@@ -13,11 +13,13 @@
 	];
 </script>
 
-<div class="flex gap-1">
+<div class="flex gap-1" role="radiogroup" aria-label="Phase status">
 	{#each states as s}
 		<button
 			class="cursor-pointer rounded-full border px-2 py-0.5 text-xs font-medium transition-all
 				{status === s.value ? s.color : 'border-transparent text-text-dim hover:bg-surface2'}"
+			role="radio"
+			aria-checked={status === s.value}
 			onclick={() => onSetStatus(s.value)}
 		>
 			{s.label}

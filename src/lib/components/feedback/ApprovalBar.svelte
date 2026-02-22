@@ -30,7 +30,7 @@
 	}
 </script>
 
-<div class="fixed right-0 bottom-0 left-0 z-40 border-t border-border bg-surface px-6 py-3">
+<div role="toolbar" aria-label="Review actions" class="fixed right-0 bottom-0 left-0 z-40 border-t border-border bg-surface px-6 py-3">
 	<div class="mx-auto flex max-w-5xl items-center justify-between pr-80">
 		<div class="text-text-dim text-sm">
 			{#if flashMessage}
@@ -42,12 +42,14 @@
 		<div class="flex gap-3">
 			<button
 				class="cursor-pointer rounded-lg bg-orange/15 px-4 py-2 text-sm font-semibold text-orange hover:bg-orange/25 transition-colors"
+				aria-label="Request changes to the plan"
 				onclick={handleRequestChanges}
 			>
 				Request Changes
 			</button>
 			<button
 				class="cursor-pointer rounded-lg bg-green px-4 py-2 text-sm font-semibold text-white hover:brightness-110 transition-colors"
+				aria-label="Approve the plan"
 				onclick={handleApprove}
 			>
 				Approve Plan

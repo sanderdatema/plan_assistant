@@ -1,8 +1,8 @@
 # Plan Assistant
 
-Review implementation plans in the browser with live reload. Designed for AI coding assistants like Claude Code that write markdown plans.
+Review implementation plans in the browser with live reload. Designed for AI coding assistants (Claude Code, Cursor, Codex, and others) that write markdown plans.
 
-## Usage
+## Quick Start
 
 ```bash
 npx plan-assistant@alpha review path/to/plan.md
@@ -14,19 +14,158 @@ This will:
 3. Open the browser to the plan review page
 4. Watch the markdown file for changes and auto-update the browser
 
+## CLI Commands
+
+| Command | Description |
+|---------|-------------|
+| `plan-assistant review <file>` | Parse and open plan for review |
+| `plan-assistant status <file-or-id>` | Check review status (exit codes: 0=approved, 3=needs-work, 4=reviewing, 5=no feedback) |
+| `plan-assistant feedback <file-or-id>` | Output feedback JSON |
+| `plan-assistant list` | List all sessions |
+| `plan-assistant init` | Generate a plan template |
+| `plan-assistant clean` | Remove orphaned sessions |
+| `plan-assistant export <file-or-id>` | Export as self-contained HTML |
+| `plan-assistant help` | Show help |
+
+### Common flags
+
+- `--pretty` — Human-readable output (default: JSON for AI parsing)
+- `--port <N>` — Specific port for review server
+- `--wait` — Block until feedback is submitted (status command)
+- `--unresolved` — Only show unresolved comments (feedback command)
+- `--phase <id>` — Filter to a specific phase (feedback command)
+- `--dry-run` — Preview what would be removed (clean command)
+- `--output <file>` — Write to file instead of stdout (init, export commands)
+
 ## Features
 
 - **Markdown parsing** — extracts phases, changes, success criteria, testing strategy, and more
+- **Flexible format** — accepts variations from Claude Code, Cursor, Codex, and other AI tools
 - **Syntax highlighting** — code blocks rendered with highlight.js (github-dark theme)
 - **Mermaid diagrams** — auto-generated phase flow diagrams
 - **Live reload** — edit the markdown file, browser updates instantly via SSE
 - **Inline feedback** — select text to add comments, set phase statuses
 - **Version history** — automatic snapshots on each update with diff view
-- **Feedback file** — submit feedback in the browser, AI reads it from `feedback.json`
+- **Machine-readable output** — all commands output JSON by default
+- **HTML export** — generate self-contained HTML reports for sharing
+- **Accessible** — keyboard navigation, ARIA attributes, screen reader support
 
-## Plan markdown format
+## Integration with AI Coding Assistants
 
-Plan Assistant parses markdown with this structure:
+### Workflow
+
+The AI integration workflow is the same regardless of which tool you use:
+
+```
+1. AI writes plan markdown (use `npx plan-assistant init` for template)
+2. AI runs `npx plan-assistant review plan.md` (opens browser)
+3. User reviews, comments, approves/rejects in the browser
+4. AI runs `npx plan-assistant status plan.md` (check status + exit code)
+5. AI runs `npx plan-assistant feedback plan.md` (read feedback)
+6. If needs-work: update plan, goto 2. If approved: implement.
+```
+
+The `review` command outputs a JSON line when the server is ready:
+
+```json
+{"event":"ready","sessionId":"a1b2c3d4","url":"http://localhost:5183/plan/a1b2c3d4","feedbackPath":"/abs/.plan-sessions/a1b2c3d4/feedback.json"}
+```
+
+The `status` command uses **distinct exit codes** so shell scripts can branch without parsing JSON:
+- `0` = approved
+- `3` = needs-work
+- `4` = still reviewing
+- `5` = no feedback yet
+
+### Claude Code
+
+Add to your project's `CLAUDE.md` or `~/.claude/CLAUDE.md`:
+
+```markdown
+## Plan Review
+
+When creating implementation plans, use Plan Assistant for review:
+1. Write the plan as markdown
+2. Run `npx plan-assistant review <plan-file>` in the background
+3. Tell the user to review the plan in the browser
+4. After they submit feedback, run `npx plan-assistant status <plan-file>`
+5. If exit code is 3 (needs-work), run `npx plan-assistant feedback <plan-file>` to read comments
+6. Update the plan based on feedback and repeat
+7. If exit code is 0 (approved), proceed with implementation
+```
+
+Optionally, create a slash command at `.claude/commands/review_plan.md`:
+
+````markdown
+---
+description: Review a plan in the browser
+---
+
+Run `npx plan-assistant review $ARGUMENTS` in the background.
+
+Tell the user to review the plan in the browser. When they've submitted feedback, run:
+- `npx plan-assistant status $ARGUMENTS` to check the result
+- `npx plan-assistant feedback $ARGUMENTS --unresolved` to read unresolved comments
+
+If `status` exits with code 3, update the plan based on feedback.
+If `status` exits with code 0, proceed with implementation.
+````
+
+### Cursor
+
+Add to your `.cursor/rules/plan-review.mdc` or `.cursorrules`:
+
+```markdown
+## Plan Review Workflow
+
+When creating implementation plans:
+1. Write the plan as a markdown file
+2. Run: `npx plan-assistant review <plan-file>`
+3. Ask the user to review in the browser
+4. Check status: `npx plan-assistant status <plan-file>`
+   - Exit code 0 = approved, proceed with implementation
+   - Exit code 3 = needs work, read feedback and update plan
+5. Read feedback: `npx plan-assistant feedback <plan-file> --unresolved`
+6. Update the plan and repeat until approved
+```
+
+### Codex
+
+Add to your `codex.md` or `AGENTS.md`:
+
+```markdown
+## Plan Review
+
+For implementation plans, use Plan Assistant for human review:
+- Generate plan template: `npx plan-assistant init --output plan.md`
+- Open for review: `npx plan-assistant review plan.md`
+- Check status: `npx plan-assistant status plan.md` (exit code 0=approved, 3=needs-work)
+- Read feedback: `npx plan-assistant feedback plan.md --unresolved`
+- Update plan based on feedback, repeat until approved
+```
+
+### Generic (any AI tool)
+
+Add this to your AI tool's instruction file:
+
+```markdown
+## Plan Review
+
+Use Plan Assistant (`npx plan-assistant`) for human review of implementation plans:
+
+Commands:
+- `npx plan-assistant init --output plan.md` — generate template
+- `npx plan-assistant review plan.md` — open in browser for review
+- `npx plan-assistant status plan.md` — check status (exit 0=approved, 3=needs-work, 4=reviewing)
+- `npx plan-assistant feedback plan.md` — read structured feedback JSON
+- `npx plan-assistant feedback plan.md --unresolved` — only unresolved comments
+
+Workflow: write plan → review → check status → read feedback → update → repeat until approved.
+```
+
+## Plan Markdown Format
+
+Plan Assistant parses markdown with this structure. All sections are optional except a title and at least one phase.
 
 ```markdown
 # Feature Name Implementation Plan
@@ -34,10 +173,10 @@ Plan Assistant parses markdown with this structure:
 ## Overview
 What we're building and why.
 
-## Current State Analysis
+## Current State
 What exists now.
 
-### Key Discoveries:
+### Key Discoveries
 - Finding with `file:line` reference
 
 ## What We're NOT Doing
@@ -58,10 +197,6 @@ What this phase accomplishes.
 
 Description of changes.
 
-```language
-// code snippet
-```
-
 ### Success Criteria:
 
 #### Automated Verification:
@@ -72,79 +207,39 @@ Description of changes.
 
 ## Testing Strategy
 
-### Unit Tests:
+### Unit Tests
 - What to test
 
-### Integration Tests:
+### Integration Tests
 - End-to-end scenarios
-
-### Manual Testing Steps:
-1. Step to verify
 
 ## References
 - Related file: `path/to/file.ext`
 ```
 
-## Integration with Claude Code
+### Format Flexibility
 
-### Setup
+The parser accepts common variations with warnings:
+- **Phase headings**: `Phase 1: Name`, `Phase 1 - Name`, `Step 1: Name`, `Task 1: Name`, or unnumbered H2s
+- **Changes section**: `Changes Required`, `Changes`, `File Changes`, `Modifications`
+- **File paths**: `**File**: \`path\``, `**Path**: \`path\``, `File: \`path\``
+- **List-based changes**: `- **path/to/file**: description`
+- **Success criteria**: `Success Criteria`, `Criteria`, `Verification`
 
-1. Install in your project:
-   ```bash
-   npm install -D plan-assistant@alpha
-   ```
+Use `npx plan-assistant init` to generate a template with all recognized sections.
 
-2. Add a `/review_plan` command to your project or global Claude Code config. Create `.claude/commands/review_plan.md`:
-
-   ````markdown
-   ---
-   description: Review a plan in the browser
-   ---
-
-   Run `npx plan-assistant review $ARGUMENTS` in the background.
-
-   The Plan Assistant parses the markdown into a structured view and opens the browser. It watches for file changes and auto-updates.
-
-   Tell the user:
-   - Review the plan in the browser
-   - Add inline comments by selecting text
-   - Set phase statuses (Pending / Approved / Needs Work)
-   - Click "Submit Feedback" when done
-
-   When the user says they've submitted feedback, read the feedback file at `.plan-sessions/<session-id>/feedback.json` next to the markdown file. The session ID is shown in the CLI output.
-
-   If `status` is `"approved"`, proceed with implementation.
-   If `status` is `"needs-work"`, apply the comments from the `comments[]` array as changes to the markdown plan. The file watcher will auto-update the browser.
-   ````
-
-3. After writing a plan, run:
-   ```
-   /review_plan thoughts/shared/plans/my-plan.md
-   ```
-
-### Feedback loop
-
-The workflow is:
-
-1. AI writes a plan as markdown
-2. `npx plan-assistant review` opens it in the browser
-3. You review, comment, and submit feedback
-4. AI reads `feedback.json` and updates the markdown
-5. Browser auto-updates (file watcher + SSE)
-6. Repeat until approved
-
-## Session files
+## Session Files
 
 Sessions are created in `.plan-sessions/` next to the markdown file:
 
 ```
-thoughts/shared/plans/
-  my-plan.md
+project/
+  plan.md
   .plan-sessions/
     a1b2c3d4/
       meta.json       # Session metadata
       plan.json       # Parsed plan (structured JSON)
-      feedback.json   # Your review comments and phase statuses
+      feedback.json   # Review comments and phase statuses
       versions/
         v1.json       # Snapshot of each plan version
 ```
@@ -154,7 +249,9 @@ Add `.plan-sessions/` to your `.gitignore`.
 ## Development
 
 ```bash
-pnpm install
-pnpm run dev        # SvelteKit dev server on port 5199
-pnpm run build      # Build CLI + server
+npm install
+npm run dev        # SvelteKit dev server on port 5199
+npm run build      # Build CLI + server
+npm test           # Run parser tests
+npm run check      # Type check
 ```

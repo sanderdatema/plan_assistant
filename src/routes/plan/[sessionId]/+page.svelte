@@ -79,6 +79,9 @@
 		if (plan && plan.meta.version !== lastFeedbackVersion) {
 			lastFeedbackVersion = plan.meta.version;
 			feedbackStore.init(data.sessionId, plan.meta.title, plan.meta.version);
+			if (liveRegion) {
+				liveRegion.textContent = `Plan updated to version ${plan.meta.version}`;
+			}
 		}
 	});
 
@@ -90,6 +93,8 @@
 	let plan = $derived(planStore.plan);
 
 	// Hover state for commenting
+	let liveRegion = $state<HTMLDivElement | undefined>();
+
 	let hoveredElement = $state<HTMLElement | null>(null);
 	let hoverRect = $state<{ x: number; y: number; width: number; height: number } | null>(null);
 	let planContentEl = $state<HTMLDivElement | undefined>();
@@ -117,6 +122,25 @@
 	}
 
 	function handleMouseLeave() {
+		hoveredElement = null;
+		hoverRect = null;
+	}
+
+	function handleFocusIn(event: FocusEvent) {
+		const target = event.target as HTMLElement;
+		if (target.closest('button, input, a, select, textarea')) return;
+		const commentable = target.closest('[data-commentable]') as HTMLElement | null;
+		if (commentable && planContentEl?.contains(commentable)) {
+			hoveredElement = commentable;
+			const rect = commentable.getBoundingClientRect();
+			hoverRect = { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
+		}
+	}
+
+	function handleFocusOut(event: FocusEvent) {
+		const related = event.relatedTarget as HTMLElement | null;
+		// Keep toolbar visible if focus moved into the toolbar
+		if (related?.closest('.fixed.z-50')) return;
 		hoveredElement = null;
 		hoverRect = null;
 	}
@@ -167,6 +191,8 @@
 		class="min-h-screen pb-20 pr-[22rem] pl-8 pt-4"
 		onmousemove={handleMouseMove}
 		onmouseleave={handleMouseLeave}
+		onfocusin={handleFocusIn}
+		onfocusout={handleFocusOut}
 		onclick={handlePlanClick}
 		onkeydown={(e) => { if (e.key === 'Enter') handlePlanClick(e as unknown as MouseEvent); }}
 	>
@@ -193,14 +219,16 @@
 		{/if}
 
 		<!-- Overview -->
-		<section data-section="Overview" data-commentable data-comment-label="Overview">
+		<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+		<section data-section="Overview" data-commentable tabindex="0" data-comment-label="Overview">
 			<h2 class="text-accent mt-8 mb-4 border-b border-border pb-2 text-xl font-semibold">Overview</h2>
 			<MarkdownBlock content={plan.overview} sectionPrefix="Overview" />
 		</section>
 
 		<!-- Diagrams -->
 		{#each plan.diagrams as diagram}
-			<section data-section="Diagrams" data-commentable data-comment-label="Diagram: {diagram.title}">
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+			<section data-section="Diagrams" data-commentable tabindex="0" data-comment-label="Diagram: {diagram.title}">
 				<h3 class="mt-6 mb-3 text-lg font-semibold">{diagram.title}</h3>
 				<MermaidDiagram code={diagram.mermaidCode} id={diagram.id} />
 			</section>
@@ -208,7 +236,8 @@
 
 		<!-- Current State -->
 		{#if plan.currentState}
-			<section data-section="Current State" data-commentable data-comment-label="Current State">
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+			<section data-section="Current State" data-commentable tabindex="0" data-comment-label="Current State">
 				<h2 class="text-accent mt-8 mb-4 border-b border-border pb-2 text-xl font-semibold">Current State</h2>
 				<MarkdownBlock content={plan.currentState} sectionPrefix="Current State" />
 
@@ -216,7 +245,8 @@
 					<h3 class="mt-6 mb-3 text-lg font-semibold">Key Discoveries</h3>
 					<ul class="text-text-dim space-y-1.5 pl-5 text-sm">
 						{#each plan.keyDiscoveries as discovery}
-							<li data-commentable data-comment-label="Key Discovery: {discovery.text.slice(0, 50)}">
+							<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+							<li data-commentable tabindex="0" data-comment-label="Key Discovery: {discovery.text.slice(0, 50)}">
 								{discovery.text}
 								{#if discovery.codeRef}
 									<code class="bg-surface2 text-accent rounded px-1 py-0.5 font-mono text-xs">{discovery.codeRef}</code>
@@ -230,11 +260,13 @@
 
 		<!-- Scope Exclusions -->
 		{#if plan.scopeExclusions.length > 0}
-			<section data-section="Scope Exclusions" data-commentable data-comment-label="Scope Exclusions">
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+			<section data-section="Scope Exclusions" data-commentable tabindex="0" data-comment-label="Scope Exclusions">
 				<h2 class="text-accent mt-8 mb-4 border-b border-border pb-2 text-xl font-semibold">What We're NOT Doing</h2>
 				<div class="grid grid-cols-2 gap-3">
 					{#each plan.scopeExclusions as exclusion}
-						<div class="bg-surface border-border rounded-lg border border-l-3 border-l-red p-4" data-commentable data-comment-label="Scope > {exclusion.title}">
+						<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+						<div class="bg-surface border-border rounded-lg border border-l-3 border-l-red p-4" data-commentable tabindex="0" data-comment-label="Scope > {exclusion.title}">
 							<div class="text-red text-xs font-semibold uppercase tracking-wide">Out of scope</div>
 							<h4 class="mt-1 mb-1 text-sm font-semibold">{exclusion.title}</h4>
 							<p class="text-text-dim text-xs">{exclusion.reason}</p>
@@ -246,7 +278,8 @@
 
 		<!-- Implementation Approach -->
 		{#if plan.implementationApproach}
-			<section data-section="Implementation Approach" data-commentable data-comment-label="Implementation Approach">
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+			<section data-section="Implementation Approach" data-commentable tabindex="0" data-comment-label="Implementation Approach">
 				<h2 class="text-accent mt-8 mb-4 border-b border-border pb-2 text-xl font-semibold">Implementation Approach</h2>
 				<MarkdownBlock content={plan.implementationApproach} sectionPrefix="Implementation Approach" />
 			</section>
@@ -275,13 +308,15 @@
 
 		<!-- Testing Strategy -->
 		{#if plan.testingStrategy}
-			<section data-section="Testing Strategy" data-commentable data-comment-label="Testing Strategy">
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+			<section data-section="Testing Strategy" data-commentable tabindex="0" data-comment-label="Testing Strategy">
 				<h2 class="text-accent mt-8 mb-4 border-b border-border pb-2 text-xl font-semibold">Testing Strategy</h2>
 				{#if plan.testingStrategy.unit.length > 0}
 					<h3 class="mt-4 mb-2 text-base font-semibold">Unit Tests</h3>
 					<ul class="text-text-dim space-y-1 pl-5 text-sm">
 						{#each plan.testingStrategy.unit as item}
-							<li data-commentable data-comment-label="Testing > Unit > {item.slice(0, 40)}">{item}</li>
+							<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+							<li data-commentable tabindex="0" data-comment-label="Testing > Unit > {item.slice(0, 40)}">{item}</li>
 						{/each}
 					</ul>
 				{/if}
@@ -289,7 +324,8 @@
 					<h3 class="mt-4 mb-2 text-base font-semibold">Integration Tests</h3>
 					<ul class="text-text-dim space-y-1 pl-5 text-sm">
 						{#each plan.testingStrategy.integration as item}
-							<li data-commentable data-comment-label="Testing > Integration > {item.slice(0, 40)}">{item}</li>
+							<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+							<li data-commentable tabindex="0" data-comment-label="Testing > Integration > {item.slice(0, 40)}">{item}</li>
 						{/each}
 					</ul>
 				{/if}
@@ -297,7 +333,8 @@
 					<h3 class="mt-4 mb-2 text-base font-semibold">Manual Tests</h3>
 					<ul class="text-text-dim space-y-1 pl-5 text-sm">
 						{#each plan.testingStrategy.manual as item}
-							<li data-commentable data-comment-label="Testing > Manual > {item.slice(0, 40)}">{item}</li>
+							<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+							<li data-commentable tabindex="0" data-comment-label="Testing > Manual > {item.slice(0, 40)}">{item}</li>
 						{/each}
 					</ul>
 				{/if}
@@ -306,11 +343,13 @@
 
 		<!-- References -->
 		{#if plan.references.length > 0}
-			<section data-section="References" data-commentable data-comment-label="References">
+			<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+			<section data-section="References" data-commentable tabindex="0" data-comment-label="References">
 				<h2 class="text-accent mt-8 mb-4 border-b border-border pb-2 text-xl font-semibold">References</h2>
 				<ul class="text-text-dim space-y-1 pl-5 text-sm">
 					{#each plan.references as ref}
-						<li data-commentable data-comment-label="Reference: {ref.slice(0, 50)}">{ref}</li>
+						<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+						<li data-commentable tabindex="0" data-comment-label="Reference: {ref.slice(0, 50)}">{ref}</li>
 					{/each}
 				</ul>
 			</section>
@@ -352,6 +391,9 @@
 		onApprove={() => feedbackStore.submitFeedback('approved')}
 		onRequestChanges={() => feedbackStore.submitFeedback('needs-work')}
 	/>
+
+	<!-- Live region for screen reader announcements -->
+	<div class="sr-only" aria-live="polite" bind:this={liveRegion}></div>
 {:else}
 	<div class="flex min-h-screen items-center justify-center">
 		<div class="text-center">

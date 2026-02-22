@@ -19,10 +19,13 @@
 	let phaseLabel = $derived(`Phase ${phase.number}`);
 </script>
 
-<section data-section="Phase {phase.number}: {phase.name}" data-commentable data-comment-label="Phase {phase.number}: {phase.name}" class="mt-6">
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+<section data-section="Phase {phase.number}: {phase.name}" data-commentable tabindex="0" data-comment-label="Phase {phase.number}: {phase.name}" class="mt-6">
 	<div class="flex items-center gap-3">
 		<button
 			class="text-accent flex-1 cursor-pointer border-b border-border pb-2 text-left text-xl font-semibold"
+			aria-expanded={expanded}
+			aria-controls="phase-content-{phase.id}"
 			onclick={() => expanded = !expanded}
 		>
 			<span class="mr-2 inline-block transition-transform" class:rotate-90={expanded}>▶</span>
@@ -35,7 +38,7 @@
 	</div>
 
 	{#if expanded}
-		<div class="mt-4 space-y-4">
+		<div id="phase-content-{phase.id}" class="mt-4 space-y-4">
 			<!-- Content (includes overview + unrecognized subsections) or fallback to overview -->
 			{#if phase.content}
 				<MarkdownBlock content={phase.content} sectionPrefix="{phaseLabel} > Content" />
@@ -47,9 +50,11 @@
 			{#if phase.subItems.length > 0}
 				<div class="mt-4 space-y-3">
 					{#each phase.subItems as subItem}
+						<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 						<div
 							class="bg-surface border-border rounded-lg border p-4"
 							data-commentable
+							tabindex="0"
 							data-comment-label="{phaseLabel} > {phase.number}{subItem.letter}. {subItem.name}"
 						>
 							<div class="flex items-center justify-between gap-3">
@@ -85,7 +90,8 @@
 					<h4 class="text-text-dim mt-3 mb-1 text-sm font-medium">Automated Verification</h4>
 					<ul class="space-y-1.5 pl-1">
 						{#each phase.successCriteria.automated as criterion}
-							<li class="text-text-dim flex items-start gap-2 text-sm" data-commentable data-comment-label="{phaseLabel} > Automated > {criterion.text.slice(0, 40)}">
+							<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+							<li class="text-text-dim flex items-start gap-2 text-sm" data-commentable tabindex="0" data-comment-label="{phaseLabel} > Automated > {criterion.text.slice(0, 40)}">
 								<input type="checkbox" class="mt-0.5 accent-green" />
 								<span>
 									{#if criterion.command}
@@ -103,7 +109,8 @@
 					<h4 class="text-text-dim mt-3 mb-1 text-sm font-medium">Manual Verification</h4>
 					<ul class="space-y-1.5 pl-1">
 						{#each phase.successCriteria.manual as criterion}
-							<li class="text-text-dim flex items-start gap-2 text-sm" data-commentable data-comment-label="{phaseLabel} > Manual > {criterion.text.slice(0, 40)}">
+							<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+							<li class="text-text-dim flex items-start gap-2 text-sm" data-commentable tabindex="0" data-comment-label="{phaseLabel} > Manual > {criterion.text.slice(0, 40)}">
 								<input type="checkbox" class="mt-0.5 accent-green" />
 								<span>{criterion.text}</span>
 							</li>

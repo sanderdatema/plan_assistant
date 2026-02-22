@@ -24,7 +24,8 @@
 	});
 </script>
 
-<div class="mb-3" data-commentable data-comment-label={commentLabel ?? change.componentName}>
+<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+<div class="mb-3" data-commentable tabindex="0" data-comment-label={commentLabel ?? change.componentName}>
 	<h4 class="text-text-dim mb-1 text-sm font-medium">{change.componentName}</h4>
 	<p class="mb-1 text-sm">
 		<strong>File:</strong>

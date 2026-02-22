@@ -33,6 +33,7 @@
 			const blockEls = container.querySelectorAll(blockTags.join(', '));
 			blockEls.forEach((el) => {
 				el.setAttribute('data-commentable', '');
+				el.setAttribute('tabindex', '0');
 				const text = el.textContent?.trim().slice(0, 60) ?? '';
 				const label = sectionPrefix ? `${sectionPrefix} > ${text}` : text;
 				el.setAttribute('data-comment-label', label);

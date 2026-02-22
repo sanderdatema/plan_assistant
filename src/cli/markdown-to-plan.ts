@@ -29,9 +29,30 @@ export interface PlanJson {
     manual: string[];
   };
   references: string[];
+  additionalSections?: { heading: string; content: string }[];
 }
 
 export type { Phase, Change, Criterion, Diagram, SubItem };
+
+export interface ParseResult {
+  plan: PlanJson;
+  warnings: string[];
+}
+
+interface ParseContext {
+  warnings: string[];
+  warn(message: string): void;
+}
+
+function createParseContext(): ParseContext {
+  const warnings: string[] = [];
+  return {
+    warnings,
+    warn(message: string) {
+      warnings.push(message);
+    },
+  };
+}
 
 interface Section {
   heading: string;
@@ -131,14 +152,62 @@ function parseScopeExclusions(
   return results;
 }
 
-function parseChanges(sections: Section[]): Change[] {
+// --- Flexible Change Parsing ---
+
+/**
+ * Extract file path from a paragraph token using multiple patterns.
+ * Accepts: **File**: `path`, **Path**: `path`, File: `path`, bare `path/to/file.ext`
+ */
+function extractFilePath(
+  raw: string,
+): { filePath: string; rest: string } | null {
+  // Pattern 1: **File**: `path` or **Path**: `path`
+  const boldPattern = raw.match(
+    /\*\*(?:File|Path)\*\*:\s*`([^`]+)`\s*(\(new\))?\s*/i,
+  );
+  if (boldPattern) {
+    return {
+      filePath: boldPattern[1],
+      rest: raw.replace(boldPattern[0], "").trim(),
+    };
+  }
+
+  // Pattern 2: File: `path` (no bold)
+  const plainPattern = raw.match(
+    /^(?:File|Path):\s*`([^`]+)`\s*(\(new\))?\s*/i,
+  );
+  if (plainPattern) {
+    return {
+      filePath: plainPattern[1],
+      rest: raw.replace(plainPattern[0], "").trim(),
+    };
+  }
+
+  return null;
+}
+
+/**
+ * Parse changes from heading-based sections (#### N. Name).
+ * Accepts both level 4 and level 3 sections.
+ */
+function parseChangesFromHeadings(
+  sections: Section[],
+  ctx: ParseContext,
+): Change[] {
   const changes: Change[] = [];
 
   for (const section of sections) {
-    if (section.level !== 4) continue;
+    // Accept level 3 or 4
+    if (section.level !== 4 && section.level !== 3) continue;
 
     const nameMatch = section.heading.match(/^\d+\.\s*(.+)/);
     if (!nameMatch) continue;
+
+    if (section.level === 3) {
+      ctx.warn(
+        `Change "${section.heading}" uses h3 instead of h4 — accepted but non-canonical`,
+      );
+    }
 
     const componentName = nameMatch[1]
       .replace(/^(?:New\s+component:\s*|Update\s+)?/i, "")
@@ -152,13 +221,10 @@ function parseChanges(sections: Section[]): Change[] {
     for (const token of section.tokens) {
       if (token.type === "paragraph") {
         const para = token as Tokens.Paragraph;
-        const fileMatch = para.raw.match(/\*\*File\*\*:\s*`([^`]+)`/);
-        if (fileMatch) {
-          filePath = fileMatch[1];
-          const rest = para.raw
-            .replace(/\*\*File\*\*:\s*`[^`]+`\s*(\(new\))?\s*/i, "")
-            .trim();
-          if (rest) lines.push(rest);
+        const fp = extractFilePath(para.raw);
+        if (fp) {
+          filePath = fp.filePath;
+          if (fp.rest) lines.push(fp.rest);
         } else {
           const changesMatch = para.raw.match(/\*\*Changes?\*\*:\s*(.*)/s);
           if (changesMatch) {
@@ -185,6 +251,54 @@ function parseChanges(sections: Section[]): Change[] {
       codeSnippet,
       codeLanguage,
     });
+  }
+
+  return changes;
+}
+
+/**
+ * Parse changes from bullet list items with file paths.
+ * Accepts: - **path/to/file**: description
+ */
+function parseChangesFromList(tokens: Token[], ctx: ParseContext): Change[] {
+  const changes: Change[] = [];
+
+  for (const token of tokens) {
+    if (token.type !== "list") continue;
+    const list = token as Tokens.List;
+    for (const item of list.items) {
+      const text = item.text.trim();
+      // **path/to/file.ext**: description
+      const boldPathMatch = text.match(/^\*\*([^*]+\.[a-zA-Z]+)\*\*:\s*(.*)/s);
+      if (boldPathMatch) {
+        const filePath = boldPathMatch[1];
+        const description = boldPathMatch[2].trim();
+        const name = basename(filePath);
+        changes.push({
+          componentName: name,
+          filePath,
+          description,
+        });
+        continue;
+      }
+
+      // `path/to/file.ext`: description
+      const backtickPathMatch = text.match(/^`([^`]+\.[a-zA-Z]+)`:\s*(.*)/s);
+      if (backtickPathMatch) {
+        const filePath = backtickPathMatch[1];
+        const description = backtickPathMatch[2].trim();
+        const name = basename(filePath);
+        changes.push({
+          componentName: name,
+          filePath,
+          description,
+        });
+      }
+    }
+  }
+
+  if (changes.length > 0) {
+    ctx.warn("Changes parsed from list format — non-canonical");
   }
 
   return changes;
@@ -217,19 +331,154 @@ function parseCriteria(
   return criteria;
 }
 
-function parsePhases(allSections: Section[]): Phase[] {
+// --- Flexible Phase Heading Matching ---
+
+interface PhaseHeadingMatch {
+  number: number;
+  name: string;
+  variant: "canonical" | "dash" | "step" | "task" | "unnumbered";
+}
+
+/**
+ * Try to match a section heading as a phase heading.
+ * Cascade: strict first, then relaxed patterns.
+ */
+function tryMatchPhaseHeading(
+  heading: string,
+  autoNumber: number,
+): PhaseHeadingMatch | null {
+  // Canonical: "Phase 1: Setup"
+  let m = heading.match(/^Phase\s+(\d+):\s*(.+)/i);
+  if (m)
+    return {
+      number: parseInt(m[1], 10),
+      name: m[2].trim(),
+      variant: "canonical",
+    };
+
+  // Dash separator: "Phase 1 - Setup"
+  m = heading.match(/^Phase\s+(\d+)\s*[-–—]\s*(.+)/i);
+  if (m)
+    return { number: parseInt(m[1], 10), name: m[2].trim(), variant: "dash" };
+
+  // Step keyword: "Step 1: Setup"
+  m = heading.match(/^Step\s+(\d+):\s*(.+)/i);
+  if (m)
+    return { number: parseInt(m[1], 10), name: m[2].trim(), variant: "step" };
+
+  // Task keyword: "Task 1: Setup"
+  m = heading.match(/^Task\s+(\d+):\s*(.+)/i);
+  if (m)
+    return { number: parseInt(m[1], 10), name: m[2].trim(), variant: "task" };
+
+  return null;
+}
+
+/** Known top-level section patterns that should NOT be treated as phases */
+const KNOWN_SECTION_PATTERNS = [
+  /^Overview$/i,
+  /^Current\s+State/i,
+  /What\s+We.*NOT\s+Doing/i,
+  /Implementation\s+Approach/i,
+  /Testing\s+Strategy/i,
+  /^References$/i,
+  /^Context$/i,
+  /^Verification$/i,
+  /^Version$/i,
+  /^Summary$/i,
+];
+
+const CHANGES_HEADING_PATTERN =
+  /^(?:Changes\s+Required|Changes|File\s+Changes|Modifications):?$/i;
+
+const SUCCESS_CRITERIA_HEADING_PATTERN =
+  /^(?:Success\s+Criteria|Criteria|Verification):?$/i;
+
+function parsePhases(allSections: Section[], ctx: ParseContext): Phase[] {
   const phases: Phase[] = [];
+  let autoNumber = 1;
 
   for (let i = 0; i < allSections.length; i++) {
     const section = allSections[i];
-    const phaseMatch = section.heading.match(/^Phase\s+(\d+):\s*(.+)/i);
-    if (!phaseMatch || section.level !== 2) continue;
 
-    const number = parseInt(phaseMatch[1], 10);
-    const name = phaseMatch[2].trim();
+    // Try matching at level 2 (canonical) or level 3 (with warning)
+    if (section.level !== 2 && section.level !== 3) continue;
+
+    const phaseMatch = tryMatchPhaseHeading(section.heading, autoNumber);
+
+    // Also check for unnumbered H2s that look like phases
+    let isUnnumberedPhase = false;
+    if (!phaseMatch && section.level === 2) {
+      // Skip known section patterns
+      if (KNOWN_SECTION_PATTERNS.some((p) => p.test(section.heading))) continue;
+
+      // Check if this H2 has subsections that look like phase content
+      // (has Changes Required, or Success Criteria, or numbered sub-headings)
+      const subSections = collectSectionsUntilLevel(allSections, i, 2);
+      const hasChanges = subSections.some((s) =>
+        CHANGES_HEADING_PATTERN.test(s.heading),
+      );
+      const hasCriteria = subSections.some(
+        (s) =>
+          SUCCESS_CRITERIA_HEADING_PATTERN.test(s.heading) ||
+          /Automated\s+Verification/i.test(s.heading) ||
+          /Manual\s+Verification/i.test(s.heading),
+      );
+      const hasNumberedChanges = subSections.some(
+        (s) => (s.level === 4 || s.level === 3) && /^\d+\.\s/.test(s.heading),
+      );
+
+      if (hasChanges || hasCriteria || hasNumberedChanges) {
+        isUnnumberedPhase = true;
+      } else {
+        continue;
+      }
+    }
+
+    if (!phaseMatch && !isUnnumberedPhase) {
+      // H3 with phase-like heading
+      if (section.level === 3) {
+        const h3Match = tryMatchPhaseHeading(section.heading, autoNumber);
+        if (h3Match) {
+          ctx.warn(
+            `Phase "${section.heading}" uses h3 instead of h2 — accepted but non-canonical`,
+          );
+          // Fall through with h3Match
+        } else {
+          continue;
+        }
+      } else {
+        continue;
+      }
+    }
+
+    const match = phaseMatch ?? {
+      number: autoNumber,
+      name: section.heading,
+      variant: "unnumbered" as const,
+    };
+
+    if (match.variant !== "canonical" && match.variant !== "unnumbered") {
+      ctx.warn(
+        `Phase "${section.heading}" uses non-canonical format (${match.variant}) — accepted`,
+      );
+    }
+    if (match.variant === "unnumbered") {
+      ctx.warn(
+        `Unnumbered heading "${section.heading}" treated as Phase ${match.number}`,
+      );
+    }
+
+    const number = match.number;
+    const name = match.name;
     const id = `phase-${number}`;
+    autoNumber = number + 1;
 
-    const subSections = collectSectionsUntilLevel(allSections, i, 2);
+    const subSections = collectSectionsUntilLevel(
+      allSections,
+      i,
+      section.level,
+    );
 
     const overviewSection = subSections.find((s) =>
       /^Overview$/i.test(s.heading),
@@ -238,25 +487,62 @@ function parsePhases(allSections: Section[]): Phase[] {
       ? tokensToMarkdown(overviewSection.tokens)
       : "";
 
+    // Flexible changes section heading
     const changesSection = subSections.find((s) =>
-      /^Changes\s+Required/i.test(s.heading),
+      CHANGES_HEADING_PATTERN.test(s.heading),
     );
+
+    if (
+      changesSection &&
+      !/^Changes\s+Required/i.test(changesSection.heading)
+    ) {
+      ctx.warn(
+        `Phase ${number}: "${changesSection.heading}" used instead of "Changes Required" — accepted`,
+      );
+    }
+
     const changesIdx = changesSection
       ? allSections.indexOf(changesSection)
       : -1;
 
     let changes: Change[] = [];
-    if (changesIdx >= 0) {
-      const changeSubs = collectSectionsUntilLevel(allSections, changesIdx, 3);
-      changes = parseChanges(changeSubs);
+    if (changesIdx >= 0 && changesSection) {
+      // Strategy 1: Heading-based changes (#### N. Name)
+      const changeSubs = collectSectionsUntilLevel(
+        allSections,
+        changesIdx,
+        changesSection.level,
+      );
+      changes = parseChangesFromHeadings(changeSubs, ctx);
+
+      // Strategy 2: List-based changes if no heading-based changes found
+      if (changes.length === 0) {
+        changes = parseChangesFromList(changesSection.tokens, ctx);
+      }
     }
 
-    const automatedSection = subSections.find((s) =>
-      /Automated\s+Verification/i.test(s.heading),
+    // Flexible success criteria heading
+    const criteriaSection = subSections.find((s) =>
+      SUCCESS_CRITERIA_HEADING_PATTERN.test(s.heading),
     );
-    const manualSection = subSections.find((s) =>
-      /Manual\s+Verification/i.test(s.heading),
-    );
+    const criteriaIdx = criteriaSection
+      ? allSections.indexOf(criteriaSection)
+      : -1;
+    const criteriaSubs =
+      criteriaIdx >= 0 && criteriaSection
+        ? collectSectionsUntilLevel(
+            allSections,
+            criteriaIdx,
+            criteriaSection.level,
+          )
+        : [];
+
+    const automatedSection =
+      criteriaSubs.find((s) => /Automated\s+Verification/i.test(s.heading)) ??
+      subSections.find((s) => /Automated\s+Verification/i.test(s.heading));
+    const manualSection =
+      criteriaSubs.find((s) => /Manual\s+Verification/i.test(s.heading)) ??
+      subSections.find((s) => /Manual\s+Verification/i.test(s.heading));
 
     const automated = automatedSection
       ? parseCriteria(automatedSection.tokens, "automated")
@@ -265,20 +551,30 @@ function parsePhases(allSections: Section[]): Phase[] {
       ? parseCriteria(manualSection.tokens, "manual")
       : [];
 
+    // If criteria section exists but no automated/manual sub-sections,
+    // treat all list items as manual criteria
+    if (
+      criteriaSection &&
+      automated.length === 0 &&
+      manual.length === 0 &&
+      criteriaSubs.length === 0
+    ) {
+      manual.push(...parseCriteria(criteriaSection.tokens, "manual"));
+    }
+
     // Build content from direct tokens + unrecognized subsections
-    // Also extract sub-items (e.g. "### 1a. First sub-task")
     const recognizedPattern =
-      /^(Overview|Changes\s+Required|Automated\s+Verification|Manual\s+Verification)$/i;
+      /^(Overview|Changes\s+Required|Changes|File\s+Changes|Modifications|Automated\s+Verification|Manual\s+Verification|Success\s+Criteria|Criteria|Verification):?$/i;
     const subItemPattern = /^(\d+)([a-z])\.\s+(.+)/i;
     const contentParts: string[] = [];
     const subItems: SubItem[] = [];
 
-    // Direct tokens between "## Phase N:" and first "###"
+    // Direct tokens between phase heading and first sub-heading
     const phaseSection = allSections[i];
     const directText = tokensToMarkdown(phaseSection.tokens);
     if (directText) contentParts.push(directText);
 
-    // Unrecognized ### subsections — check for sub-items first
+    // Unrecognized subsections — check for sub-items first
     for (const sub of subSections) {
       if (recognizedPattern.test(sub.heading)) continue;
 
@@ -385,7 +681,8 @@ export function parseMarkdownToPlan(
   markdownPath: string,
   projectDir: string,
   version = 1,
-): PlanJson {
+): ParseResult {
+  const ctx = createParseContext();
   const tokens = Lexer.lex(markdown);
   const sections = splitIntoSections(tokens);
 
@@ -416,7 +713,6 @@ export function parseMarkdownToPlan(
   let keyDiscoveries: { text: string; codeRef?: string }[] = [];
 
   if (currentStateSection) {
-    // Get tokens that are in the current state section but NOT in the key discoveries sub-section
     const subSections = collectSectionsUntilLevel(sections, currentStateIdx, 2);
     const kdSection = subSections.find((s) =>
       /Key\s+Discover/i.test(s.heading),
@@ -424,11 +720,9 @@ export function parseMarkdownToPlan(
 
     if (kdSection) {
       keyDiscoveries = parseKeyDiscoveries(kdSection.tokens);
-      // currentState is everything in the current state section before key discoveries
       const kdIdx = sections.indexOf(kdSection);
       const beforeKd: Token[] = [];
       for (let i = currentStateIdx + 1; i < kdIdx; i++) {
-        // include sub-section headings+tokens as raw markdown
         beforeKd.push(...sections[i].tokens);
       }
       currentState = tokensToMarkdown([
@@ -457,7 +751,7 @@ export function parseMarkdownToPlan(
     : "";
 
   // Phases
-  const phases = parsePhases(sections);
+  const phases = parsePhases(sections, ctx);
 
   // Diagrams
   const diagrams: Diagram[] = [];
@@ -478,9 +772,67 @@ export function parseMarkdownToPlan(
   const refsSection = findSection(sections, /^References$/i, 2);
   const references = refsSection ? parseReferences(refsSection.tokens) : [];
 
+  // Collect additional (unrecognized) H2 sections
+  const knownH2Indices = new Set<number>();
+  const knownPatterns = [
+    /^Overview$/i,
+    /^Current\s+State/i,
+    /What\s+We.*NOT\s+Doing/i,
+    /Implementation\s+Approach/i,
+    /Testing\s+Strategy/i,
+    /^References$/i,
+  ];
+  for (let i = 0; i < sections.length; i++) {
+    if (sections[i].level === 1) {
+      knownH2Indices.add(i);
+      continue;
+    }
+    if (sections[i].level !== 2) continue;
+
+    // Check if it's a known section
+    if (knownPatterns.some((p) => p.test(sections[i].heading))) {
+      knownH2Indices.add(i);
+      continue;
+    }
+
+    // Check if it was parsed as a phase
+    if (
+      phases.some(
+        (p) =>
+          p.name === sections[i].heading ||
+          tryMatchPhaseHeading(sections[i].heading, 0),
+      )
+    ) {
+      knownH2Indices.add(i);
+      continue;
+    }
+  }
+
+  const additionalSections: { heading: string; content: string }[] = [];
+  for (let i = 0; i < sections.length; i++) {
+    if (sections[i].level !== 2 || knownH2Indices.has(i)) continue;
+    // Double-check it's not a parsed phase
+    const isPhase = phases.some(
+      (p) =>
+        p.name === sections[i].heading ||
+        sections[i].heading.match(new RegExp(`Phase\\s+${p.number}`, "i")),
+    );
+    if (isPhase) continue;
+
+    const subs = collectSectionsUntilLevel(sections, i, 2);
+    let content = tokensToMarkdown(sections[i].tokens);
+    for (const sub of subs) {
+      content += `\n\n${"#".repeat(sub.level)} ${sub.heading}\n\n${tokensToMarkdown(sub.tokens)}`;
+    }
+    additionalSections.push({
+      heading: sections[i].heading,
+      content: content.trim(),
+    });
+  }
+
   const now = new Date().toISOString();
 
-  return {
+  const plan: PlanJson = {
     schemaVersion: 1,
     meta: {
       title,
@@ -501,5 +853,27 @@ export function parseMarkdownToPlan(
     diagrams,
     testingStrategy,
     references,
+    ...(additionalSections.length > 0 ? { additionalSections } : {}),
   };
+
+  return { plan, warnings: ctx.warnings };
 }
+
+// Export internals for testing
+export const _internal = {
+  splitIntoSections,
+  tokensToMarkdown,
+  findSection,
+  collectSectionsUntilLevel,
+  parseKeyDiscoveries,
+  parseScopeExclusions,
+  parseChangesFromHeadings,
+  parseChangesFromList,
+  parseCriteria,
+  parsePhases,
+  parseTestingStrategy,
+  parseReferences,
+  tryMatchPhaseHeading,
+  extractFilePath,
+  createParseContext,
+};
