@@ -30,6 +30,7 @@ export interface Phase {
   number: number;
   name: string;
   overview: string;
+  content?: string;
   changes: Change[];
   successCriteria: {
     automated: Criterion[];

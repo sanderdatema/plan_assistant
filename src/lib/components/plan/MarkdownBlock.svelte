@@ -5,9 +5,10 @@
 
 	interface Props {
 		content: string;
+		sectionPrefix?: string;
 	}
 
-	let { content }: Props = $props();
+	let { content, sectionPrefix }: Props = $props();
 
 	let html = $derived.by(() => {
 		marked.setOptions({
@@ -19,12 +20,22 @@
 
 	let container: HTMLDivElement;
 
-	// Highlight code blocks after render
+	// Highlight code blocks and add commentable attributes after render
 	$effect(() => {
 		if (container && html) {
 			const blocks = container.querySelectorAll('pre code');
 			blocks.forEach((block) => {
 				hljs.highlightElement(block as HTMLElement);
+			});
+
+			// Add data-commentable to block-level elements
+			const blockTags = ['p', 'li', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'blockquote', 'pre', 'table'];
+			const blockEls = container.querySelectorAll(blockTags.join(', '));
+			blockEls.forEach((el) => {
+				el.setAttribute('data-commentable', '');
+				const text = el.textContent?.trim().slice(0, 60) ?? '';
+				const label = sectionPrefix ? `${sectionPrefix} > ${text}` : text;
+				el.setAttribute('data-comment-label', label);
 			});
 		}
 	});

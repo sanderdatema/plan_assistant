@@ -4,9 +4,10 @@
 
 	interface Props {
 		change: Change;
+		commentLabel?: string;
 	}
 
-	let { change }: Props = $props();
+	let { change, commentLabel }: Props = $props();
 	let codeEl = $state<HTMLElement | undefined>();
 
 	$effect(() => {
@@ -23,7 +24,7 @@
 	});
 </script>
 
-<div class="mb-3">
+<div class="mb-3" data-commentable data-comment-label={commentLabel ?? change.componentName}>
 	<h4 class="text-text-dim mb-1 text-sm font-medium">{change.componentName}</h4>
 	<p class="mb-1 text-sm">
 		<strong>File:</strong>

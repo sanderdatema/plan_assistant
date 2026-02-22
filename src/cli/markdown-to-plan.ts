@@ -31,7 +31,7 @@ export interface PlanJson {
   references: string[];
 }
 
-export { Phase, Change, Criterion, Diagram };
+export type { Phase, Change, Criterion, Diagram };
 
 interface Section {
   heading: string;
@@ -265,11 +265,32 @@ function parsePhases(allSections: Section[]): Phase[] {
       ? parseCriteria(manualSection.tokens, "manual")
       : [];
 
+    // Build content from direct tokens + unrecognized subsections
+    const recognizedPattern =
+      /^(Overview|Changes\s+Required|Automated\s+Verification|Manual\s+Verification)$/i;
+    const contentParts: string[] = [];
+
+    // Direct tokens between "## Phase N:" and first "###"
+    const phaseSection = allSections[i];
+    const directText = tokensToMarkdown(phaseSection.tokens);
+    if (directText) contentParts.push(directText);
+
+    // Unrecognized ### subsections
+    for (const sub of subSections) {
+      if (!recognizedPattern.test(sub.heading)) {
+        const subBody = tokensToMarkdown(sub.tokens);
+        contentParts.push(`### ${sub.heading}\n\n${subBody}`);
+      }
+    }
+
+    const content = contentParts.join("\n\n").trim() || undefined;
+
     phases.push({
       id,
       number,
       name,
       overview,
+      content,
       changes,
       successCriteria: { automated, manual },
     });
