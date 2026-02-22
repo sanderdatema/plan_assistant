@@ -21,8 +21,9 @@
 {#if versions.length > 0}
 	<div class="flex items-center gap-3">
 		<div class="flex items-center gap-2">
-			<label class="text-text-dim text-xs">Version:</label>
+			<label class="text-text-dim text-xs" for="version-select">Version:</label>
 			<select
+				id="version-select"
 				class="bg-surface2 border-border rounded px-2 py-1 text-xs text-text"
 				value={currentVersion}
 				onchange={(e) => onSelectVersion(parseInt(e.currentTarget.value, 10))}

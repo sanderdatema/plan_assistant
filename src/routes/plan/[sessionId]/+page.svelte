@@ -159,13 +159,16 @@
 {#if plan}
 	<ProgressBar phases={plan.phases} phaseStatuses={feedbackStore.phaseStatuses} />
 
-	<!-- svelte-ignore a11y_no_static_element_interactions a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
 	<div
 		bind:this={planContentEl}
+		role="region"
+		aria-label="Plan content"
 		class="min-h-screen pb-20 pr-[22rem] pl-8 pt-4"
 		onmousemove={handleMouseMove}
 		onmouseleave={handleMouseLeave}
 		onclick={handlePlanClick}
+		onkeydown={(e) => { if (e.key === 'Enter') handlePlanClick(e as unknown as MouseEvent); }}
 	>
 		<PlanHeader meta={plan.meta} version={plan.meta.version} status={feedbackStore.status} />
 

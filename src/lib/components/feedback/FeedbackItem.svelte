@@ -11,9 +11,9 @@
 	let { comment, onUpdate, onDelete, onResolve }: Props = $props();
 
 	let editing = $state(false);
-	let editText = $state(comment.comment);
+	let editText = $state('');
 
-	// Sync editText when comment prop changes
+	// Sync editText when comment prop changes (including initial)
 	$effect(() => {
 		editText = comment.comment;
 	});

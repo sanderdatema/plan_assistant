@@ -5,7 +5,8 @@
 
 	let { data }: { data: PageData } = $props();
 
-	let sessions = $state<SessionMeta[]>(data.sessions);
+	let polledSessions = $state<SessionMeta[] | null>(null);
+	let sessions = $derived(polledSessions ?? data.sessions);
 
 	onMount(() => {
 		// Poll for new/updated sessions every 3 seconds
@@ -13,7 +14,7 @@
 			try {
 				const res = await fetch('/api/sessions');
 				if (res.ok) {
-					sessions = await res.json();
+					polledSessions = await res.json();
 				}
 			} catch {
 				// ignore
