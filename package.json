@@ -1,6 +1,6 @@
 {
   "name": "plan-assistant",
-  "version": "1.0.0-alpha.2",
+  "version": "1.0.0-alpha.3",
   "description": "Review implementation plans in the browser with live reload",
   "homepage": "https://github.com/sanderdatema/plan_assistant#readme",
   "bugs": {
@@ -35,8 +35,8 @@
     "marked": "^15.0.7"
   },
   "devDependencies": {
-    "@sveltejs/adapter-node": "^5.2.12",
-    "@sveltejs/kit": "^2.16.0",
+    "@sveltejs/adapter-node": "^5.5.3",
+    "@sveltejs/kit": "^2.53.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
     "@tailwindcss/vite": "^4.1.4",
     "@types/node": "^25.3.0",
