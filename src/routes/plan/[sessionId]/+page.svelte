@@ -57,6 +57,9 @@
 		} catch { /* ignore */ }
 	}
 
+	// Track the version we initialized feedback for
+	let lastFeedbackVersion = $state(0);
+
 	// Initialize stores from server data
 	$effect(() => {
 		if (data.plan) {
@@ -67,6 +70,15 @@
 				data.plan.meta.version,
 				data.feedback
 			);
+			lastFeedbackVersion = data.plan.meta.version;
+		}
+	});
+
+	// Reset feedback when plan version changes via SSE (new version = fresh review)
+	$effect(() => {
+		if (plan && plan.meta.version !== lastFeedbackVersion) {
+			lastFeedbackVersion = plan.meta.version;
+			feedbackStore.init(data.sessionId, plan.meta.title, plan.meta.version);
 		}
 	});
 
@@ -84,6 +96,12 @@
 
 	function handleMouseMove(event: MouseEvent) {
 		const target = event.target as HTMLElement;
+		// Don't highlight when hovering over interactive elements
+		if (target.closest('button, input, a, select, textarea')) {
+			hoveredElement = null;
+			hoverRect = null;
+			return;
+		}
 		const commentable = target.closest('[data-commentable]') as HTMLElement | null;
 
 		if (commentable && planContentEl?.contains(commentable)) {
@@ -119,6 +137,23 @@
 	function handleAddGeneralComment() {
 		feedbackStore.addComment('General', '', '');
 	}
+
+	// Mark elements that have comments with a visual indicator
+	$effect(() => {
+		if (!planContentEl) return;
+		const commentSections = new Set(
+			feedbackStore.comments.filter(c => !c.resolved).map(c => c.section)
+		);
+		const elements = planContentEl.querySelectorAll('[data-comment-label]');
+		for (const el of elements) {
+			const label = el.getAttribute('data-comment-label');
+			if (label && commentSections.has(label)) {
+				el.classList.add('has-comments');
+			} else {
+				el.classList.remove('has-comments');
+			}
+		}
+	});
 </script>
 
 {#if plan}
@@ -230,6 +265,8 @@
 				{phase}
 				phaseStatus={feedbackStore.phaseStatuses[phase.id]}
 				onSetStatus={(status, note) => feedbackStore.setPhaseStatus(phase.id, status, note)}
+				subItemStatuses={feedbackStore.subItemStatuses}
+				onSetSubItemStatus={(subItemId, status) => feedbackStore.setSubItemStatus(subItemId, phase.id, status, phase.subItems.map(si => si.id))}
 			/>
 		{/each}
 
@@ -323,3 +360,10 @@
 		</div>
 	</div>
 {/if}
+
+<style>
+	:global(.has-comments) {
+		border-left: 3px solid rgb(59, 130, 246);
+		padding-left: 0.5rem;
+	}
+</style>

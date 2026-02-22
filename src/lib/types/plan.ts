@@ -25,12 +25,20 @@ export interface PlanJson {
   references: string[];
 }
 
+export interface SubItem {
+  id: string;
+  letter: string;
+  name: string;
+  content: string;
+}
+
 export interface Phase {
   id: string;
   number: number;
   name: string;
   overview: string;
   content?: string;
+  subItems: SubItem[];
   changes: Change[];
   successCriteria: {
     automated: Criterion[];

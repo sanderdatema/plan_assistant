@@ -1,7 +1,7 @@
 import { Lexer, type Token, type Tokens } from "marked";
 import { createHash } from "node:crypto";
 import { basename } from "node:path";
-import type { Phase, Change, Criterion, Diagram } from "./types.js";
+import type { Phase, Change, Criterion, Diagram, SubItem } from "./types.js";
 import { generatePhaseFlowDiagram } from "./mermaid-gen.js";
 
 export interface PlanJson {
@@ -31,7 +31,7 @@ export interface PlanJson {
   references: string[];
 }
 
-export type { Phase, Change, Criterion, Diagram };
+export type { Phase, Change, Criterion, Diagram, SubItem };
 
 interface Section {
   heading: string;
@@ -266,18 +266,32 @@ function parsePhases(allSections: Section[]): Phase[] {
       : [];
 
     // Build content from direct tokens + unrecognized subsections
+    // Also extract sub-items (e.g. "### 1a. First sub-task")
     const recognizedPattern =
       /^(Overview|Changes\s+Required|Automated\s+Verification|Manual\s+Verification)$/i;
+    const subItemPattern = /^(\d+)([a-z])\.\s+(.+)/i;
     const contentParts: string[] = [];
+    const subItems: SubItem[] = [];
 
     // Direct tokens between "## Phase N:" and first "###"
     const phaseSection = allSections[i];
     const directText = tokensToMarkdown(phaseSection.tokens);
     if (directText) contentParts.push(directText);
 
-    // Unrecognized ### subsections
+    // Unrecognized ### subsections — check for sub-items first
     for (const sub of subSections) {
-      if (!recognizedPattern.test(sub.heading)) {
+      if (recognizedPattern.test(sub.heading)) continue;
+
+      const siMatch = sub.heading.match(subItemPattern);
+      if (siMatch && parseInt(siMatch[1], 10) === number) {
+        const letter = siMatch[2].toLowerCase();
+        subItems.push({
+          id: `${id}-${letter}`,
+          letter,
+          name: siMatch[3].trim(),
+          content: tokensToMarkdown(sub.tokens),
+        });
+      } else {
         const subBody = tokensToMarkdown(sub.tokens);
         contentParts.push(`### ${sub.heading}\n\n${subBody}`);
       }
@@ -291,6 +305,7 @@ function parsePhases(allSections: Section[]): Phase[] {
       name,
       overview,
       content,
+      subItems,
       changes,
       successCriteria: { automated, manual },
     });

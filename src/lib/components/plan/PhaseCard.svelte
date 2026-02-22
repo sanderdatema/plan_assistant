@@ -8,9 +8,11 @@
 		phase: Phase;
 		phaseStatus?: { phaseId: string; status: string; note?: string };
 		onSetStatus: (status: 'pending' | 'approved' | 'needs-work', note?: string) => void;
+		subItemStatuses?: Record<string, { subItemId: string; phaseId: string; status: string }>;
+		onSetSubItemStatus?: (subItemId: string, status: 'pending' | 'approved' | 'needs-work') => void;
 	}
 
-	let { phase, phaseStatus, onSetStatus }: Props = $props();
+	let { phase, phaseStatus, onSetStatus, subItemStatuses = {}, onSetSubItemStatus }: Props = $props();
 
 	let expanded = $state(true);
 
@@ -39,6 +41,32 @@
 				<MarkdownBlock content={phase.content} sectionPrefix="{phaseLabel} > Content" />
 			{:else if phase.overview}
 				<MarkdownBlock content={phase.overview} sectionPrefix="{phaseLabel} > Overview" />
+			{/if}
+
+			<!-- Sub-items -->
+			{#if phase.subItems.length > 0}
+				<div class="mt-4 space-y-3">
+					{#each phase.subItems as subItem}
+						<div
+							class="bg-surface border-border rounded-lg border p-4"
+							data-commentable
+							data-comment-label="{phaseLabel} > {phase.number}{subItem.letter}. {subItem.name}"
+						>
+							<div class="flex items-center justify-between gap-3">
+								<h4 class="text-sm font-semibold">{phase.number}{subItem.letter}. {subItem.name}</h4>
+								<PhaseStatusControl
+									status={subItemStatuses[subItem.id]?.status ?? 'pending'}
+									onSetStatus={(status) => onSetSubItemStatus?.(subItem.id, status)}
+								/>
+							</div>
+							{#if subItem.content}
+								<div class="mt-2">
+									<MarkdownBlock content={subItem.content} sectionPrefix="{phaseLabel} > {subItem.name}" />
+								</div>
+							{/if}
+						</div>
+					{/each}
+				</div>
 			{/if}
 
 			<!-- Changes -->
