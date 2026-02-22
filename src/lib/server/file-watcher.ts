@@ -5,14 +5,18 @@ import { readFileSync } from "node:fs";
 import { broadcast } from "./sse-manager.js";
 import { snapshotVersion } from "./session-manager.js";
 
-const BASE_DIR = join(homedir(), ".plan-assistant", "sessions");
+function getBaseDir(): string {
+  return (
+    process.env.SESSION_DIR || join(homedir(), ".plan-assistant", "sessions")
+  );
+}
 
 let watcher: ReturnType<typeof watch> | null = null;
 
 export function startWatcher() {
   if (watcher) return;
 
-  watcher = watch(BASE_DIR, {
+  watcher = watch(getBaseDir(), {
     ignoreInitial: true,
     depth: 2,
     awaitWriteFinish: {
@@ -45,7 +49,7 @@ export function startWatcher() {
   watcher.on("change", handlePlanChange);
   watcher.on("add", handlePlanChange);
 
-  console.log("[file-watcher] Watching", BASE_DIR);
+  console.log("[file-watcher] Watching", getBaseDir());
 }
 
 export function stopWatcher() {
