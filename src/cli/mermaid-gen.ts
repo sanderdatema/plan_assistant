@@ -1,4 +1,4 @@
-import type { Phase, Diagram } from "./types.js";
+import type { Phase, Diagram } from "../lib/types/index.js";
 
 export function generatePhaseFlowDiagram(phases: Phase[]): Diagram {
   const lines: string[] = ["graph LR"];

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { SectionDiff } from '$lib/utils/diff.js';
+	import { diffStatusColor, diffStatusBadge } from '$lib/utils/status.js';
 
 	interface Props {
 		diffs: SectionDiff[];
@@ -16,24 +17,6 @@
 			case 'removed': return '−';
 			case 'changed': return '~';
 			default: return '';
-		}
-	}
-
-	function statusColor(status: string) {
-		switch (status) {
-			case 'added': return 'border-l-green bg-green/5';
-			case 'removed': return 'border-l-red bg-red/5';
-			case 'changed': return 'border-l-orange bg-orange/5';
-			default: return 'border-l-border';
-		}
-	}
-
-	function statusBadge(status: string) {
-		switch (status) {
-			case 'added': return 'bg-green/15 text-green';
-			case 'removed': return 'bg-red/15 text-red';
-			case 'changed': return 'bg-orange/15 text-orange';
-			default: return 'bg-text-dim/15 text-text-dim';
 		}
 	}
 </script>
@@ -61,9 +44,9 @@
 	{:else}
 		<div class="divide-y divide-border">
 			{#each diffs as diff}
-				<div class="border-l-3 p-4 {statusColor(diff.status)}">
+				<div class="border-l-3 p-4 {diffStatusColor(diff.status)}">
 					<div class="mb-2 flex items-center gap-2">
-						<span class="rounded-full px-2 py-0.5 text-xs font-semibold {statusBadge(diff.status)}">
+						<span class="rounded-full px-2 py-0.5 text-xs font-semibold {diffStatusBadge(diff.status)}">
 							{statusIcon(diff.status)} {diff.status}
 						</span>
 						<span class="text-sm font-medium">{diff.section}</span>

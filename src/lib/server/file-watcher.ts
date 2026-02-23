@@ -1,15 +1,7 @@
 import { watch } from "chokidar";
-import { join } from "node:path";
-import { homedir } from "node:os";
 import { readFileSync } from "node:fs";
 import { broadcast } from "./sse-manager.js";
-import { snapshotVersion } from "./session-manager.js";
-
-function getBaseDir(): string {
-  return (
-    process.env.SESSION_DIR || join(homedir(), ".plan-assistant", "sessions")
-  );
-}
+import { snapshotVersion, getBaseDir } from "./session-manager.js";
 
 let watcher: ReturnType<typeof watch> | null = null;
 
@@ -25,36 +17,32 @@ export function startWatcher() {
     },
   });
 
-  function handlePlanChange(filePath: string) {
-    if (!filePath.endsWith("/plan.json")) return;
+  function handleFileChange(filePath: string) {
+    if (filePath.endsWith("/plan.json")) {
+      const parts = filePath.split("/");
+      const planIdx = parts.lastIndexOf("plan.json");
+      if (planIdx < 1) return;
+      const sessionId = parts[planIdx - 1];
 
-    const parts = filePath.split("/");
-    const planIdx = parts.lastIndexOf("plan.json");
-    if (planIdx < 1) return;
-    const sessionId = parts[planIdx - 1];
+      console.log(`[file-watcher] plan.json changed for session: ${sessionId}`);
 
-    console.log(`[file-watcher] plan.json changed for session: ${sessionId}`);
+      try {
+        const content = readFileSync(filePath, "utf-8");
+        const plan = JSON.parse(content);
 
-    try {
-      const content = readFileSync(filePath, "utf-8");
-      const plan = JSON.parse(content);
-
-      snapshotVersion(sessionId, plan);
-      broadcast(sessionId, "plan-updated", plan);
-    } catch (err) {
-      console.error("[file-watcher] Error processing plan change:", err);
+        snapshotVersion(sessionId, plan);
+        broadcast(sessionId, "plan-updated", plan);
+      } catch (err) {
+        console.error("[file-watcher] Error processing plan change:", err);
+      }
+    } else if (filePath.endsWith("/meta.json")) {
+      console.log(`[file-watcher] meta.json changed`);
+      broadcast("*", "sessions-updated", {});
     }
   }
 
-  watcher.on("change", handlePlanChange);
-  watcher.on("add", handlePlanChange);
+  watcher.on("change", handleFileChange);
+  watcher.on("add", handleFileChange);
 
   console.log("[file-watcher] Watching", getBaseDir());
-}
-
-export function stopWatcher() {
-  if (watcher) {
-    watcher.close();
-    watcher = null;
-  }
 }

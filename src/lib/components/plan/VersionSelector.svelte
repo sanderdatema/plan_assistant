@@ -37,14 +37,12 @@
 			</select>
 		</div>
 
-		{#if versions.length > 0}
-			<button
-				class="text-text-dim hover:text-accent rounded px-2 py-1 text-xs transition-colors"
-				onclick={() => compareMode = !compareMode}
-			>
-				{compareMode ? 'Hide diff' : 'Compare versions'}
-			</button>
-		{/if}
+		<button
+			class="text-text-dim hover:text-accent rounded px-2 py-1 text-xs transition-colors"
+			onclick={() => compareMode = !compareMode}
+		>
+			{compareMode ? 'Hide diff' : 'Compare versions'}
+		</button>
 
 		{#if compareMode}
 			<div class="flex items-center gap-2">

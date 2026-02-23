@@ -2,258 +2,284 @@
   "master": {
     "tasks": [
       {
-        "id": 1,
+        "id": "1",
         "title": "Consolidate duplicate type definitions into single shared module",
         "description": "Three parallel, partially-inconsistent type definition sets exist: src/cli/types.ts, src/cli/markdown-to-plan.ts (lines 7–35), and src/lib/types/ (plan.ts, feedback.ts, session.ts). SubItem, Phase, Change, Criterion, Diagram, SessionMeta, FeedbackPayload, and FeedbackComment are each defined in at least two places with no type-level guarantee they stay in sync. Create a single shared types barrel that both CLI and server import from.",
         "details": "1. Create src/lib/types/index.ts as a barrel re-exporting from plan.ts, feedback.ts, session.ts\n2. Update src/cli/markdown-to-plan.ts to import PlanJson and domain types from ../../lib/types/index.js (relative path since CLI can't use $lib)\n3. Remove src/cli/types.ts entirely\n4. Update src/cli/commands/review.ts:9 and src/cli/commands/status.ts:5 to import from the new shared location\n5. Verify tsconfig paths allow this cross-boundary import",
         "testStrategy": "Run svelte-check and vitest to verify no type errors or test regressions. Verify CLI commands still work with: npx plan-assistant review, npx plan-assistant status",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.921Z"
       },
       {
-        "id": 2,
+        "id": "2",
         "title": "Fix require() in ESM module in export-html.ts",
         "description": "src/cli/export-html.ts:60 uses `const hljs = require(\"highlight.js\")` inside a try/catch. The package uses \"type\": \"module\", so require() is undefined without createRequire. The try/catch silently swallows the ReferenceError, meaning HTML exports always produce unhighlighted code even though highlight.js is a listed dev dependency.",
         "details": "Replace `const hljs = require(\"highlight.js\")` with either:\n- `import { createRequire } from 'node:module'; const require = createRequire(import.meta.url); const hljs = require('highlight.js');`\n- Or a top-level dynamic `const hljs = await import('highlight.js').then(m => m.default).catch(() => null);`\nThe second approach is cleaner for ESM. Ensure the try/catch still handles the case where highlight.js is not installed.",
         "testStrategy": "Run `npx plan-assistant export --html` on a sample plan and verify code blocks have syntax highlighting classes applied.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.923Z"
       },
       {
-        "id": 3,
+        "id": "3",
         "title": "Fix version snapshot not written on CLI file-watch updates",
         "description": "src/cli/commands/review.ts:276–301 — The watcher's change handler increments the version and writes plan.json, but never writes to versions/v{N}.json. The initial review call writes v1.json at line 215, but subsequent live-reload updates skip versioning. The server's file-watcher.ts:42 calls snapshotVersion, but the CLI watcher does not. GET /api/sessions/:id/versions always returns [1] even after multiple reloads.",
         "details": "In the watcher's change handler in src/cli/commands/review.ts (around line 276–301), after incrementing the version and writing plan.json, add a call to write the version snapshot file (versions/v{N}.json). Follow the same pattern used in the initial write at line 215 and in src/lib/server/file-watcher.ts:42 (snapshotVersion).",
         "testStrategy": "Start a review session, modify the source markdown file, verify that versions/ directory contains v1.json, v2.json etc. after each change. Verify the version selector in the UI shows the full history.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.924Z"
       },
       {
-        "id": 4,
+        "id": "4",
         "title": "Add updateSessionStatus() to session-manager and use in approve endpoint",
         "description": "src/routes/api/sessions/[sessionId]/approve/+server.ts:13–19 directly calls readFileSync/writeFileSync to patch meta.json instead of using a session-manager function. This bypasses the abstraction and will break if getBaseDir() logic changes. Also, cpSync is imported but never used in session-manager.ts (dead import).",
         "details": "1. Add `updateSessionStatus(sessionId: string, status: string): void` to src/lib/server/session-manager.ts\n2. Refactor src/routes/api/sessions/[sessionId]/approve/+server.ts to call updateSessionStatus() instead of raw fs operations\n3. Remove the unused cpSync import from session-manager.ts (L1)\n4. This also resolves L1 (dead cpSync import)",
         "testStrategy": "Test the approve flow end-to-end: start a review session, approve it via the UI, verify meta.json is updated correctly. Run vitest.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "high",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.925Z"
       },
       {
-        "id": 5,
+        "id": "5",
         "title": "Extract shared parseDuration utility from clean.ts and status.ts",
         "description": "src/cli/commands/clean.ts:9–18 and src/cli/commands/status.ts:103–115 both define a local parseDuration function with slightly different suffix support (clean: h/d/w; status: ms/s/m/h/d) and return types (number|null vs number). Extract to a unified src/cli/utils.ts with a single signature supporting all suffixes.",
         "details": "1. Create src/cli/utils.ts with a unified parseDuration(input: string): number | null supporting ms/s/m/h/d/w suffixes\n2. Update src/cli/commands/clean.ts to import from ../utils.js\n3. Update src/cli/commands/status.ts to import from ../utils.js\n4. Remove the local parseDuration definitions from both files\n5. Also move ensureDir here (see H4)",
         "testStrategy": "Run vitest. Test clean and status commands with various duration strings (e.g., \"7d\", \"24h\", \"2w\", \"500ms\").",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.926Z"
       },
       {
-        "id": 6,
+        "id": "6",
         "title": "Extract shared status badge/color helper from 4 duplicated components",
         "description": "The approved/needs-work/pending status-to-CSS-class mapping is reinvented in PhaseTable.svelte:12–17 (badgeClass), PlanHeader.svelte:16–21 (statusColor), +page.svelte:37–48 (statusBadge), and DiffView.svelte:22–38 (statusColor + statusBadge). Extract one statusColors(status: string): string helper to src/lib/utils/status.ts.",
         "details": "1. Create src/lib/utils/status.ts with a statusBadgeClass(status: string): string function\n2. Update PhaseTable.svelte to import and use it instead of local badgeClass\n3. Update PlanHeader.svelte to import and use it instead of local statusColor\n4. Update +page.svelte to import and use it instead of local statusBadge\n5. Update DiffView.svelte to import and use it instead of local statusColor/statusBadge",
         "testStrategy": "Run svelte-check. Visually verify status badges render correctly in all views (phase table, plan header, session list, diff view).",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.926Z"
       },
       {
-        "id": 7,
+        "id": "7",
         "title": "Deduplicate getBaseDir() between session-manager.ts and file-watcher.ts",
         "description": "src/lib/server/session-manager.ts:15–18 and src/lib/server/file-watcher.ts:8–11 both implement identical getBaseDir() (process.env.SESSION_DIR || join(homedir(), \".plan-assistant\", \"sessions\")). The watcher already imports from session-manager, so it can import getBaseDir from there too.",
         "details": "1. Export getBaseDir() from src/lib/server/session-manager.ts (if not already exported)\n2. In src/lib/server/file-watcher.ts, remove the local getBaseDir() and import it from ./session-manager.js\n3. Verify no other files duplicate this logic",
         "testStrategy": "Run vitest. Start a review session and verify file watching still works correctly.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.927Z"
       },
       {
-        "id": 8,
+        "id": "8",
         "title": "Deduplicate ensureDir() between session-manager.ts and review.ts",
         "description": "src/lib/server/session-manager.ts:21–24 and src/cli/commands/review.ts:21–25 both define the same two-line ensureDir(dir) helper. The CLI cannot import from $lib/server, but the helper can go in src/cli/utils.ts (alongside parseDuration from H1).",
         "details": "1. Add ensureDir to src/cli/utils.ts (created in task for H1)\n2. Update src/cli/commands/review.ts to import ensureDir from ../utils.js\n3. Keep the server-side copy in session-manager.ts (or extract to src/lib/server/utils.ts if desired)\n4. Depends on H1 task creating src/cli/utils.ts",
         "testStrategy": "Run vitest. Run npx plan-assistant review on a plan file and verify session directory is created correctly.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
-          5
+          "5"
         ],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.928Z"
       },
       {
-        "id": 9,
+        "id": "9",
         "title": "Fix marked.setOptions called on every render in MarkdownBlock.svelte",
         "description": "src/lib/components/plan/MarkdownBlock.svelte:13–17 — $derived.by re-runs on every content change and calls marked.setOptions({ gfm: true, breaks: false }) every time. These are constant options that never change, mutating a global singleton on each reactive update.",
         "details": "Move marked.setOptions({ gfm: true, breaks: false }) to module-level initialization (outside the derived block), or better yet use per-call options with marked v15: marked.parse(content, { gfm: true, breaks: false })",
         "testStrategy": "Run svelte-check. Verify markdown content still renders correctly in plan views.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.929Z"
       },
       {
-        "id": 10,
+        "id": "10",
         "title": "Make openBrowser cross-platform in review.ts",
         "description": "src/cli/commands/review.ts:124–129 uses execSync('open \"...\"') which is macOS-only. On Linux the equivalent is xdg-open and on Windows it is start. Since this is an npx tool that runs cross-platform, this is a real UX gap.",
         "details": "Replace the macOS-only `open` command with a cross-platform check:\n- darwin: open\n- linux: xdg-open\n- win32: start\nUse process.platform to select the right command. Keep the URL-print fallback for unknown platforms.",
         "testStrategy": "Test on macOS. Verify the fallback path prints the URL when the open command fails.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.929Z"
       },
       {
-        "id": 11,
+        "id": "11",
         "title": "Remove redundant readMeta call in clean.ts",
         "description": "src/cli/commands/clean.ts:64 — findSessionDirs() already reads and returns meta for every entry (session-reader.ts:69–72). The loop then calls readMeta(entry.sessionDir) again, performing a redundant filesystem read. Use the already-available entry.meta directly.",
         "details": "In src/cli/commands/clean.ts, replace the readMeta(entry.sessionDir) call with entry.meta. Verify the types match.",
         "testStrategy": "Run vitest. Run npx plan-assistant clean --dry-run and verify output is correct.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.930Z"
       },
       {
-        "id": 12,
+        "id": "12",
         "title": "Remove or wire up unused stopWatcher export in file-watcher.ts",
         "description": "src/lib/server/file-watcher.ts:55–60 — stopWatcher is exported but has no consumers. The server process lifecycle does not call it. Either wire it up to a graceful shutdown handler or remove the export.",
         "details": "If graceful shutdown is not needed, remove the stopWatcher function entirely. If it should be used, wire it to the SvelteKit server shutdown hook.",
         "testStrategy": "Run svelte-check and vitest. Verify no import errors.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.931Z"
       },
       {
-        "id": 13,
+        "id": "13",
         "title": "Remove or use unused hasClients export in sse-manager.ts",
         "description": "src/lib/server/sse-manager.ts:45–47 — hasClients is exported but has no consumers. It may have been intended for a \"skip broadcast if no listeners\" optimization. Either use it in broadcast() or remove it.",
         "details": "Option A: Remove hasClients entirely. Option B: Use it in broadcast() to short-circuit when no clients are connected.",
         "testStrategy": "Run svelte-check and vitest.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.931Z"
       },
       {
-        "id": 14,
+        "id": "14",
         "title": "Merge double import statement in list.ts",
         "description": "src/cli/commands/list.ts:2–3 — findSessionDirs and readFeedback are imported on separate lines from the same module \"../session-reader.js\". Merge into a single import statement.",
         "details": "Combine the two import lines into: import { findSessionDirs, readFeedback } from \"../session-reader.js\";",
         "testStrategy": "Run svelte-check. Run npx plan-assistant list.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.932Z"
       },
       {
-        "id": 15,
+        "id": "15",
         "title": "Remove redundant src/cli/types.ts file",
         "description": "src/cli/types.ts re-declares every type already in src/cli/markdown-to-plan.ts (which re-exports from the same file). Only two files import from ../types.js: review.ts:9 (SessionMeta) and status.ts:5 (FeedbackPayload). Both could import from the shared types module instead.",
         "details": "This is a subtask of the type consolidation (task 1). Once shared types are set up, delete src/cli/types.ts and update the two import sites.",
         "testStrategy": "Run svelte-check and vitest. Verify no import errors.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
-          1
+          "1"
         ],
         "priority": "low",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.933Z"
       },
       {
-        "id": 16,
+        "id": "16",
         "title": "Remove duplicate PlanJson definition from markdown-to-plan.ts",
         "description": "src/cli/markdown-to-plan.ts:7–33 defines PlanJson locally and src/lib/types/plan.ts:1–27 defines it identically. The parser should import PlanJson from the shared types location rather than redefine it.",
         "details": "After type consolidation (task 1), update markdown-to-plan.ts to import PlanJson from the shared types module instead of defining it locally.",
         "testStrategy": "Run svelte-check and vitest.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [
-          1
+          "1"
         ],
         "priority": "low",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.933Z"
       },
       {
-        "id": 17,
+        "id": "17",
         "title": "Fix fragile @ts-expect-error SSE controller cancellation logic",
         "description": "src/routes/api/sse/[sessionId]/+server.ts:26–27 — assigns to a non-existent property on ReadableStreamDefaultController with @ts-expect-error. The removeClient call in the cancel() body at line 33 may be unreachable because real cleanup happens elsewhere. The correct pattern is to use the cancel() method on the ReadableStream options object.",
         "details": "Review the SSE endpoint implementation. Ensure removeClient is actually called on stream cancellation. Remove the @ts-expect-error hack and use proper ReadableStream cancel() callback pattern.",
         "testStrategy": "Run svelte-check. Test SSE by connecting a client, then disconnecting — verify the client is properly removed from the manager.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.934Z"
       },
       {
-        "id": 18,
+        "id": "18",
         "title": "Remove redundant version prop from PlanHeader component",
         "description": "src/lib/components/plan/PlanHeader.svelte:6–12 accepts both meta (which contains version) and a separate version: number prop. The caller at +page.svelte:199 passes version={plan.meta.version}, which is the same value. Remove the separate version prop and read meta.version inside the component.",
         "details": "1. Remove the version prop from PlanHeader.svelte\n2. Use meta.version internally\n3. Update the caller in +page.svelte to stop passing the version prop",
         "testStrategy": "Run svelte-check. Verify plan header still shows the correct version number.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.934Z"
       },
       {
-        "id": 19,
+        "id": "19",
         "title": "Remove redundant inner {#if} guard in VersionSelector.svelte",
         "description": "src/lib/components/plan/VersionSelector.svelte:40 — The outer {#if versions.length > 0} at line 21 already guarantees the inner block only renders when there are versions, making the identical inner check at line 40 dead code.",
         "details": "Remove the inner {#if versions.length > 0} block at line 40, keeping its contents.",
         "testStrategy": "Run svelte-check. Verify version selector still works correctly.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "low",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.935Z"
       },
       {
-        "id": 20,
+        "id": "20",
         "title": "Extract CLI utility module (src/cli/utils.ts)",
         "description": "S2: Multiple CLI commands duplicate small helpers (parseDuration, ensureDir). Create src/cli/utils.ts to consolidate CLI-side shared utilities. The commands already follow a clean pattern; this just completes it.",
         "details": "This is the structural enabler for tasks 5 (parseDuration) and 8 (ensureDir). Create the file, then those tasks populate it. Can be done as part of task 5.",
         "testStrategy": "Run vitest and svelte-check after creation.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.936Z"
       },
       {
-        "id": 21,
+        "id": "21",
         "title": "Consider splitting markdown-to-plan.ts (880 lines) into parser + orchestrator",
         "description": "S4: At 880 lines, markdown-to-plan.ts contains the public API (parseMarkdownToPlan, sessionIdFromPath), 12 internal parsing utilities, phase matching logic, and two exported constant patterns. The _internal export for testing suggests the file has grown beyond its original intent.",
         "details": "Split into:\n- markdown-parser.ts: all parse* and extract* functions, the Section type, _internal export\n- markdown-to-plan.ts: only the top-level parseMarkdownToPlan orchestrator plus sessionIdFromPath\nThis creates two ~400-line files that are easier to navigate. Update all imports accordingly.",
         "testStrategy": "Run vitest (all 38 tests must pass). Run svelte-check. Test with npx plan-assistant review on a sample plan.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.936Z"
       },
       {
-        "id": 22,
+        "id": "22",
         "title": "Replace polling with SSE on sessions index page",
         "description": "S5: src/routes/+page.svelte:11–25 polls GET /api/sessions every 3 seconds. The project already has SSE infrastructure (sse-manager.ts, file-watcher.ts). A broadcast('*', 'sessions-updated', ...) call in file-watcher.ts when any meta.json changes would allow the index page to update reactively via SSE rather than polling.",
         "details": "1. In file-watcher.ts, add a broadcast when meta.json changes: broadcast('*', 'sessions-updated', ...)\n2. In +page.svelte, replace the setInterval polling with an EventSource connection to /api/sse/*\n3. On receiving a sessions-updated event, re-fetch the sessions list\n4. Keep a manual refresh button as fallback\n5. The SSE system already handles reconnection",
         "testStrategy": "Start a review session. Open the index page. Verify sessions list updates automatically when a new session is created or a session status changes, without the 3-second polling delay.",
-        "status": "pending",
+        "status": "done",
         "dependencies": [],
         "priority": "medium",
-        "subtasks": []
+        "subtasks": [],
+        "updatedAt": "2026-02-23T17:44:26.937Z"
       }
     ],
     "metadata": {
-      "created": "2026-02-23T17:05:37.172Z",
-      "description": "Default tasks context",
-      "updated": "2026-02-23T17:07:28.156Z"
+      "version": "1.0.0",
+      "lastModified": "2026-02-23T17:44:26.937Z",
+      "taskCount": 22,
+      "completedCount": 22,
+      "tags": [
+        "master"
+      ]
     }
   }
 }

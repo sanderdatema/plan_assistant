@@ -4,7 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "outDir": "dist",
-    "rootDir": "src/cli",
+    "rootDir": "src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -13,5 +13,5 @@
     "declaration": false,
     "sourceMap": false
   },
-  "include": ["src/cli/**/*.ts"]
+  "include": ["src/cli/**/*.ts", "src/lib/types/**/*.ts"]
 }

@@ -5,8 +5,11 @@
 
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
-import type { SessionMeta, FeedbackPayload } from "./types.js";
-import type { PlanJson } from "./markdown-to-plan.js";
+import type {
+  SessionMeta,
+  FeedbackPayload,
+  PlanJson,
+} from "../lib/types/index.js";
 
 export function readMeta(sessionDir: string): SessionMeta | null {
   const path = join(sessionDir, "meta.json");

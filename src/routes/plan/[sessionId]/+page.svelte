@@ -196,7 +196,7 @@
 		onclick={handlePlanClick}
 		onkeydown={(e) => { if (e.key === 'Enter') handlePlanClick(e as unknown as MouseEvent); }}
 	>
-		<PlanHeader meta={plan.meta} version={plan.meta.version} status={feedbackStore.status} />
+		<PlanHeader meta={plan.meta} status={feedbackStore.status} />
 
 		<!-- Version Selector -->
 		<div class="mt-4 mb-2">

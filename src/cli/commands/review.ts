@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn, execSync } from "node:child_process";
@@ -6,7 +6,8 @@ import { createServer } from "node:net";
 import { watch } from "chokidar";
 import { parseMarkdownToPlan, sessionIdFromPath } from "../markdown-to-plan.js";
 import { outputJson } from "../output.js";
-import type { SessionMeta } from "../types.js";
+import type { SessionMeta } from "../../lib/types/index.js";
+import { ensureDir } from "../utils.js";
 import type { ParsedArgs } from "../index.js";
 
 const DEFAULT_BASE_PORT = 5181;
@@ -14,14 +15,8 @@ const MAX_PORT = 5199;
 
 function getPackageDir(): string {
   const thisFile = fileURLToPath(import.meta.url);
-  // dist/commands/review.js -> package root
-  return resolve(dirname(thisFile), "../..");
-}
-
-function ensureDir(dir: string) {
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
+  // dist/cli/commands/review.js -> package root
+  return resolve(dirname(thisFile), "../../..");
 }
 
 async function checkHealth(
@@ -123,7 +118,13 @@ function startServer(sessionDir: string, port: number): Promise<void> {
 
 function openBrowser(url: string) {
   try {
-    execSync(`open "${url}"`, { stdio: "ignore" });
+    const cmd =
+      process.platform === "darwin"
+        ? "open"
+        : process.platform === "win32"
+          ? "start"
+          : "xdg-open";
+    execSync(`${cmd} "${url}"`, { stdio: "ignore" });
   } catch {
     console.log(`Open in browser: ${url}`);
   }
@@ -291,6 +292,10 @@ export async function review(args: ParsedArgs) {
 
       writeFileSync(
         join(sessionPath, "plan.json"),
+        JSON.stringify(newPlan, null, 2),
+      );
+      writeFileSync(
+        join(sessionPath, "versions", `v${newVersion}.json`),
         JSON.stringify(newPlan, null, 2),
       );
       console.error(

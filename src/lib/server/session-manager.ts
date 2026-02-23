@@ -4,7 +4,6 @@ import {
   mkdirSync,
   existsSync,
   readdirSync,
-  cpSync,
 } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -12,7 +11,7 @@ import type { SessionMeta } from "$lib/types/session.js";
 import type { PlanJson } from "$lib/types/plan.js";
 import type { FeedbackPayload } from "$lib/types/feedback.js";
 
-function getBaseDir(): string {
+export function getBaseDir(): string {
   return (
     process.env.SESSION_DIR || join(homedir(), ".plan-assistant", "sessions")
   );
@@ -112,6 +111,23 @@ export function listVersions(sessionId: string): number[] {
     .map((f) => parseInt(f.slice(1, -5), 10))
     .filter((n) => !isNaN(n))
     .sort((a, b) => a - b);
+}
+
+export function updateSessionStatus(
+  sessionId: string,
+  status: SessionMeta["status"],
+): void {
+  const meta = getSession(sessionId);
+  if (!meta) throw new Error(`Session not found: ${sessionId}`);
+  const updated: SessionMeta = {
+    ...meta,
+    status,
+    updatedAt: new Date().toISOString(),
+  };
+  writeFileSync(
+    join(getSessionDir(sessionId), "meta.json"),
+    JSON.stringify(updated, null, 2),
+  );
 }
 
 export function getVersion(

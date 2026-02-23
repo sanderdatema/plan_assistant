@@ -3,17 +3,19 @@ import { addClient, removeClient } from '$lib/server/sse-manager.js';
 
 export const GET: RequestHandler = async ({ params }) => {
 	const sessionId = params.sessionId;
+	let interval: ReturnType<typeof setInterval>;
+	let client: ReturnType<typeof addClient>;
 
 	const stream = new ReadableStream({
 		start(controller) {
-			const client = addClient(sessionId, controller);
+			client = addClient(sessionId, controller);
 
 			// Send initial heartbeat
 			const encoder = new TextEncoder();
 			controller.enqueue(encoder.encode(': heartbeat\n\n'));
 
 			// Heartbeat every 30s to keep connection alive
-			const interval = setInterval(() => {
+			interval = setInterval(() => {
 				try {
 					controller.enqueue(encoder.encode(': heartbeat\n\n'));
 				} catch {
@@ -21,16 +23,10 @@ export const GET: RequestHandler = async ({ params }) => {
 					removeClient(client);
 				}
 			}, 30000);
-
-			// Cleanup when client disconnects
-			// @ts-expect-error - cancel is valid on ReadableStream controllers
-			controller.cancel = () => {
-				clearInterval(interval);
-				removeClient(client);
-			};
 		},
 		cancel() {
-			// handled above
+			clearInterval(interval);
+			removeClient(client);
 		}
 	});
 

@@ -1,22 +1,10 @@
 import { existsSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
 import { findSessionDirs } from "../session-reader.js";
-import { readMeta } from "../session-reader.js";
 import { outputJson, outputError } from "../output.js";
+import { parseDuration } from "../utils.js";
 import type { ParsedArgs } from "../index.js";
 import * as readline from "node:readline";
-
-function parseDuration(s: string): number | null {
-  const match = s.match(/^(\d+)(h|d|w)$/);
-  if (!match) return null;
-  const n = parseInt(match[1], 10);
-  switch (match[2]) {
-    case "h": return n * 3600 * 1000;
-    case "d": return n * 86400 * 1000;
-    case "w": return n * 7 * 86400 * 1000;
-    default: return null;
-  }
-}
 
 async function confirm(message: string): Promise<boolean> {
   const rl = readline.createInterface({
@@ -33,7 +21,9 @@ async function confirm(message: string): Promise<boolean> {
 
 export async function clean(args: ParsedArgs) {
   const dir =
-    typeof args.flags.dir === "string" ? resolve(args.flags.dir) : process.cwd();
+    typeof args.flags.dir === "string"
+      ? resolve(args.flags.dir)
+      : process.cwd();
 
   const all = args.flags.all === true;
   const dryRun = args.flags["dry-run"] === true;
@@ -58,10 +48,14 @@ export async function clean(args: ParsedArgs) {
   const sessions = findSessionDirs(dir);
   const now = Date.now();
 
-  const toRemove: Array<{ sessionId: string; sessionDir: string; reason: string }> = [];
+  const toRemove: Array<{
+    sessionId: string;
+    sessionDir: string;
+    reason: string;
+  }> = [];
 
   for (const entry of sessions) {
-    const meta = readMeta(entry.sessionDir);
+    const meta = entry.meta;
     if (!meta) continue;
 
     // Orphan detection: markdown file no longer exists
