@@ -10,13 +10,7 @@
 
 	let { content, sectionPrefix }: Props = $props();
 
-	let html = $derived.by(() => {
-		marked.setOptions({
-			gfm: true,
-			breaks: false
-		});
-		return marked.parse(content) as string;
-	});
+	let html = $derived(marked.parse(content, { gfm: true, breaks: false }) as string);
 
 	let container: HTMLDivElement;
 

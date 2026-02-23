@@ -1,12 +1,13 @@
 import { resolve } from "node:path";
-import { findSessionDirs } from "../session-reader.js";
-import { readFeedback } from "../session-reader.js";
+import { findSessionDirs, readFeedback } from "../session-reader.js";
 import { outputJson } from "../output.js";
 import type { ParsedArgs } from "../index.js";
 
 export async function list(args: ParsedArgs) {
   const dir =
-    typeof args.flags.dir === "string" ? resolve(args.flags.dir) : process.cwd();
+    typeof args.flags.dir === "string"
+      ? resolve(args.flags.dir)
+      : process.cwd();
 
   const sessions = findSessionDirs(dir);
 

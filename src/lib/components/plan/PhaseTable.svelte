@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { Phase } from '$lib/types/plan.js';
+	import { statusBadgeClass } from '$lib/utils/status.js';
 
 	interface Props {
 		phases: Phase[];
@@ -8,14 +9,6 @@
 	}
 
 	let { phases, phaseStatuses, onSetStatus }: Props = $props();
-
-	function badgeClass(status: string) {
-		switch (status) {
-			case 'approved': return 'bg-green/15 text-green';
-			case 'needs-work': return 'bg-orange/15 text-orange';
-			default: return 'bg-accent/15 text-accent';
-		}
-	}
 
 	function badgeLabel(status: string) {
 		switch (status) {
@@ -47,7 +40,7 @@
 					</td>
 					<td class="border-b border-border px-3 py-2">
 						<button
-							class="inline-block cursor-pointer rounded-full px-2 py-0.5 text-xs font-semibold {badgeClass(status)}"
+							class="inline-block cursor-pointer rounded-full px-2 py-0.5 text-xs font-semibold {statusBadgeClass(status)}"
 							onclick={() => {
 								const next = status === 'pending' ? 'approved' : status === 'approved' ? 'needs-work' : 'pending';
 								onSetStatus(phase.id, next);

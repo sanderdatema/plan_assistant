@@ -1,5 +1,8 @@
-import type { PlanJson } from "./markdown-to-plan.js";
-import type { FeedbackPayload, FeedbackComment } from "./types.js";
+import type {
+  PlanJson,
+  FeedbackPayload,
+  FeedbackComment,
+} from "../lib/types/index.js";
 
 function escapeHtml(text: string): string {
   return text
@@ -26,10 +29,7 @@ function renderPhaseStatus(
   return `<span style="display:inline-block;padding:2px 8px;border-radius:9999px;font-size:12px;font-weight:600;${colors[ps.status] ?? colors.pending}">${ps.status}</span>`;
 }
 
-function renderComments(
-  comments: FeedbackComment[],
-  phaseId?: string,
-): string {
+function renderComments(comments: FeedbackComment[], phaseId?: string): string {
   const filtered = phaseId
     ? comments.filter((c) => c.phaseId === phaseId)
     : comments.filter((c) => !c.phaseId);
@@ -53,11 +53,25 @@ function renderComments(
   return `<div style="margin:12px 0">${items}</div>`;
 }
 
+import { createRequire } from "node:module";
+
+type HljsLike = {
+  getLanguage(lang: string): unknown;
+  highlight(code: string, opts: { language: string }): { value: string };
+  highlightAuto(code: string): { value: string };
+};
+
+let hljs: HljsLike | null = null;
+try {
+  const require = createRequire(import.meta.url);
+  hljs = require("highlight.js") as HljsLike;
+} catch {
+  // highlight.js not available
+}
+
 function highlightCode(code: string, lang?: string): string {
+  if (!hljs) return escapeHtml(code);
   try {
-    // Dynamic import of highlight.js for server-side highlighting
-    // eslint-disable-next-line @typescript-eslint/no-var-requires
-    const hljs = require("highlight.js");
     if (lang && hljs.getLanguage(lang)) {
       return hljs.highlight(code, { language: lang }).value;
     }

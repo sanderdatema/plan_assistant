@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { statusBadgeClass } from '$lib/utils/status.js';
+
 	interface Props {
 		meta: {
 			title: string;
@@ -7,19 +9,10 @@
 			markdownPath: string;
 			version: number;
 		};
-		version: number;
 		status: string;
 	}
 
-	let { meta, version, status }: Props = $props();
-
-	function statusColor(s: string) {
-		switch (s) {
-			case 'approved': return 'bg-green/15 text-green';
-			case 'needs-work': return 'bg-orange/15 text-orange';
-			default: return 'bg-accent/15 text-accent';
-		}
-	}
+	let { meta, status }: Props = $props();
 </script>
 
 <header class="mb-6">
@@ -35,9 +28,9 @@
 		</div>
 		<div class="flex items-center gap-2">
 			<span class="bg-surface2 rounded-full px-3 py-1 text-xs font-semibold text-text-dim">
-				v{version}
+				v{meta.version}
 			</span>
-			<span class="rounded-full px-3 py-1 text-xs font-semibold {statusColor(status)}">
+			<span class="rounded-full px-3 py-1 text-xs font-semibold {statusBadgeClass(status)}">
 				{status}
 			</span>
 		</div>

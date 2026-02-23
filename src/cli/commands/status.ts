@@ -1,8 +1,9 @@
 import { resolveSession } from "../session-resolver.js";
 import { readMeta, readFeedback } from "../session-reader.js";
 import { outputJson, outputError } from "../output.js";
+import { parseDuration } from "../utils.js";
 import type { ParsedArgs } from "../index.js";
-import type { FeedbackPayload } from "../types.js";
+import type { FeedbackPayload } from "../../lib/types/index.js";
 import { watch } from "chokidar";
 import { join } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
@@ -15,7 +16,8 @@ const EXIT_REVIEWING = 4;
 const EXIT_NO_FEEDBACK = 5;
 
 function computeStatus(feedback: FeedbackPayload | null) {
-  if (!feedback) return { feedbackStatus: "none" as const, exitCode: EXIT_NO_FEEDBACK };
+  if (!feedback)
+    return { feedbackStatus: "none" as const, exitCode: EXIT_NO_FEEDBACK };
 
   switch (feedback.status) {
     case "approved":
@@ -52,7 +54,10 @@ function computeSummary(feedback: FeedbackPayload | null) {
 export async function status(args: ParsedArgs) {
   const idOrFile = args.positional[0];
   if (!idOrFile) {
-    outputError("Please provide a session ID or markdown file path", "MISSING_ARG");
+    outputError(
+      "Please provide a session ID or markdown file path",
+      "MISSING_ARG",
+    );
     process.exit(EXIT_ERROR);
   }
 
@@ -74,10 +79,15 @@ export async function status(args: ParsedArgs) {
     const timeoutStr = args.flags["wait-timeout"];
     const timeoutMs =
       typeof timeoutStr === "string"
-        ? parseDuration(timeoutStr)
+        ? (parseDuration(timeoutStr) ?? 30 * 60 * 1000)
         : 30 * 60 * 1000; // 30 min default
 
-    await waitForFeedback(resolved.sessionDir, resolved.sessionId, meta, timeoutMs);
+    await waitForFeedback(
+      resolved.sessionDir,
+      resolved.sessionId,
+      meta,
+      timeoutMs,
+    );
     return;
   }
 
@@ -98,20 +108,6 @@ export async function status(args: ParsedArgs) {
   );
 
   process.exit(exitCode);
-}
-
-function parseDuration(s: string): number {
-  const match = s.match(/^(\d+)(ms|s|m|h|d)$/);
-  if (!match) return 30 * 60 * 1000;
-  const n = parseInt(match[1], 10);
-  switch (match[2]) {
-    case "ms": return n;
-    case "s": return n * 1000;
-    case "m": return n * 60 * 1000;
-    case "h": return n * 3600 * 1000;
-    case "d": return n * 86400 * 1000;
-    default: return 30 * 60 * 1000;
-  }
 }
 
 async function waitForFeedback(

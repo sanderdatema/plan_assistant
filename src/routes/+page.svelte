@@ -2,26 +2,37 @@
 	import { onMount } from 'svelte';
 	import type { PageData } from './$types.js';
 	import type { SessionMeta } from '$lib/types/session.js';
+	import { sessionStatusBadgeClass } from '$lib/utils/status.js';
 
 	let { data }: { data: PageData } = $props();
 
 	let polledSessions = $state<SessionMeta[] | null>(null);
 	let sessions = $derived(polledSessions ?? data.sessions);
 
-	onMount(() => {
-		// Poll for new/updated sessions every 3 seconds
-		const interval = setInterval(async () => {
-			try {
-				const res = await fetch('/api/sessions');
-				if (res.ok) {
-					polledSessions = await res.json();
-				}
-			} catch {
-				// ignore
+	async function refreshSessions() {
+		try {
+			const res = await fetch('/api/sessions');
+			if (res.ok) {
+				polledSessions = await res.json();
 			}
-		}, 3000);
+		} catch {
+			// ignore
+		}
+	}
 
-		return () => clearInterval(interval);
+	onMount(() => {
+		// Use SSE for reactive updates, fall back to polling
+		const eventSource = new EventSource('/api/sse/*');
+		eventSource.addEventListener('sessions-updated', () => refreshSessions());
+		eventSource.addEventListener('plan-updated', () => refreshSessions());
+
+		// Fallback poll every 10s in case SSE is not delivering
+		const interval = setInterval(refreshSessions, 10000);
+
+		return () => {
+			eventSource.close();
+			clearInterval(interval);
+		};
 	});
 
 	function formatDate(iso: string) {
@@ -34,18 +45,6 @@
 		});
 	}
 
-	function statusBadge(status: string) {
-		switch (status) {
-			case 'active':
-				return 'bg-accent/15 text-accent';
-			case 'approved':
-				return 'bg-green/15 text-green';
-			case 'archived':
-				return 'bg-text-dim/15 text-text-dim';
-			default:
-				return 'bg-text-dim/15 text-text-dim';
-		}
-	}
 </script>
 
 <div class="min-h-screen p-8">
@@ -74,7 +73,7 @@
 								v{session.planVersion} &middot; {formatDate(session.updatedAt)}
 							</p>
 						</div>
-						<span class="inline-block rounded-full px-3 py-1 text-xs font-semibold {statusBadge(session.status)}">
+						<span class="inline-block rounded-full px-3 py-1 text-xs font-semibold {sessionStatusBadgeClass(session.status)}">
 							{session.status}
 						</span>
 					</a>
