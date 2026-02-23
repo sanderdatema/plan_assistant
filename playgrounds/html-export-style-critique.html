@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan Assistant - HTML Export Style Critique</title>
+<style>
+  /* ============================================================
+     Base / Reset
+     ============================================================ */
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+  :root {
+    --ui-bg: #0d1117;
+    --ui-surface: #161b22;
+    --ui-surface2: #1c2129;
+    --ui-border: #30363d;
+    --ui-text: #e6edf3;
+    --ui-text-dim: #8b949e;
+    --ui-accent: #58a6ff;
+    --ui-amber: #d29922;
+    --ui-green: #3fb950;
+    --ui-red: #f85149;
+    --ui-amber-bg: rgba(210, 153, 34, 0.08);
+    --ui-green-bg: rgba(63, 185, 80, 0.08);
+    --ui-red-bg: rgba(248, 81, 73, 0.05);
+  }
+
+  html, body { height:100%; overflow:hidden; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--ui-bg);
+    color: var(--ui-text);
+    line-height: 1.5;
+    display: grid;
+    grid-template-columns: 1fr 420px;
+    grid-template-rows: 1fr auto;
+    height: 100vh;
+  }
+
+  /* ============================================================
+     Scrollbar styling
+     ============================================================ */
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--ui-border); border-radius:4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ui-text-dim); }
+
+  /* ============================================================
+     Document Panel (left)
+     ============================================================ */
+  #doc-panel {
+    background: var(--ui-bg);
+    overflow-y: auto;
+    border-right: 1px solid var(--ui-border);
+    display: flex;
+    flex-direction: column;
+  }
+
+  #doc-header {
+    padding: 16px 20px;
+    background: var(--ui-surface);
+    border-bottom: 1px solid var(--ui-border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  #doc-header h1 {
+    font-size: 16px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+
+  #doc-header h1 span {
+    color: var(--ui-text-dim);
+    font-weight: 400;
+    font-size: 13px;
+    margin-left: 8px;
+  }
+
+  #doc-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0;
+  }
+
+  .doc-line {
+    display: flex;
+    min-height: 24px;
+    line-height: 24px;
+    font-size: 13px;
+    transition: background 0.15s;
+    border-left: 3px solid transparent;
+    cursor: default;
+  }
+
+  .doc-line:hover {
+    background: rgba(255,255,255,0.02);
+  }
+
+  .doc-line .line-num {
+    width: 48px;
+    min-width: 48px;
+    text-align: right;
+    padding-right: 12px;
+    color: var(--ui-text-dim);
+    opacity: 0.4;
+    font-size: 12px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    user-select: none;
+    line-height: 24px;
+  }
+
+  .doc-line .line-content {
+    flex: 1;
+    padding-right: 16px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  /* Suggestion highlighting on lines */
+  .doc-line.suggestion-pending {
+    border-left-color: var(--ui-amber);
+    background: var(--ui-amber-bg);
+  }
+  .doc-line.suggestion-approved {
+    border-left-color: var(--ui-green);
+    background: var(--ui-green-bg);
+  }
+  .doc-line.suggestion-rejected {
+    border-left-color: var(--ui-red);
+    background: var(--ui-red-bg);
+  }
+
+  .doc-line.highlight-flash {
+    background: rgba(88, 166, 255, 0.12) !important;
+    transition: background 0s;
+  }
+
+  /* ============================================================
+     Rendered HTML Preview inside document lines
+     ============================================================ */
+  .rendered-block {
+    padding: 4px 0;
+  }
+
+  .rendered-block .export-header {
+    font-size: 22px;
+    font-weight: 700;
+    color: #cdd6f4;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .export-status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 9999px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #fff;
+  }
+
+  .rendered-block .export-subtitle {
+    font-size: 13px;
+    color: #6b7280;
+    margin-top: 2px;
+  }
+
+  .rendered-block .export-section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #a6adc8;
+    margin: 4px 0;
+  }
+
+  .rendered-block .export-paragraph {
+    font-size: 13px;
+    color: #a6adc8;
+    line-height: 1.5;
+  }
+
+  .export-phase-card {
+    background: #181825;
+    border: 1px solid #313244;
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 4px 0;
+  }
+
+  .export-phase-heading {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 8px;
+  }
+
+  .export-phase-heading h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: #cdd6f4;
+  }
+
+  .export-change-block {
+    background: #1e1e2e;
+    border-radius: 6px;
+    padding: 10px 12px;
+    margin: 6px 0;
+  }
+
+  .export-change-block h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: #cdd6f4;
+    margin-bottom: 4px;
+  }
+
+  .export-change-block .filepath {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    color: #89b4fa;
+    margin-bottom: 4px;
+  }
+
+  .export-change-block .desc {
+    font-size: 12px;
+    color: #bac2de;
+  }
+
+  .export-code-pre {
+    background: #11111b;
+    border-radius: 4px;
+    padding: 8px 10px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    color: #cdd6f4;
+    overflow-x: auto;
+    margin-top: 6px;
+    white-space: pre;
+    line-height: 1.4;
+  }
+
+  .export-criteria-list {
+    padding-left: 18px;
+    margin-top: 6px;
+    font-size: 12px;
+    color: #bac2de;
+  }
+
+  .export-criteria-list li {
+    margin: 2px 0;
+  }
+
+  .export-criteria-list code {
+    background: #1e1e2e;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+  }
+
+  .export-mermaid-box {
+    background: #fff;
+    padding: 14px;
+    border-radius: 6px;
+    margin: 4px 0;
+    text-align: center;
+    color: #333;
+    font-size: 13px;
+  }
+
+  .export-comment-item {
+    margin: 4px 0;
+    padding: 8px 12px;
+    border-left: 3px solid #60a5fa;
+    background: rgba(96,165,250,0.1);
+    border-radius: 0 4px 4px 0;
+    font-size: 12px;
+  }
+
+  .export-comment-item .quote {
+    font-style: italic;
+    color: #9ca3af;
+    margin-bottom: 3px;
+  }
+
+  .export-comment-item .body {
+    color: #cdd6f4;
+  }
+
+  .export-comment-item .meta {
+    font-size: 11px;
+    color: #6b7280;
+    margin-top: 3px;
+  }
+
+  .export-footer {
+    font-size: 12px;
+    color: #6b7280;
+    padding-top: 12px;
+    border-top: 1px solid #313244;
+    margin-top: 8px;
+  }
+
+  .export-css-var-block {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: #cdd6f4;
+  }
+
+  .export-css-var-block .prop { color: #89b4fa; }
+  .export-css-var-block .val { color: #a6e3a1; }
+  .export-css-var-block .comment { color: #6c7086; font-style: italic; }
+
+  /* ============================================================
+     Suggestions Panel (right)
+     ============================================================ */
+  #suggestions-panel {
+    background: var(--ui-surface);
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+  }
+
+  #suggestions-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--ui-border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: var(--ui-surface);
+  }
+
+  #suggestions-header h2 {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+
+  #suggestion-stats {
+    font-size: 12px;
+    color: var(--ui-text-dim);
+    margin-bottom: 10px;
+    display: flex;
+    gap: 12px;
+  }
+
+  #suggestion-stats .stat-pending { color: var(--ui-amber); }
+  #suggestion-stats .stat-approved { color: var(--ui-green); }
+  #suggestion-stats .stat-rejected { color: var(--ui-red); }
+
+  .filter-tabs {
+    display: flex;
+    gap: 2px;
+    background: var(--ui-bg);
+    border-radius: 8px;
+    padding: 3px;
+  }
+
+  .filter-tab {
+    flex: 1;
+    text-align: center;
+    padding: 6px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    color: var(--ui-text-dim);
+    background: transparent;
+    border: none;
+    transition: all 0.15s;
+  }
+
+  .filter-tab:hover {
+    color: var(--ui-text);
+    background: rgba(255,255,255,0.04);
+  }
+
+  .filter-tab.active {
+    color: var(--ui-text);
+    background: var(--ui-surface2);
+  }
+
+  #suggestions-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 12px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .suggestion-card {
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    border-radius: 8px;
+    padding: 14px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .suggestion-card:hover {
+    border-color: rgba(88,166,255,0.3);
+  }
+
+  .suggestion-card.status-pending { border-left: 3px solid var(--ui-amber); }
+  .suggestion-card.status-approved { border-left: 3px solid var(--ui-green); }
+  .suggestion-card.status-rejected { border-left: 3px solid var(--ui-red); }
+
+  .suggestion-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+
+  .suggestion-line-ref {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 11px;
+    color: var(--ui-accent);
+    cursor: pointer;
+    padding: 1px 6px;
+    border-radius: 4px;
+    background: rgba(88,166,255,0.1);
+    text-decoration: none;
+    transition: background 0.15s;
+  }
+
+  .suggestion-line-ref:hover {
+    background: rgba(88,166,255,0.2);
+  }
+
+  .category-badge {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 7px;
+    border-radius: 4px;
+  }
+
+  .category-consistency {
+    color: #d2a8ff;
+    background: rgba(210,168,255,0.12);
+  }
+
+  .category-accessibility {
+    color: #79c0ff;
+    background: rgba(121,192,255,0.12);
+  }
+
+  .category-performance {
+    color: #ffa657;
+    background: rgba(255,166,87,0.12);
+  }
+
+  .category-completeness {
+    color: #7ee787;
+    background: rgba(126,231,135,0.12);
+  }
+
+  .suggestion-status-badge {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 7px;
+    border-radius: 4px;
+    margin-left: auto;
+  }
+
+  .status-badge-pending { color: var(--ui-amber); background: rgba(210,153,34,0.15); }
+  .status-badge-approved { color: var(--ui-green); background: rgba(63,185,80,0.15); }
+  .status-badge-rejected { color: var(--ui-red); background: rgba(248,81,73,0.15); }
+
+  .suggestion-title {
+    font-size: 13px;
+    font-weight: 600;
+    margin-bottom: 6px;
+    color: var(--ui-text);
+  }
+
+  .suggestion-text {
+    font-size: 12px;
+    color: var(--ui-text-dim);
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+
+  .suggestion-actions {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 8px;
+  }
+
+  .suggestion-actions button {
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--ui-border);
+    background: transparent;
+    color: var(--ui-text-dim);
+    transition: all 0.15s;
+  }
+
+  .suggestion-actions button:hover {
+    background: rgba(255,255,255,0.05);
+    color: var(--ui-text);
+  }
+
+  .btn-approve:hover, .btn-approve.active {
+    border-color: var(--ui-green) !important;
+    color: var(--ui-green) !important;
+    background: rgba(63,185,80,0.1) !important;
+  }
+
+  .btn-reject:hover, .btn-reject.active {
+    border-color: var(--ui-red) !important;
+    color: var(--ui-red) !important;
+    background: rgba(248,81,73,0.1) !important;
+  }
+
+  .btn-reset:hover {
+    border-color: var(--ui-text-dim) !important;
+    color: var(--ui-text) !important;
+  }
+
+  .suggestion-comment {
+    width: 100%;
+    padding: 8px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--ui-border);
+    background: var(--ui-surface);
+    color: var(--ui-text);
+    font-size: 12px;
+    font-family: inherit;
+    resize: vertical;
+    min-height: 32px;
+    max-height: 100px;
+    transition: border-color 0.15s;
+  }
+
+  .suggestion-comment::placeholder {
+    color: var(--ui-text-dim);
+    opacity: 0.5;
+  }
+
+  .suggestion-comment:focus {
+    outline: none;
+    border-color: var(--ui-accent);
+  }
+
+  .suggestion-card.hidden {
+    display: none;
+  }
+
+  /* ============================================================
+     Prompt Output (bottom)
+     ============================================================ */
+  #prompt-panel {
+    grid-column: 1 / -1;
+    background: var(--ui-surface);
+    border-top: 1px solid var(--ui-border);
+    display: flex;
+    flex-direction: column;
+    max-height: 280px;
+    min-height: 50px;
+  }
+
+  #prompt-header {
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--ui-border);
+    flex-shrink: 0;
+  }
+
+  #prompt-header h3 {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--ui-text);
+  }
+
+  #prompt-toggle {
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--ui-border);
+    background: transparent;
+    color: var(--ui-text-dim);
+    transition: all 0.15s;
+    margin-right: 8px;
+  }
+
+  #prompt-toggle:hover {
+    color: var(--ui-text);
+    background: rgba(255,255,255,0.05);
+  }
+
+  #copy-btn {
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid var(--ui-accent);
+    background: rgba(88,166,255,0.1);
+    color: var(--ui-accent);
+    transition: all 0.15s;
+  }
+
+  #copy-btn:hover {
+    background: rgba(88,166,255,0.2);
+  }
+
+  #copy-btn.copied {
+    border-color: var(--ui-green);
+    background: rgba(63,185,80,0.15);
+    color: var(--ui-green);
+  }
+
+  #prompt-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px 20px;
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--ui-text-dim);
+    white-space: pre-wrap;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    cursor: text;
+  }
+  #prompt-content:focus {
+    outline: 1px solid #58a6ff;
+    outline-offset: 2px;
+  }
+  .prompt-editable-hint {
+    font-size: 11px;
+    color: #8b949e;
+    padding: 0 20px 8px;
+    flex-shrink: 0;
+  }
+
+  #prompt-content .prompt-heading {
+    color: var(--ui-text);
+    font-weight: 700;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    font-size: 13px;
+  }
+
+  #prompt-content .prompt-approved {
+    color: var(--ui-green);
+  }
+
+  #prompt-content .prompt-declined {
+    color: var(--ui-red);
+    opacity: 0.7;
+  }
+
+  #prompt-content .prompt-note {
+    color: var(--ui-amber);
+  }
+
+  #prompt-panel.collapsed #prompt-content {
+    display: none;
+  }
+
+  #prompt-panel.collapsed {
+    min-height: auto;
+    max-height: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     Document Panel (Left)
+     ============================================================ -->
+<div id="doc-panel">
+  <div id="doc-header">
+    <h1>Export Preview <span>export-html.ts output</span></h1>
+  </div>
+  <div id="doc-content"></div>
+</div>
+
+<!-- ============================================================
+     Suggestions Panel (Right)
+     ============================================================ -->
+<div id="suggestions-panel">
+  <div id="suggestions-header">
+    <h2>Style Critique</h2>
+    <div id="suggestion-stats"></div>
+    <div class="filter-tabs">
+      <button class="filter-tab active" data-filter="all">All</button>
+      <button class="filter-tab" data-filter="pending">Pending</button>
+      <button class="filter-tab" data-filter="approved">Approved</button>
+      <button class="filter-tab" data-filter="rejected">Rejected</button>
+    </div>
+  </div>
+  <div id="suggestions-list"></div>
+</div>
+
+<!-- ============================================================
+     Prompt Output (Bottom)
+     ============================================================ -->
+<div id="prompt-panel">
+  <div id="prompt-header">
+    <h3>Prompt Output</h3>
+    <div style="display:flex;align-items:center;gap:6px">
+      <button id="prompt-toggle">Collapse</button>
+      <button id="copy-btn">Copy</button>
+    </div>
+  </div>
+  <div id="prompt-content" contenteditable="true"></div>
+  <div class="prompt-editable-hint">Click to edit before copying</div>
+</div>
+
+<script>
+// ================================================================
+// Data
+// ================================================================
+
+const suggestions = [
+  {
+    id: 1,
+    title: "Color Consistency",
+    lines: [5, 12],
+    category: "consistency",
+    text: "The HTML export uses Catppuccin Mocha (#1e1e2e surface, #89b4fa accent) while the web UI uses GitHub Dark (#161b22 surface, #58a6ff accent). Consider aligning the palettes or documenting the intentional difference.",
+    status: "pending",
+    comment: ""
+  },
+  {
+    id: 2,
+    title: "Mermaid Theme Mismatch",
+    lines: [28, 28],
+    category: "consistency",
+    text: "The web UI uses Mermaid 'dark' theme but the export uses 'default' theme with white background. This causes diagrams to look different between the app and export. Suggest using the same dark theme.",
+    status: "pending",
+    comment: ""
+  },
+  {
+    id: 3,
+    title: "Missing Responsive Styles",
+    lines: [14, 17],
+    category: "accessibility",
+    text: "The export has `max-width: 900px` but no responsive breakpoints. On mobile devices, content may overflow. Add `@media` queries or use relative units.",
+    status: "pending",
+    comment: ""
+  },
+  {
+    id: 4,
+    title: "CDN Dependency for Syntax Highlighting",
+    lines: [30, 30],
+    category: "performance",
+    text: "The export loads highlight.js from CDN. If the user is offline, code blocks lose all styling. Consider inlining a minimal highlight.js theme directly in the HTML.",
+    status: "pending",
+    comment: ""
+  },
+  {
+    id: 5,
+    title: "CDN Dependency for Mermaid",
+    lines: [31, 31],
+    category: "performance",
+    text: "Mermaid is loaded from CDN via ES module import. If offline, diagrams won't render at all. Consider rendering Mermaid to SVG at export time instead.",
+    status: "pending",
+    comment: ""
+  },
+  {
+    id: 6,
+    title: "Missing Print Styles",
+    lines: null,
+    category: "completeness",
+    text: "No @media print styles. When users print the export, it uses dark background which wastes ink. Add print styles that switch to light theme.",
+    status: "pending",
+    comment: ""
+  },
+  {
+    id: 7,
+    title: "Accessibility: Contrast Ratios",
+    lines: [8, 9],
+    category: "accessibility",
+    text: "The text-dim color (#a6adc8) on surface (#181825) has a contrast ratio of ~4.8:1, which barely meets WCAG AA for large text but fails for small text. Consider lightening text-dim.",
+    status: "pending",
+    comment: ""
+  },
+  {
+    id: 8,
+    title: "Missing ARIA Labels",
+    lines: null,
+    category: "accessibility",
+    text: "Status badges use only color to convey meaning (green=approved, red=needs-work). Add text or aria-label for screen reader users.",
+    status: "pending",
+    comment: ""
+  }
+];
+
+// ================================================================
+// Document lines representing the rendered HTML export
+// ================================================================
+
+// We build an array of {lineNum, html, blank} objects.
+// html is rendered inline HTML; blank lines are spacers.
+const docLines = [
+  { lineNum: 1, html: '<span style="color:#6c7086;font-size:12px">&lt;!DOCTYPE html&gt; &middot; &lt;html lang="en"&gt;</span>' },
+  { lineNum: 2, html: '<span style="color:#6c7086;font-size:12px">&lt;head&gt; charset=UTF-8, viewport, title</span>' },
+  { lineNum: 3, blank: true },
+  { lineNum: 4, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ui-text-dim)">CSS Variables</span>' },
+  { lineNum: 5, html: '<span class="export-css-var-block"><span class="prop">--bg</span>: <span class="val">#1e1e2e</span> <span class="comment">/* Catppuccin Mocha base */</span></span>' },
+  { lineNum: 6, html: '<span class="export-css-var-block"><span class="prop">--surface</span>: <span class="val">#181825</span></span>' },
+  { lineNum: 7, html: '<span class="export-css-var-block"><span class="prop">--text</span>: <span class="val">#cdd6f4</span></span>' },
+  { lineNum: 8, html: '<span class="export-css-var-block"><span class="prop">--text-dim</span>: <span class="val">#a6adc8</span></span>' },
+  { lineNum: 9, html: '<span class="export-css-var-block"><span class="prop">--border</span>: <span class="val">#313244</span></span>' },
+  { lineNum: 10, html: '<span class="export-css-var-block"><span class="prop">--blue</span>: <span class="val">#89b4fa</span> <span class="comment">/* accent */</span></span>' },
+  { lineNum: 11, html: '<span class="export-css-var-block"><span class="prop">--green</span>: <span class="val">#a6e3a1</span></span>' },
+  { lineNum: 12, html: '<span class="export-css-var-block"><span class="prop">--red</span>: <span class="val">#f38ba8</span></span>' },
+  { lineNum: 13, blank: true },
+  { lineNum: 14, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ui-text-dim)">Body Styles</span>' },
+  { lineNum: 15, html: '<span class="export-css-var-block"><span class="prop">font-family</span>: <span class="val">-apple-system, BlinkMacSystemFont, \'Segoe UI\', ...</span></span>' },
+  { lineNum: 16, html: '<span class="export-css-var-block"><span class="prop">background</span>: <span class="val">#11111b</span>; <span class="prop">color</span>: <span class="val">var(--text)</span></span>' },
+  { lineNum: 17, html: '<span class="export-css-var-block"><span class="prop">max-width</span>: <span class="val">900px</span>; <span class="prop">padding</span>: <span class="val">24px</span></span>' },
+  { lineNum: 18, blank: true },
+  { lineNum: 19, html: '<div class="rendered-block"><div class="export-header">Authentication Refactor Plan <span class="export-status-badge" style="background:#3b82f6">pending</span></div><div class="export-subtitle">Version 3 &middot; 2026-02-20</div></div>' },
+  { lineNum: 20, blank: true },
+  { lineNum: 21, html: '<div class="rendered-block"><div class="export-section-title">Overview</div><div class="export-paragraph">Refactor the authentication system to use JWT tokens with refresh token rotation. Migrate from session-based auth to stateless tokens while maintaining backward compatibility during the transition period.</div></div>' },
+  { lineNum: 22, blank: true },
+  { lineNum: 23, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ui-text-dim)">Mermaid Diagram</span>' },
+  { lineNum: 24, blank: true },
+  { lineNum: 25, html: '<div class="rendered-block"><div class="export-mermaid-box"><div style="font-size:12px;color:#666;margin-bottom:8px">class="mermaid" container (white background)</div><svg width="340" height="80" viewBox="0 0 340 80"><rect x="0" y="25" width="80" height="30" rx="4" fill="#e3e8f0" stroke="#666"/><text x="40" y="44" text-anchor="middle" font-size="11" fill="#333">Client</text><line x1="80" y1="40" x2="120" y2="40" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/><rect x="120" y="25" width="100" height="30" rx="4" fill="#e3e8f0" stroke="#666"/><text x="170" y="44" text-anchor="middle" font-size="11" fill="#333">Auth Controller</text><line x1="220" y1="40" x2="260" y2="40" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/><rect x="260" y="25" width="80" height="30" rx="4" fill="#e3e8f0" stroke="#666"/><text x="300" y="44" text-anchor="middle" font-size="11" fill="#333">JWT Service</text><defs><marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#666"/></marker></defs></svg></div></div>' },
+  { lineNum: 26, blank: true },
+  { lineNum: 27, html: '<div class="rendered-block"><div class="export-phase-card"><div class="export-phase-heading"><h3>Phase 1: Token Infrastructure</h3><span class="export-status-badge" style="background:#22c55e">approved</span></div><div class="export-paragraph" style="margin-bottom:8px">Set up JWT token generation, validation, and refresh token rotation. Create the core token service and update the user model.</div></div></div>' },
+  { lineNum: 28, html: '<div class="rendered-block" style="padding-left:16px"><div class="export-change-block"><h4>UserModel</h4><div class="filepath">src/models/user.ts</div><div class="desc">Add refreshToken and tokenVersion fields to the user schema</div><div class="export-code-pre"><span style="color:#cba6f7">interface</span> <span style="color:#89b4fa">User</span> {\n  id: <span style="color:#a6e3a1">string</span>;\n  email: <span style="color:#a6e3a1">string</span>;\n  refreshToken?: <span style="color:#a6e3a1">string</span>;\n  tokenVersion: <span style="color:#fab387">number</span>;\n}</div></div></div>' },
+  { lineNum: 29, html: '<div class="rendered-block" style="padding-left:16px"><div class="export-change-block"><h4>AuthController</h4><div class="filepath">src/controllers/auth.ts</div><div class="desc">Implement login, logout, and token refresh endpoints with proper error handling and rate limiting</div></div></div>' },
+  { lineNum: 30, html: '<div class="rendered-block" style="padding-left:16px"><div style="margin-top:6px"><span style="font-size:12px;font-weight:600;color:#cdd6f4">Success Criteria</span><ul class="export-criteria-list"><li>All existing tests pass <code>npm test</code></li><li>Token refresh rotates correctly under load</li><li>Invalid tokens return 401 consistently</li></ul></div></div>' },
+  { lineNum: 31, blank: true },
+  { lineNum: 32, html: '<div class="rendered-block"><div class="export-phase-card"><div class="export-phase-heading"><h3>Phase 2: Migration Layer</h3><span class="export-status-badge" style="background:#ef4444">needs-work</span></div><div class="export-paragraph" style="margin-bottom:8px">Build a compatibility layer that accepts both session cookies and JWT tokens. Gradually migrate endpoints to token-only auth.</div></div></div>' },
+  { lineNum: 33, html: '<div class="rendered-block" style="padding-left:16px"><div class="export-change-block"><h4>AuthMiddleware</h4><div class="filepath">src/middleware/auth.ts</div><div class="desc">Dual-mode middleware that checks for JWT first, falls back to session cookie</div></div></div>' },
+  { lineNum: 34, html: '<div class="rendered-block" style="padding-left:16px"><div class="export-change-block"><h4>SessionMigrator</h4><div class="filepath">src/services/session-migrator.ts</div><div class="desc">Background job that converts active sessions to JWT tokens, with rollback capability</div></div></div>' },
+  { lineNum: 35, html: '<div class="rendered-block" style="padding-left:16px"><div style="margin-top:6px"><span style="font-size:12px;font-weight:600;color:#cdd6f4">Success Criteria</span><ul class="export-criteria-list"><li>Dual-mode auth passes integration tests <code>npm run test:integration</code></li><li>Session migration handles 10k+ active sessions</li><li>Zero downtime during migration</li></ul></div></div>' },
+  { lineNum: 36, blank: true },
+  { lineNum: 37, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ui-text-dim)">General Comments</span>' },
+  { lineNum: 38, html: '<div class="rendered-block"><div class="export-comment-item"><div class="quote">"migrate from session-based auth"</div><div class="body">Consider adding a feature flag to control the migration rollout per-tenant.</div><div class="meta">Overview &middot; 2/19/2026, 3:45:00 PM</div></div></div>' },
+  { lineNum: 39, html: '<div class="rendered-block"><div class="export-comment-item"><div class="body">Rate limiting on the refresh endpoint needs to be more aggressive for production. Current config allows 100 req/min which is too high.</div><div class="meta">Phase 1 &middot; 2/20/2026, 10:12:00 AM</div></div></div>' },
+  { lineNum: 40, blank: true },
+  { lineNum: 41, html: '<div class="rendered-block"><div class="export-footer">Generated by Plan Assistant &middot; 2026-02-23</div></div>' }
+];
+
+// ================================================================
+// Build line-to-suggestion mapping
+// ================================================================
+
+function getLineSuggestions(lineNum) {
+  const result = [];
+  for (const s of suggestions) {
+    if (!s.lines) continue;
+    if (lineNum >= s.lines[0] && lineNum <= s.lines[1]) {
+      result.push(s);
+    }
+  }
+  return result;
+}
+
+function getLineStatus(lineNum) {
+  const matched = getLineSuggestions(lineNum);
+  if (matched.length === 0) return null;
+  // Priority: pending > approved > rejected
+  if (matched.some(s => s.status === 'pending')) return 'pending';
+  if (matched.some(s => s.status === 'approved')) return 'approved';
+  return 'rejected';
+}
+
+// ================================================================
+// Render Document
+// ================================================================
+
+function renderDocument() {
+  const container = document.getElementById('doc-content');
+  container.innerHTML = '';
+
+  for (const line of docLines) {
+    const div = document.createElement('div');
+    div.className = 'doc-line';
+    div.dataset.lineNum = line.lineNum;
+
+    const status = getLineStatus(line.lineNum);
+    if (status) {
+      div.classList.add('suggestion-' + status);
+    }
+
+    const numSpan = document.createElement('span');
+    numSpan.className = 'line-num';
+    numSpan.textContent = line.lineNum;
+    div.appendChild(numSpan);
+
+    const contentSpan = document.createElement('span');
+    contentSpan.className = 'line-content';
+    if (line.blank) {
+      contentSpan.innerHTML = '&nbsp;';
+    } else {
+      contentSpan.innerHTML = line.html;
+    }
+    div.appendChild(contentSpan);
+
+    container.appendChild(div);
+  }
+}
+
+// ================================================================
+// Render Suggestions
+// ================================================================
+
+let activeFilter = 'all';
+
+function renderSuggestions() {
+  const list = document.getElementById('suggestions-list');
+  list.innerHTML = '';
+
+  for (const s of suggestions) {
+    const card = document.createElement('div');
+    card.className = `suggestion-card status-${s.status}`;
+    card.dataset.id = s.id;
+    card.dataset.status = s.status;
+
+    if (activeFilter !== 'all' && s.status !== activeFilter) {
+      card.classList.add('hidden');
+    }
+
+    const lineRef = s.lines
+      ? `<a class="suggestion-line-ref" data-lines="${s.lines[0]}-${s.lines[1]}">${s.lines[0] === s.lines[1] ? 'L' + s.lines[0] : 'L' + s.lines[0] + '-' + s.lines[1]}</a>`
+      : '<span class="suggestion-line-ref" style="opacity:0.4;cursor:default">Global</span>';
+
+    const statusBadgeClass = 'status-badge-' + s.status;
+    const statusLabel = s.status.charAt(0).toUpperCase() + s.status.slice(1);
+
+    card.innerHTML = `
+      <div class="suggestion-card-header">
+        ${lineRef}
+        <span class="category-badge category-${s.category}">${s.category}</span>
+        <span class="suggestion-status-badge ${statusBadgeClass}">${statusLabel}</span>
+      </div>
+      <div class="suggestion-title">${s.title}</div>
+      <div class="suggestion-text">${s.text}</div>
+      <div class="suggestion-actions">
+        <button class="btn-approve ${s.status === 'approved' ? 'active' : ''}" data-id="${s.id}">Approve</button>
+        <button class="btn-reject ${s.status === 'rejected' ? 'active' : ''}" data-id="${s.id}">Reject</button>
+        <button class="btn-reset" data-id="${s.id}">Reset</button>
+      </div>
+      <textarea class="suggestion-comment" data-id="${s.id}" placeholder="Add a note (optional)..." rows="1">${s.comment}</textarea>
+    `;
+
+    list.appendChild(card);
+  }
+
+  // Bind action buttons
+  list.querySelectorAll('.btn-approve').forEach(btn => {
+    btn.addEventListener('click', () => setStatus(parseInt(btn.dataset.id), 'approved'));
+  });
+  list.querySelectorAll('.btn-reject').forEach(btn => {
+    btn.addEventListener('click', () => setStatus(parseInt(btn.dataset.id), 'rejected'));
+  });
+  list.querySelectorAll('.btn-reset').forEach(btn => {
+    btn.addEventListener('click', () => setStatus(parseInt(btn.dataset.id), 'pending'));
+  });
+
+  // Bind comments
+  list.querySelectorAll('.suggestion-comment').forEach(ta => {
+    ta.addEventListener('input', () => {
+      const s = suggestions.find(s => s.id === parseInt(ta.dataset.id));
+      if (s) { s.comment = ta.value; renderPrompt(); }
+    });
+  });
+
+  // Bind line references
+  list.querySelectorAll('.suggestion-line-ref[data-lines]').forEach(ref => {
+    ref.addEventListener('click', (e) => {
+      e.preventDefault();
+      const [startStr] = ref.dataset.lines.split('-');
+      const startLine = parseInt(startStr);
+      scrollToLine(startLine);
+    });
+  });
+
+  updateStats();
+}
+
+function setStatus(id, status) {
+  const s = suggestions.find(s => s.id === id);
+  if (s) {
+    s.status = status;
+    renderSuggestions();
+    renderDocument();
+    renderPrompt();
+  }
+}
+
+function updateStats() {
+  const pending = suggestions.filter(s => s.status === 'pending').length;
+  const approved = suggestions.filter(s => s.status === 'approved').length;
+  const rejected = suggestions.filter(s => s.status === 'rejected').length;
+
+  document.getElementById('suggestion-stats').innerHTML =
+    `<span class="stat-pending">${pending} Pending</span>` +
+    `<span style="color:var(--ui-border)">|</span>` +
+    `<span class="stat-approved">${approved} Approved</span>` +
+    `<span style="color:var(--ui-border)">|</span>` +
+    `<span class="stat-rejected">${rejected} Rejected</span>`;
+}
+
+function scrollToLine(lineNum) {
+  const docContent = document.getElementById('doc-content');
+  const line = docContent.querySelector(`.doc-line[data-line-num="${lineNum}"]`);
+  if (!line) return;
+
+  line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+
+  // Flash highlight
+  line.classList.add('highlight-flash');
+  setTimeout(() => {
+    line.classList.remove('highlight-flash');
+  }, 1200);
+}
+
+// ================================================================
+// Filter Tabs
+// ================================================================
+
+document.querySelectorAll('.filter-tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+    tab.classList.add('active');
+    activeFilter = tab.dataset.filter;
+    renderSuggestions();
+  });
+});
+
+// ================================================================
+// Prompt Output
+// ================================================================
+
+function renderPrompt() {
+  const approved = suggestions.filter(s => s.status === 'approved');
+  const rejected = suggestions.filter(s => s.status === 'rejected');
+  const commented = suggestions.filter(s => s.status === 'pending' && s.comment.trim());
+
+  let lines = [];
+
+  lines.push('Please update the HTML export in `src/cli/export-html.ts` with the following improvements:');
+  lines.push('');
+
+  if (approved.length > 0) {
+    lines.push('## Approved Changes');
+    lines.push('');
+    for (const s of approved) {
+      const lineRef = s.lines ? ` (Lines ${s.lines[0]}-${s.lines[1]})` : '';
+      lines.push(`**${s.title}**${lineRef}: ${s.text.split('.')[0]}.`);
+      if (s.comment.trim()) {
+        lines.push(`  -> User note: ${s.comment.trim()}`);
+      }
+      lines.push('');
+    }
+  }
+
+  if (commented.length > 0) {
+    lines.push('## Additional Notes');
+    lines.push('');
+    for (const s of commented) {
+      const lineRef = s.lines ? ` (Line ${s.lines[0]})` : '';
+      lines.push(`**${s.title}**${lineRef}: User commented: ${s.comment.trim()}`);
+      lines.push('');
+    }
+  }
+
+  if (rejected.length > 0) {
+    lines.push('## Declined');
+    for (const s of rejected) {
+      const reason = s.comment.trim() ? ` \u2014 ${s.comment.trim()}` : '';
+      lines.push(`- ${s.title}${reason}`);
+    }
+    lines.push('');
+  }
+
+  if (approved.length === 0 && rejected.length === 0 && commented.length === 0) {
+    lines.push('(No suggestions reviewed yet. Approve or reject suggestions to build the prompt.)');
+  }
+
+  lines.push('');
+  lines.push('[Playground: HTML Export Style Critique]');
+
+  const container = document.getElementById('prompt-content');
+  container.innerHTML = '';
+
+  const raw = lines.join('\n');
+
+  // Simple rendering with colored sections
+  const htmlOut = raw
+    .replace(/^## (Approved Changes)$/gm, '<span class="prompt-heading prompt-approved">## $1</span>')
+    .replace(/^## (Additional Notes)$/gm, '<span class="prompt-heading prompt-note">## $1</span>')
+    .replace(/^## (Declined)$/gm, '<span class="prompt-heading prompt-declined">## $1</span>')
+    .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+    .replace(/`([^`]+)`/g, '<code style="background:rgba(88,166,255,0.1);padding:1px 5px;border-radius:3px;font-size:11px">$1</code>')
+    .replace(/^  -> (.+)$/gm, '  <span style="color:var(--ui-accent)">-> $1</span>');
+
+  container.innerHTML = htmlOut;
+
+  // Store raw text for copy
+  container.dataset.raw = raw;
+}
+
+// ================================================================
+// Copy Button
+// ================================================================
+
+document.getElementById('copy-btn').addEventListener('click', () => {
+  const raw = document.getElementById('prompt-content').textContent || '';
+  navigator.clipboard.writeText(raw).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+    }, 2000);
+  });
+});
+
+// ================================================================
+// Prompt Toggle
+// ================================================================
+
+document.getElementById('prompt-toggle').addEventListener('click', () => {
+  const panel = document.getElementById('prompt-panel');
+  const btn = document.getElementById('prompt-toggle');
+  panel.classList.toggle('collapsed');
+  btn.textContent = panel.classList.contains('collapsed') ? 'Expand' : 'Collapse';
+});
+
+// ================================================================
+// Apply some initial states for demo purposes
+// ================================================================
+
+// Set some initial states to make the demo more interesting
+suggestions[0].status = 'approved';
+suggestions[0].comment = 'Keep Catppuccin for the export but match the accent color.';
+suggestions[1].status = 'pending';
+suggestions[1].comment = 'Consider rendering to SVG at build time instead.';
+suggestions[3].status = 'rejected';
+suggestions[3].comment = "We're okay with CDN for now.";
+suggestions[5].status = 'approved';
+suggestions[5].comment = '';
+
+// ================================================================
+// Initialize
+// ================================================================
+
+renderDocument();
+renderSuggestions();
+renderPrompt();
+</script>
+</body>
+</html>

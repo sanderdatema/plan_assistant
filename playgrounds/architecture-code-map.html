@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan Assistant - Architecture Code Map</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
+    background: #0d1117;
+    color: #e6edf3;
+    height: 100vh;
+    overflow: hidden;
+    display: flex;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 280px;
+    min-width: 280px;
+    background: #161b22;
+    border-right: 1px solid #30363d;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .sidebar h2 {
+    font-size: 13px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #8b949e;
+    padding: 16px 16px 8px;
+  }
+  .sidebar section { padding: 0 16px 16px; border-bottom: 1px solid #21262d; }
+  .sidebar section:last-child { border-bottom: none; flex: 1; }
+
+  /* View presets */
+  .preset-btn {
+    display: block;
+    width: 100%;
+    padding: 8px 12px;
+    margin-bottom: 4px;
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #e6edf3;
+    font-size: 13px;
+    text-align: left;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .preset-btn:hover { background: #30363d; border-color: #58a6ff; }
+  .preset-btn.active { background: #1f3a5f; border-color: #58a6ff; }
+
+  /* Layer toggles */
+  .layer-toggle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 0;
+    cursor: pointer;
+    font-size: 13px;
+    user-select: none;
+  }
+  .layer-toggle input[type="checkbox"] { display: none; }
+  .layer-swatch {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+    border: 2px solid transparent;
+    transition: opacity 0.15s;
+  }
+  .layer-toggle input:checked + .layer-swatch { border-color: #58a6ff; }
+  .layer-toggle input:not(:checked) + .layer-swatch { opacity: 0.35; }
+
+  /* Connection filters */
+  .conn-filter {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 0;
+    cursor: pointer;
+    font-size: 13px;
+    user-select: none;
+  }
+  .conn-filter input[type="checkbox"] { display: none; }
+  .conn-swatch {
+    width: 20px;
+    height: 3px;
+    border-radius: 2px;
+    transition: opacity 0.15s;
+  }
+  .conn-swatch.dashed {
+    background: repeating-linear-gradient(90deg, var(--sw-color) 0, var(--sw-color) 5px, transparent 5px, transparent 8px);
+  }
+  .conn-swatch.dotted {
+    background: repeating-linear-gradient(90deg, var(--sw-color) 0, var(--sw-color) 2px, transparent 2px, transparent 6px);
+  }
+  .conn-filter input:not(:checked) + .conn-swatch { opacity: 0.25; }
+  .conn-filter input:not(:checked) ~ span { opacity: 0.5; }
+
+  /* Comments list */
+  .comments-list { list-style: none; }
+  .comment-item {
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    padding: 10px;
+    margin-bottom: 8px;
+    position: relative;
+  }
+  .comment-item .node-name { font-weight: 600; font-size: 13px; color: #58a6ff; }
+  .comment-item .file-path { font-size: 11px; color: #8b949e; margin-bottom: 4px; }
+  .comment-item .comment-text { font-size: 13px; color: #c9d1d9; white-space: pre-wrap; }
+  .comment-delete {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: none;
+    border: none;
+    color: #f85149;
+    cursor: pointer;
+    font-size: 14px;
+    line-height: 1;
+    opacity: 0.6;
+    transition: opacity 0.15s;
+  }
+  .comment-delete:hover { opacity: 1; }
+  .no-comments { color: #484f58; font-size: 13px; font-style: italic; padding: 8px 0; }
+
+  /* ── Main area ── */
+  .main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* Canvas */
+  .canvas-wrap {
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+    cursor: grab;
+  }
+  .canvas-wrap.grabbing { cursor: grabbing; }
+  .canvas-wrap svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+  }
+
+  /* Zoom controls */
+  .zoom-controls {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    z-index: 10;
+  }
+  .zoom-btn {
+    width: 32px;
+    height: 32px;
+    background: #21262d;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #e6edf3;
+    font-size: 16px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+  }
+  .zoom-btn:hover { background: #30363d; }
+
+  /* ── Prompt output ── */
+  .prompt-panel {
+    position: absolute;
+    bottom: 12px;
+    right: 12px;
+    width: 420px;
+    max-height: 300px;
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+  }
+  .prompt-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    border-bottom: 1px solid #21262d;
+  }
+  .prompt-header span {
+    font-size: 13px;
+    font-weight: 600;
+    color: #8b949e;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+  .copy-btn {
+    padding: 4px 12px;
+    background: #238636;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .copy-btn:hover { background: #2ea043; }
+  .copy-btn.copied { background: #1f6feb; }
+  .prompt-body {
+    padding: 12px 14px;
+    overflow-y: auto;
+    font-size: 13px;
+    line-height: 1.55;
+    color: #c9d1d9;
+    white-space: pre-wrap;
+    font-family: inherit;
+    max-height: 240px;
+    cursor: text;
+  }
+  .prompt-body:focus {
+    outline: 1px solid #58a6ff;
+    outline-offset: 2px;
+  }
+  .prompt-editable-hint {
+    font-size: 11px;
+    color: #8b949e;
+    padding: 0 14px 8px;
+  }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: #161b22;
+    border: 1px solid #30363d;
+    border-radius: 10px;
+    width: 440px;
+    max-width: 92vw;
+    box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  }
+  .modal-title {
+    padding: 16px 20px;
+    border-bottom: 1px solid #21262d;
+  }
+  .modal-title h3 { font-size: 16px; font-weight: 600; color: #e6edf3; }
+  .modal-title p { font-size: 12px; color: #8b949e; margin-top: 2px; }
+  .modal-body { padding: 16px 20px; }
+  .modal-body textarea {
+    width: 100%;
+    min-height: 100px;
+    background: #0d1117;
+    border: 1px solid #30363d;
+    border-radius: 6px;
+    color: #e6edf3;
+    padding: 10px;
+    font-size: 13px;
+    font-family: inherit;
+    resize: vertical;
+  }
+  .modal-body textarea:focus { outline: none; border-color: #58a6ff; }
+  .modal-footer {
+    padding: 12px 20px;
+    border-top: 1px solid #21262d;
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .modal-btn {
+    padding: 6px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid #30363d;
+  }
+  .modal-btn.cancel { background: #21262d; color: #c9d1d9; }
+  .modal-btn.cancel:hover { background: #30363d; }
+  .modal-btn.save { background: #238636; border-color: #238636; color: #fff; }
+  .modal-btn.save:hover { background: #2ea043; }
+
+  /* SVG node styles */
+  .node-group { cursor: pointer; }
+  .node-group:hover .node-rect { filter: brightness(1.15); }
+  .node-rect { rx: 6; ry: 6; transition: filter 0.15s; }
+  .node-label { font-size: 11px; font-weight: 600; pointer-events: none; }
+  .node-subtitle { font-size: 8.5px; pointer-events: none; opacity: 0.7; }
+  .node-comment-dot { pointer-events: none; }
+
+  .connection-path { fill: none; stroke-width: 1.5; pointer-events: none; transition: opacity 0.2s; }
+  .connection-path.dimmed { opacity: 0.08; }
+  .connection-path.highlighted { stroke-width: 2.5; opacity: 1; }
+
+  /* Layer band labels */
+  .layer-band-label {
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    fill: #484f58;
+    pointer-events: none;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<!-- Sidebar -->
+<aside class="sidebar">
+  <section>
+    <h2>View Presets</h2>
+    <div id="presets"></div>
+  </section>
+  <section>
+    <h2>Layers</h2>
+    <div id="layer-toggles"></div>
+  </section>
+  <section>
+    <h2>Connections</h2>
+    <div id="conn-filters"></div>
+  </section>
+  <section>
+    <h2>Comments</h2>
+    <ul id="comments-list" class="comments-list">
+      <li class="no-comments" id="no-comments-msg">Click any node to add a comment.</li>
+    </ul>
+  </section>
+</aside>
+
+<!-- Main area -->
+<div class="main">
+  <div class="canvas-wrap" id="canvas-wrap">
+    <svg id="svg-canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+  </div>
+  <div class="zoom-controls">
+    <button class="zoom-btn" id="zoom-in" title="Zoom in">+</button>
+    <button class="zoom-btn" id="zoom-out" title="Zoom out">&minus;</button>
+    <button class="zoom-btn" id="zoom-reset" title="Reset view" style="font-size:12px;">R</button>
+  </div>
+  <div class="prompt-panel">
+    <div class="prompt-header">
+      <span>Prompt Output</span>
+      <button class="copy-btn" id="copy-btn">Copy</button>
+    </div>
+    <div class="prompt-body" id="prompt-body" contenteditable="true"></div>
+    <div class="prompt-editable-hint">Click to edit before copying</div>
+  </div>
+</div>
+
+<!-- Comment modal -->
+<div class="modal-overlay" id="modal-overlay">
+  <div class="modal">
+    <div class="modal-title">
+      <h3 id="modal-node-name"></h3>
+      <p id="modal-file-path"></p>
+    </div>
+    <div class="modal-body">
+      <textarea id="modal-textarea" placeholder="Add your comment about this component..."></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="modal-btn cancel" id="modal-cancel">Cancel</button>
+      <button class="modal-btn save" id="modal-save">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ───────────────────────────── DATA ─────────────────────────────
+
+const LAYERS = [
+  { id: 'cli',        name: 'CLI',          bg: '#dbeafe', text: '#1e3a5f', y: 60 },
+  { id: 'server',     name: 'Server',       bg: '#fef3c7', text: '#78350f', y: 220 },
+  { id: 'api',        name: 'API Routes',   bg: '#f3e8ff', text: '#581c87', y: 340 },
+  { id: 'components', name: 'Components',   bg: '#dcfce7', text: '#14532d', y: 470 },
+  { id: 'feedback',   name: 'Feedback',     bg: '#fce7f3', text: '#831843', y: 610 },
+  { id: 'stores',     name: 'Stores',       bg: '#e0e7ff', text: '#3730a3', y: 730 },
+  { id: 'types',      name: 'Types',        bg: '#f5f5f4', text: '#44403c', y: 840 },
+];
+
+const NODES = [
+  // CLI layer
+  { id: 'index.ts',           label: 'index.ts',           subtitle: 'src/cli/index.ts',                             layer: 'cli' },
+  { id: 'review.ts',          label: 'review.ts',          subtitle: 'src/cli/commands/review.ts',                   layer: 'cli' },
+  { id: 'status.ts',          label: 'status.ts',          subtitle: 'src/cli/commands/status.ts',                   layer: 'cli' },
+  { id: 'feedback.ts',        label: 'feedback.ts',        subtitle: 'src/cli/commands/feedback.ts',                 layer: 'cli' },
+  { id: 'list.ts',            label: 'list.ts',            subtitle: 'src/cli/commands/list.ts',                     layer: 'cli' },
+  { id: 'clean.ts',           label: 'clean.ts',           subtitle: 'src/cli/commands/clean.ts',                    layer: 'cli' },
+  { id: 'init.ts',            label: 'init.ts',            subtitle: 'src/cli/commands/init.ts',                     layer: 'cli' },
+  { id: 'export.ts',          label: 'export.ts',          subtitle: 'src/cli/commands/export.ts',                   layer: 'cli' },
+  { id: 'markdown-parser.ts', label: 'markdown-parser.ts', subtitle: 'src/cli/markdown-parser.ts',                   layer: 'cli' },
+  { id: 'markdown-to-plan',   label: 'markdown-to-plan.ts',subtitle: 'src/cli/markdown-to-plan.ts',                  layer: 'cli' },
+  { id: 'mermaid-gen.ts',     label: 'mermaid-gen.ts',     subtitle: 'src/cli/mermaid-gen.ts',                       layer: 'cli' },
+  { id: 'session-reader.ts',  label: 'session-reader.ts',  subtitle: 'src/cli/session-reader.ts',                    layer: 'cli' },
+  { id: 'utils.ts',           label: 'utils.ts',           subtitle: 'src/cli/utils.ts',                             layer: 'cli' },
+  // Server layer
+  { id: 'session-manager.ts', label: 'session-manager.ts', subtitle: 'src/lib/server/session-manager.ts',            layer: 'server' },
+  { id: 'file-watcher.ts',    label: 'file-watcher.ts',    subtitle: 'src/lib/server/file-watcher.ts',               layer: 'server' },
+  { id: 'sse-manager.ts',     label: 'sse-manager.ts',     subtitle: 'src/lib/server/sse-manager.ts',                layer: 'server' },
+  // API Routes
+  { id: 'GET /api/sessions',  label: 'GET /api/sessions',  subtitle: 'src/routes/api/sessions/+server.ts',           layer: 'api' },
+  { id: 'GET /api/sse/[id]',  label: 'GET /api/sse/[id]',  subtitle: 'src/routes/api/sse/[sessionId]/+server.ts',    layer: 'api' },
+  { id: 'PUT /feedback',      label: 'PUT /feedback',      subtitle: 'src/routes/api/sessions/[id]/feedback/+server.ts', layer: 'api' },
+  { id: 'POST /approve',      label: 'POST /approve',      subtitle: 'src/routes/api/sessions/[id]/approve/+server.ts', layer: 'api' },
+  { id: 'GET /versions',      label: 'GET /versions',      subtitle: 'src/routes/api/sessions/[id]/versions/+server.ts', layer: 'api' },
+  // Components layer
+  { id: 'PlanHeader',         label: 'PlanHeader',         subtitle: 'src/lib/components/plan/PlanHeader.svelte',    layer: 'components' },
+  { id: 'PhaseTable',         label: 'PhaseTable',         subtitle: 'src/lib/components/plan/PhaseTable.svelte',    layer: 'components' },
+  { id: 'PhaseCard',          label: 'PhaseCard',          subtitle: 'src/lib/components/plan/PhaseCard.svelte',     layer: 'components' },
+  { id: 'ChangeBlock',        label: 'ChangeBlock',        subtitle: 'src/lib/components/plan/ChangeBlock.svelte',   layer: 'components' },
+  { id: 'MarkdownBlock',      label: 'MarkdownBlock',      subtitle: 'src/lib/components/plan/MarkdownBlock.svelte', layer: 'components' },
+  { id: 'MermaidDiagram',     label: 'MermaidDiagram',     subtitle: 'src/lib/components/plan/MermaidDiagram.svelte',layer: 'components' },
+  { id: 'VersionSelector',    label: 'VersionSelector',    subtitle: 'src/lib/components/plan/VersionSelector.svelte',layer: 'components' },
+  { id: 'DiffView',           label: 'DiffView',           subtitle: 'src/lib/components/plan/DiffView.svelte',     layer: 'components' },
+  { id: 'ProgressBar',        label: 'ProgressBar',        subtitle: 'src/lib/components/plan/ProgressBar.svelte',  layer: 'components' },
+  // Feedback layer
+  { id: 'FeedbackPanel',      label: 'FeedbackPanel',      subtitle: 'src/lib/components/feedback/FeedbackPanel.svelte',    layer: 'feedback' },
+  { id: 'FeedbackItem',       label: 'FeedbackItem',       subtitle: 'src/lib/components/feedback/FeedbackItem.svelte',     layer: 'feedback' },
+  { id: 'HoverToolbar',       label: 'HoverToolbar',       subtitle: 'src/lib/components/feedback/HoverToolbar.svelte',     layer: 'feedback' },
+  { id: 'ApprovalBar',        label: 'ApprovalBar',        subtitle: 'src/lib/components/feedback/ApprovalBar.svelte',      layer: 'feedback' },
+  { id: 'PhaseStatusControl', label: 'PhaseStatusControl', subtitle: 'src/lib/components/feedback/PhaseStatusControl.svelte',layer: 'feedback' },
+  // Stores layer
+  { id: 'plan store',         label: 'plan store',         subtitle: 'src/lib/stores/plan.svelte.ts',               layer: 'stores' },
+  { id: 'feedback store',     label: 'feedback store',     subtitle: 'src/lib/stores/feedback.svelte.ts',           layer: 'stores' },
+  // Types layer
+  { id: 'plan.ts types',      label: 'plan.ts',            subtitle: 'src/lib/types/plan.ts',                       layer: 'types' },
+  { id: 'feedback.ts types',  label: 'feedback.ts',        subtitle: 'src/lib/types/feedback.ts',                   layer: 'types' },
+  { id: 'session.ts types',   label: 'session.ts',         subtitle: 'src/lib/types/session.ts',                    layer: 'types' },
+  { id: 'index.ts barrel',    label: 'index.ts barrel',    subtitle: 'src/lib/types/index.ts',                      layer: 'types' },
+];
+
+const CONN_TYPES = [
+  { id: 'data-flow',      name: 'Data Flow',      color: '#3b82f6', dash: '' },
+  { id: 'function-call',  name: 'Function Calls',  color: '#10b981', dash: '6,3' },
+  { id: 'event',          name: 'Events',          color: '#ef4444', dash: '2,4' },
+  { id: 'import',         name: 'Imports',         color: '#6b7280', dash: '1,3' },
+];
+
+const CONNECTIONS = [
+  // Data Flow
+  { from: 'markdown-parser.ts', to: 'markdown-to-plan',   type: 'data-flow' },
+  { from: 'markdown-to-plan',   to: 'session-manager.ts', type: 'data-flow' },
+  { from: 'session-manager.ts', to: 'file-watcher.ts',    type: 'data-flow' },
+  { from: 'file-watcher.ts',    to: 'sse-manager.ts',     type: 'data-flow' },
+  { from: 'sse-manager.ts',     to: 'GET /api/sse/[id]',  type: 'data-flow' },
+  { from: 'plan store',         to: 'PlanHeader',         type: 'data-flow' },
+  { from: 'plan store',         to: 'PhaseTable',         type: 'data-flow' },
+  { from: 'feedback store',     to: 'FeedbackPanel',      type: 'data-flow' },
+  { from: 'feedback store',     to: 'ApprovalBar',        type: 'data-flow' },
+  // Function Calls
+  { from: 'index.ts',           to: 'review.ts',          type: 'function-call' },
+  { from: 'index.ts',           to: 'status.ts',          type: 'function-call' },
+  { from: 'index.ts',           to: 'feedback.ts',        type: 'function-call' },
+  { from: 'index.ts',           to: 'list.ts',            type: 'function-call' },
+  { from: 'index.ts',           to: 'clean.ts',           type: 'function-call' },
+  { from: 'index.ts',           to: 'init.ts',            type: 'function-call' },
+  { from: 'index.ts',           to: 'export.ts',          type: 'function-call' },
+  { from: 'review.ts',          to: 'markdown-to-plan',   type: 'function-call' },
+  { from: 'review.ts',          to: 'session-manager.ts', type: 'function-call' },
+  // Events
+  { from: 'file-watcher.ts',    to: 'sse-manager.ts',     type: 'event' },
+  { from: 'PUT /feedback',      to: 'feedback store',     type: 'event' },
+  { from: 'POST /approve',      to: 'session-manager.ts', type: 'event' },
+  // Imports — all components + feedback → type files
+  { from: 'PlanHeader',         to: 'plan.ts types',      type: 'import' },
+  { from: 'PhaseTable',         to: 'plan.ts types',      type: 'import' },
+  { from: 'PhaseCard',          to: 'plan.ts types',      type: 'import' },
+  { from: 'ChangeBlock',        to: 'plan.ts types',      type: 'import' },
+  { from: 'MarkdownBlock',      to: 'plan.ts types',      type: 'import' },
+  { from: 'MermaidDiagram',     to: 'plan.ts types',      type: 'import' },
+  { from: 'VersionSelector',    to: 'plan.ts types',      type: 'import' },
+  { from: 'DiffView',           to: 'plan.ts types',      type: 'import' },
+  { from: 'ProgressBar',        to: 'plan.ts types',      type: 'import' },
+  { from: 'FeedbackPanel',      to: 'feedback.ts types',  type: 'import' },
+  { from: 'FeedbackItem',       to: 'feedback.ts types',  type: 'import' },
+  { from: 'HoverToolbar',       to: 'feedback.ts types',  type: 'import' },
+  { from: 'ApprovalBar',        to: 'feedback.ts types',  type: 'import' },
+  { from: 'PhaseStatusControl', to: 'feedback.ts types',  type: 'import' },
+  { from: 'feedback store',     to: 'feedback.ts types',  type: 'import' },
+  { from: 'plan store',         to: 'plan.ts types',      type: 'import' },
+];
+
+const PRESETS = [
+  { name: 'Full System',           layers: ['cli','server','api','components','feedback','stores','types'], conns: ['data-flow','function-call','event','import'] },
+  { name: 'CLI Pipeline',          layers: ['cli'],                            conns: ['data-flow','function-call'] },
+  { name: 'Server + SSE Flow',     layers: ['server','api'],                   conns: ['data-flow','event'] },
+  { name: 'Component Tree',        layers: ['components','feedback','stores'], conns: ['data-flow','function-call','event','import'] },
+  { name: 'Review Feedback Loop',  layers: ['feedback','stores','api'],        conns: ['event','data-flow'] },
+];
+
+// ───────────────────────────── STATE ─────────────────────────────
+
+const state = {
+  visibleLayers: new Set(LAYERS.map(l => l.id)),
+  visibleConns: new Set(CONN_TYPES.map(c => c.id)),
+  comments: {},       // nodeId -> text
+  activePreset: 0,
+  hoveredNode: null,
+  modalNode: null,
+  // Pan / zoom
+  zoom: 1,
+  panX: 0,
+  panY: 0,
+};
+
+// ───────────────────────────── LAYOUT ─────────────────────────────
+
+const NODE_H = 44;
+const CANVAS_W = 1600;
+const CANVAS_H = 920;
+
+function computeNodePositions() {
+  const positions = {};
+  for (const layer of LAYERS) {
+    const layerNodes = NODES.filter(n => n.layer === layer.id);
+    const count = layerNodes.length;
+    // Adaptive node width: narrower for crowded layers
+    const pad = 50;
+    const usable = CANVAS_W - 2 * pad;
+    const maxNodeW = 150;
+    const minNodeW = 100;
+    const gapMin = 6;
+    const nodeW = Math.max(minNodeW, Math.min(maxNodeW, (usable - gapMin * (count - 1)) / count));
+    const totalWidth = count * nodeW + (count - 1) * gapMin;
+    const startX = (CANVAS_W - totalWidth) / 2;
+    layerNodes.forEach((n, i) => {
+      const x = startX + i * (nodeW + gapMin);
+      positions[n.id] = { x, y: layer.y, w: nodeW, h: NODE_H };
+    });
+  }
+  return positions;
+}
+
+const nodePositions = computeNodePositions();
+
+// ───────────────────────────── SVG RENDERING ─────────────────────────────
+
+const svgNS = 'http://www.w3.org/2000/svg';
+const svg = document.getElementById('svg-canvas');
+svg.setAttribute('width', CANVAS_W);
+svg.setAttribute('height', CANVAS_H);
+svg.setAttribute('viewBox', `0 0 ${CANVAS_W} ${CANVAS_H}`);
+
+// Root group for pan/zoom
+const rootG = document.createElementNS(svgNS, 'g');
+rootG.setAttribute('id', 'root-group');
+svg.appendChild(rootG);
+
+// Defs for arrowheads
+const defs = document.createElementNS(svgNS, 'defs');
+CONN_TYPES.forEach(ct => {
+  const marker = document.createElementNS(svgNS, 'marker');
+  marker.setAttribute('id', `arrow-${ct.id}`);
+  marker.setAttribute('viewBox', '0 0 10 10');
+  marker.setAttribute('refX', '10');
+  marker.setAttribute('refY', '5');
+  marker.setAttribute('markerWidth', '8');
+  marker.setAttribute('markerHeight', '8');
+  marker.setAttribute('orient', 'auto-start-reverse');
+  const path = document.createElementNS(svgNS, 'path');
+  path.setAttribute('d', 'M 0 0 L 10 5 L 0 10 z');
+  path.setAttribute('fill', ct.color);
+  marker.appendChild(path);
+  defs.appendChild(marker);
+});
+svg.insertBefore(defs, rootG);
+
+// Connections group (behind nodes)
+const connG = document.createElementNS(svgNS, 'g');
+connG.setAttribute('id', 'connections-group');
+rootG.appendChild(connG);
+
+// Nodes group
+const nodesG = document.createElementNS(svgNS, 'g');
+nodesG.setAttribute('id', 'nodes-group');
+rootG.appendChild(nodesG);
+
+// Layer band labels
+const labelsG = document.createElementNS(svgNS, 'g');
+labelsG.setAttribute('id', 'labels-group');
+rootG.insertBefore(labelsG, connG);
+
+function renderLayerBandLabels() {
+  labelsG.innerHTML = '';
+  for (const layer of LAYERS) {
+    if (!state.visibleLayers.has(layer.id)) continue;
+    const txt = document.createElementNS(svgNS, 'text');
+    txt.setAttribute('x', '12');
+    txt.setAttribute('y', layer.y + 8);
+    txt.setAttribute('class', 'layer-band-label');
+    txt.textContent = layer.name;
+    labelsG.appendChild(txt);
+  }
+}
+
+// Lookup helpers
+const nodeById = {};
+NODES.forEach(n => nodeById[n.id] = n);
+const layerById = {};
+LAYERS.forEach(l => layerById[l.id] = l);
+
+function renderConnections() {
+  connG.innerHTML = '';
+  for (const conn of CONNECTIONS) {
+    if (!state.visibleConns.has(conn.type)) continue;
+    const fromNode = nodeById[conn.from];
+    const toNode   = nodeById[conn.to];
+    if (!fromNode || !toNode) continue;
+    if (!state.visibleLayers.has(fromNode.layer) || !state.visibleLayers.has(toNode.layer)) continue;
+
+    const fp = nodePositions[conn.from];
+    const tp = nodePositions[conn.to];
+    const ct = CONN_TYPES.find(c => c.id === conn.type);
+
+    // Compute best anchor points
+    const fx = fp.x + fp.w / 2;
+    const fy = fp.y + fp.h / 2;
+    const tx = tp.x + tp.w / 2;
+    const ty = tp.y + tp.h / 2;
+
+    // Exit from bottom of source, enter top of target (if source above target)
+    let sx, sy, ex, ey;
+    if (fy < ty) {
+      sx = fx; sy = fp.y + fp.h;
+      ex = tx; ey = tp.y;
+    } else if (fy > ty) {
+      sx = fx; sy = fp.y;
+      ex = tx; ey = tp.y + tp.h;
+    } else {
+      // Same row — go right to left
+      if (fx < tx) {
+        sx = fp.x + fp.w; sy = fy;
+        ex = tp.x; ey = ty;
+      } else {
+        sx = fp.x; sy = fy;
+        ex = tp.x + tp.w; ey = ty;
+      }
+    }
+
+    const midY = (sy + ey) / 2;
+    const d = `M ${sx} ${sy} C ${sx} ${midY}, ${ex} ${midY}, ${ex} ${ey}`;
+
+    const path = document.createElementNS(svgNS, 'path');
+    path.setAttribute('d', d);
+    path.setAttribute('class', 'connection-path');
+    path.setAttribute('stroke', ct.color);
+    path.setAttribute('marker-end', `url(#arrow-${ct.id})`);
+    if (ct.dash) path.setAttribute('stroke-dasharray', ct.dash);
+    path.dataset.from = conn.from;
+    path.dataset.to = conn.to;
+    path.dataset.type = conn.type;
+    connG.appendChild(path);
+  }
+}
+
+function renderNodes() {
+  nodesG.innerHTML = '';
+  for (const node of NODES) {
+    if (!state.visibleLayers.has(node.layer)) continue;
+    const layer = layerById[node.layer];
+    const pos = nodePositions[node.id];
+
+    const g = document.createElementNS(svgNS, 'g');
+    g.setAttribute('class', 'node-group');
+    g.dataset.nodeId = node.id;
+
+    // Rect
+    const rect = document.createElementNS(svgNS, 'rect');
+    rect.setAttribute('x', pos.x);
+    rect.setAttribute('y', pos.y);
+    rect.setAttribute('width', pos.w);
+    rect.setAttribute('height', pos.h);
+    rect.setAttribute('fill', layer.bg);
+    rect.setAttribute('class', 'node-rect');
+    rect.setAttribute('stroke', 'transparent');
+    rect.setAttribute('stroke-width', '2');
+    g.appendChild(rect);
+
+    // Label
+    // Clip path for text overflow
+    const clipId = 'clip-' + node.id.replace(/[^a-zA-Z0-9]/g, '_');
+    const clipPath = document.createElementNS(svgNS, 'clipPath');
+    clipPath.setAttribute('id', clipId);
+    const clipRect = document.createElementNS(svgNS, 'rect');
+    clipRect.setAttribute('x', pos.x + 4);
+    clipRect.setAttribute('y', pos.y);
+    clipRect.setAttribute('width', pos.w - 8);
+    clipRect.setAttribute('height', pos.h);
+    clipPath.appendChild(clipRect);
+    g.appendChild(clipPath);
+
+    const textG = document.createElementNS(svgNS, 'g');
+    textG.setAttribute('clip-path', `url(#${clipId})`);
+
+    const label = document.createElementNS(svgNS, 'text');
+    label.setAttribute('x', pos.x + pos.w / 2);
+    label.setAttribute('y', pos.y + 17);
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('fill', layer.text);
+    label.setAttribute('class', 'node-label');
+    label.textContent = node.label;
+    textG.appendChild(label);
+
+    // Subtitle -- show shortened path for narrow nodes
+    const sub = document.createElementNS(svgNS, 'text');
+    sub.setAttribute('x', pos.x + pos.w / 2);
+    sub.setAttribute('y', pos.y + 32);
+    sub.setAttribute('text-anchor', 'middle');
+    sub.setAttribute('fill', layer.text);
+    sub.setAttribute('class', 'node-subtitle');
+    const maxChars = Math.floor(pos.w / 5.5);
+    let st = node.subtitle;
+    if (st.length > maxChars) st = '...' + st.slice(-(maxChars - 3));
+    sub.textContent = st;
+    textG.appendChild(sub);
+
+    g.appendChild(textG);
+
+    // Tooltip for full label + path
+    const title = document.createElementNS(svgNS, 'title');
+    title.textContent = `${node.label}\n${node.subtitle}`;
+    g.appendChild(title);
+
+    // Comment indicator dot
+    if (state.comments[node.id]) {
+      const dot = document.createElementNS(svgNS, 'circle');
+      dot.setAttribute('cx', pos.x + pos.w - 6);
+      dot.setAttribute('cy', pos.y + 6);
+      dot.setAttribute('r', '4');
+      dot.setAttribute('fill', '#58a6ff');
+      dot.setAttribute('class', 'node-comment-dot');
+      g.appendChild(dot);
+    }
+
+    // Hover / click
+    g.addEventListener('mouseenter', () => onNodeHover(node.id));
+    g.addEventListener('mouseleave', () => onNodeHover(null));
+    g.addEventListener('click', (e) => { e.stopPropagation(); openModal(node.id); });
+
+    nodesG.appendChild(g);
+  }
+}
+
+function fullRender() {
+  renderLayerBandLabels();
+  renderConnections();
+  renderNodes();
+  updateConnectionHighlights();
+  updatePrompt();
+}
+
+// ───────────────────────────── HOVER HIGHLIGHT ─────────────────────────────
+
+function onNodeHover(nodeId) {
+  state.hoveredNode = nodeId;
+  updateConnectionHighlights();
+  // Highlight node rect stroke
+  nodesG.querySelectorAll('.node-group').forEach(g => {
+    const r = g.querySelector('.node-rect');
+    if (g.dataset.nodeId === nodeId) {
+      r.setAttribute('stroke', '#58a6ff');
+    } else {
+      r.setAttribute('stroke', 'transparent');
+    }
+  });
+}
+
+function updateConnectionHighlights() {
+  const paths = connG.querySelectorAll('.connection-path');
+  if (!state.hoveredNode) {
+    paths.forEach(p => { p.classList.remove('dimmed', 'highlighted'); });
+    return;
+  }
+  paths.forEach(p => {
+    if (p.dataset.from === state.hoveredNode || p.dataset.to === state.hoveredNode) {
+      p.classList.add('highlighted');
+      p.classList.remove('dimmed');
+    } else {
+      p.classList.add('dimmed');
+      p.classList.remove('highlighted');
+    }
+  });
+}
+
+// ───────────────────────────── COMMENT MODAL ─────────────────────────────
+
+const overlay = document.getElementById('modal-overlay');
+const modalName = document.getElementById('modal-node-name');
+const modalPath = document.getElementById('modal-file-path');
+const modalText = document.getElementById('modal-textarea');
+
+function openModal(nodeId) {
+  const node = nodeById[nodeId];
+  if (!node) return;
+  state.modalNode = nodeId;
+  modalName.textContent = node.label;
+  modalPath.textContent = node.subtitle;
+  modalText.value = state.comments[nodeId] || '';
+  overlay.classList.add('open');
+  setTimeout(() => modalText.focus(), 50);
+}
+
+function closeModal() {
+  overlay.classList.remove('open');
+  state.modalNode = null;
+}
+
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+document.getElementById('modal-save').addEventListener('click', () => {
+  const txt = modalText.value.trim();
+  if (txt) {
+    state.comments[state.modalNode] = txt;
+  } else {
+    delete state.comments[state.modalNode];
+  }
+  closeModal();
+  fullRender();
+  renderCommentsList();
+});
+overlay.addEventListener('click', (e) => { if (e.target === overlay) closeModal(); });
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && overlay.classList.contains('open')) closeModal();
+});
+
+// ───────────────────────────── COMMENTS LIST ─────────────────────────────
+
+const commentsList = document.getElementById('comments-list');
+const noCommentsMsg = document.getElementById('no-comments-msg');
+
+function renderCommentsList() {
+  commentsList.innerHTML = '';
+  const ids = Object.keys(state.comments);
+  if (ids.length === 0) {
+    const li = document.createElement('li');
+    li.className = 'no-comments';
+    li.textContent = 'Click any node to add a comment.';
+    commentsList.appendChild(li);
+    return;
+  }
+  for (const id of ids) {
+    const node = nodeById[id];
+    if (!node) continue;
+    const li = document.createElement('li');
+    li.className = 'comment-item';
+    li.innerHTML = `
+      <div class="node-name">${node.label}</div>
+      <div class="file-path">${node.subtitle}</div>
+      <div class="comment-text">${escHtml(state.comments[id])}</div>
+      <button class="comment-delete" title="Delete comment">&times;</button>
+    `;
+    li.querySelector('.comment-delete').addEventListener('click', () => {
+      delete state.comments[id];
+      fullRender();
+      renderCommentsList();
+    });
+    commentsList.appendChild(li);
+  }
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ───────────────────────────── SIDEBAR CONTROLS ─────────────────────────────
+
+// Presets
+const presetsDiv = document.getElementById('presets');
+PRESETS.forEach((p, i) => {
+  const btn = document.createElement('button');
+  btn.className = 'preset-btn' + (i === 0 ? ' active' : '');
+  btn.textContent = p.name;
+  btn.addEventListener('click', () => {
+    state.activePreset = i;
+    state.visibleLayers = new Set(p.layers);
+    state.visibleConns = new Set(p.conns);
+    syncToggles();
+    fullRender();
+    presetsDiv.querySelectorAll('.preset-btn').forEach((b, j) => b.classList.toggle('active', j === i));
+  });
+  presetsDiv.appendChild(btn);
+});
+
+// Layer toggles
+const layerTogglesDiv = document.getElementById('layer-toggles');
+LAYERS.forEach(layer => {
+  const label = document.createElement('label');
+  label.className = 'layer-toggle';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = true;
+  cb.dataset.layerId = layer.id;
+  cb.addEventListener('change', () => {
+    if (cb.checked) state.visibleLayers.add(layer.id);
+    else state.visibleLayers.delete(layer.id);
+    clearActivePreset();
+    fullRender();
+  });
+  const swatch = document.createElement('span');
+  swatch.className = 'layer-swatch';
+  swatch.style.background = layer.bg;
+  const txt = document.createElement('span');
+  txt.textContent = layer.name;
+  label.appendChild(cb);
+  label.appendChild(swatch);
+  label.appendChild(txt);
+  layerTogglesDiv.appendChild(label);
+});
+
+// Connection filters
+const connFiltersDiv = document.getElementById('conn-filters');
+CONN_TYPES.forEach(ct => {
+  const label = document.createElement('label');
+  label.className = 'conn-filter';
+  const cb = document.createElement('input');
+  cb.type = 'checkbox';
+  cb.checked = true;
+  cb.dataset.connId = ct.id;
+  cb.addEventListener('change', () => {
+    if (cb.checked) state.visibleConns.add(ct.id);
+    else state.visibleConns.delete(ct.id);
+    clearActivePreset();
+    fullRender();
+  });
+  const swatch = document.createElement('span');
+  swatch.className = 'conn-swatch';
+  swatch.style.setProperty('--sw-color', ct.color);
+  swatch.style.background = ct.color;
+  if (ct.dash === '6,3') { swatch.classList.add('dashed'); swatch.style.background = ''; }
+  if (ct.dash === '2,4') { swatch.classList.add('dotted'); swatch.style.background = ''; }
+  if (ct.dash === '1,3') { swatch.classList.add('dotted'); swatch.style.background = ''; }
+  const txt = document.createElement('span');
+  txt.textContent = ct.name;
+  label.appendChild(cb);
+  label.appendChild(swatch);
+  label.appendChild(txt);
+  connFiltersDiv.appendChild(label);
+});
+
+function syncToggles() {
+  layerTogglesDiv.querySelectorAll('input').forEach(cb => {
+    cb.checked = state.visibleLayers.has(cb.dataset.layerId);
+  });
+  connFiltersDiv.querySelectorAll('input').forEach(cb => {
+    cb.checked = state.visibleConns.has(cb.dataset.connId);
+  });
+}
+
+function clearActivePreset() {
+  state.activePreset = -1;
+  presetsDiv.querySelectorAll('.preset-btn').forEach(b => b.classList.remove('active'));
+}
+
+// ───────────────────────────── PROMPT OUTPUT ─────────────────────────────
+
+const promptBody = document.getElementById('prompt-body');
+const copyBtn = document.getElementById('copy-btn');
+
+function updatePrompt() {
+  const allVisible = LAYERS.every(l => state.visibleLayers.has(l.id));
+  const visibleNames = LAYERS.filter(l => state.visibleLayers.has(l.id)).map(l => l.name);
+
+  let layerNote = '';
+  if (allVisible) {
+    layerNote = 'all layers';
+  } else if (visibleNames.length === 0) {
+    layerNote = 'no layers (all hidden)';
+  } else {
+    layerNote = visibleNames.join(', ') + (visibleNames.length === 1 ? ' layer' : ' layers');
+  }
+
+  let text = `This is the Plan Assistant architecture, focusing on the ${layerNote}.`;
+
+  const commentIds = Object.keys(state.comments);
+  if (commentIds.length > 0) {
+    text += '\n\nFeedback on specific components:\n';
+    for (const id of commentIds) {
+      const node = nodeById[id];
+      if (!node) continue;
+      text += `\n**${node.label}** (${node.subtitle}):\n${state.comments[id]}\n`;
+    }
+  }
+
+  text += '\n\n[Playground: Architecture Code Map]';
+
+  promptBody.textContent = text;
+}
+
+copyBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(promptBody.textContent).then(() => {
+    copyBtn.textContent = 'Copied!';
+    copyBtn.classList.add('copied');
+    setTimeout(() => { copyBtn.textContent = 'Copy'; copyBtn.classList.remove('copied'); }, 1500);
+  });
+});
+
+// ───────────────────────────── PAN / ZOOM ─────────────────────────────
+
+const canvasWrap = document.getElementById('canvas-wrap');
+let isPanning = false;
+let panStartX = 0, panStartY = 0;
+let panStartPX = 0, panStartPY = 0;
+
+function applyTransform() {
+  svg.style.transform = `translate(${state.panX}px, ${state.panY}px) scale(${state.zoom})`;
+  svg.style.transformOrigin = '0 0';
+}
+
+canvasWrap.addEventListener('mousedown', (e) => {
+  // Pan if clicking on any non-node area (canvas, SVG root, connections, labels, etc.)
+  const nodeGroup = e.target.closest('.node-group');
+  if (!nodeGroup) {
+    isPanning = true;
+    panStartX = e.clientX;
+    panStartY = e.clientY;
+    panStartPX = state.panX;
+    panStartPY = state.panY;
+    canvasWrap.classList.add('grabbing');
+  }
+});
+
+window.addEventListener('mousemove', (e) => {
+  if (!isPanning) return;
+  state.panX = panStartPX + (e.clientX - panStartX);
+  state.panY = panStartPY + (e.clientY - panStartY);
+  applyTransform();
+});
+
+window.addEventListener('mouseup', () => {
+  isPanning = false;
+  canvasWrap.classList.remove('grabbing');
+});
+
+canvasWrap.addEventListener('wheel', (e) => {
+  e.preventDefault();
+  const delta = e.deltaY > 0 ? -0.08 : 0.08;
+  const newZoom = Math.min(3, Math.max(0.3, state.zoom + delta));
+
+  // Zoom towards cursor position
+  const rect = canvasWrap.getBoundingClientRect();
+  const mx = e.clientX - rect.left;
+  const my = e.clientY - rect.top;
+
+  const scale = newZoom / state.zoom;
+  state.panX = mx - scale * (mx - state.panX);
+  state.panY = my - scale * (my - state.panY);
+  state.zoom = newZoom;
+  applyTransform();
+}, { passive: false });
+
+document.getElementById('zoom-in').addEventListener('click', () => {
+  state.zoom = Math.min(3, state.zoom + 0.15);
+  applyTransform();
+});
+document.getElementById('zoom-out').addEventListener('click', () => {
+  state.zoom = Math.max(0.3, state.zoom - 0.15);
+  applyTransform();
+});
+document.getElementById('zoom-reset').addEventListener('click', () => {
+  state.zoom = 1;
+  state.panX = 0;
+  state.panY = 0;
+  applyTransform();
+});
+
+// ───────────────────────────── INIT ─────────────────────────────
+
+fullRender();
+renderCommentsList();
+applyTransform();
+
+// Fit canvas to viewport on load
+(function fitInitial() {
+  const wrapRect = canvasWrap.getBoundingClientRect();
+  const scaleX = wrapRect.width / CANVAS_W;
+  const scaleY = wrapRect.height / CANVAS_H;
+  state.zoom = Math.min(scaleX, scaleY, 1) * 0.95;
+  // Center
+  state.panX = (wrapRect.width - CANVAS_W * state.zoom) / 2;
+  state.panY = (wrapRect.height - CANVAS_H * state.zoom) / 2;
+  applyTransform();
+})();
+</script>
+</body>
+</html>
