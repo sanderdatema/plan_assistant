@@ -1,6 +1,6 @@
 {
   "name": "plan-assistant",
-  "version": "1.2.0-alpha.1",
+  "version": "1.2.0-alpha.2",
   "description": "Review implementation plans in the browser with live reload",
   "homepage": "https://github.com/sanderdatema/plan_assistant#readme",
   "bugs": {
