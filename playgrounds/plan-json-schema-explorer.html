@@ -1,0 +1,1144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PlanJson Schema Explorer</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #1c2129;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-dim: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --orange: #d29922;
+  --purple: #bc8cff;
+  --red: #f85149;
+  --dim: #8b949e;
+}
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+header {
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+header h1 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--accent);
+}
+
+header .badge {
+  font-size: 11px;
+  background: var(--accent);
+  color: var(--bg);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.main-layout {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+/* Left Panel */
+.left-panel {
+  width: 300px;
+  min-width: 260px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  flex-shrink: 0;
+}
+
+.panel-section {
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.panel-section h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+  font-weight: 600;
+}
+
+/* Type Selector Tabs */
+.type-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.type-tab {
+  flex: 1;
+  padding: 6px 8px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.type-tab:hover { border-color: var(--accent); color: var(--text); }
+.type-tab.active {
+  background: rgba(88, 166, 255, 0.12);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Radio groups */
+.radio-group { display: flex; flex-direction: column; gap: 6px; }
+.radio-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+}
+.radio-group input[type="radio"] { accent-color: var(--accent); }
+
+/* Text input */
+.search-input {
+  width: 100%;
+  padding: 7px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  margin-top: 8px;
+}
+.search-input:focus { border-color: var(--accent); }
+.search-input::placeholder { color: var(--text-dim); }
+
+/* Toggle switches */
+.toggle-group { display: flex; flex-direction: column; gap: 8px; }
+.toggle-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  font-size: 13px;
+}
+.toggle-switch {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+}
+.toggle-switch input { opacity: 0; width: 0; height: 0; }
+.toggle-slider {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 10px;
+  transition: 0.2s;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 14px; height: 14px;
+  left: 3px; bottom: 3px;
+  background: var(--text);
+  border-radius: 50%;
+  transition: 0.2s;
+}
+.toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+.toggle-switch input:checked + .toggle-slider::before { transform: translateX(16px); }
+
+/* Quick Navigate */
+.quick-nav { display: flex; flex-wrap: wrap; gap: 6px; }
+.quick-nav-link {
+  padding: 3px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--accent);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+  text-decoration: none;
+}
+.quick-nav-link:hover {
+  background: rgba(88, 166, 255, 0.1);
+  border-color: var(--accent);
+}
+
+/* Presets */
+.presets { display: flex; flex-direction: column; gap: 4px; }
+.preset-btn {
+  display: block;
+  width: 100%;
+  padding: 6px 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text);
+  font-size: 12px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s;
+}
+.preset-btn:hover { border-color: var(--accent); background: var(--surface2); }
+.preset-btn .preset-name { font-weight: 500; }
+.preset-btn .preset-desc { color: var(--text-dim); font-size: 11px; }
+
+/* Expand/Collapse */
+.action-btns { display: flex; gap: 6px; }
+.action-btn {
+  flex: 1;
+  padding: 6px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-dim);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.action-btn:hover { border-color: var(--accent); color: var(--text); }
+
+/* Right Panel */
+.right-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.tree-container {
+  flex: 1;
+  overflow: auto;
+  padding: 16px 20px;
+}
+
+/* Tree */
+.tree-node { margin: 0; }
+.tree-row {
+  display: flex;
+  align-items: flex-start;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: default;
+  gap: 4px;
+  min-height: 26px;
+  flex-wrap: wrap;
+}
+.tree-row:hover { background: rgba(88, 166, 255, 0.04); }
+.tree-row.highlighted { background: rgba(88, 166, 255, 0.12); }
+
+.tree-toggle {
+  width: 18px;
+  height: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--text-dim);
+  font-size: 12px;
+  flex-shrink: 0;
+  border-radius: 3px;
+  margin-top: 2px;
+  user-select: none;
+}
+.tree-toggle:hover { background: var(--border); color: var(--text); }
+.tree-toggle-placeholder { width: 18px; flex-shrink: 0; }
+
+.tree-field { color: var(--accent); font-weight: 500; }
+.tree-colon { color: var(--text-dim); margin: 0 2px; }
+.tree-type { color: var(--green); font-size: 12px; }
+.tree-optional { color: var(--orange); font-size: 12px; font-weight: 600; }
+.tree-array-bracket { color: var(--purple); }
+.tree-object-brace { color: var(--dim); }
+.tree-literal { color: var(--red); font-size: 12px; font-style: italic; }
+.tree-desc { color: var(--dim); font-size: 12px; margin-left: 8px; font-style: italic; }
+.tree-example {
+  color: var(--orange);
+  font-size: 11px;
+  margin-left: 8px;
+  background: rgba(210, 153, 34, 0.08);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+.tree-source {
+  color: var(--purple);
+  font-size: 11px;
+  margin-left: 8px;
+  background: rgba(188, 140, 255, 0.08);
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.tree-children {
+  padding-left: 22px;
+  border-left: 1px solid var(--border);
+  margin-left: 9px;
+}
+
+.tree-hidden { display: none; }
+
+/* Prompt Output */
+.prompt-panel {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 12px 20px;
+  flex-shrink: 0;
+}
+.prompt-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+.prompt-header h3 {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--text-dim);
+  font-weight: 600;
+}
+.copy-btn {
+  padding: 4px 12px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.copy-btn:hover { opacity: 0.85; }
+.copy-btn.copied { background: var(--green); }
+.prompt-text {
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--text-dim);
+  max-height: 80px;
+  overflow-y: auto;
+  cursor: text;
+}
+.prompt-text:focus {
+  outline: 1px solid #58a6ff;
+  outline-offset: 2px;
+}
+.prompt-editable-hint {
+  font-size: 11px;
+  color: #8b949e;
+  margin-top: 4px;
+}
+.prompt-text code {
+  background: var(--bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+  color: var(--accent);
+  font-size: 12px;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+/* Count badge */
+.field-count {
+  font-size: 10px;
+  background: var(--border);
+  color: var(--text-dim);
+  padding: 0 6px;
+  border-radius: 8px;
+  margin-left: 4px;
+}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>PlanJson Schema Explorer</h1>
+  <span class="badge">Interactive</span>
+</header>
+
+<div class="main-layout">
+  <!-- Left Panel: Controls -->
+  <div class="left-panel">
+
+    <!-- Type Selector -->
+    <div class="panel-section">
+      <h3>Root Type</h3>
+      <div class="type-tabs">
+        <div class="type-tab active" data-type="PlanJson">PlanJson</div>
+        <div class="type-tab" data-type="FeedbackPayload">Feedback</div>
+        <div class="type-tab" data-type="SessionMeta">Session</div>
+      </div>
+    </div>
+
+    <!-- Filter -->
+    <div class="panel-section">
+      <h3>Filter</h3>
+      <div class="radio-group">
+        <label><input type="radio" name="filter" value="all" checked> Show All</label>
+        <label><input type="radio" name="filter" value="required"> Required Only</label>
+        <label><input type="radio" name="filter" value="optional"> Optional Only</label>
+      </div>
+      <input type="text" class="search-input" id="searchInput" placeholder="Search fields...">
+    </div>
+
+    <!-- Display Options -->
+    <div class="panel-section">
+      <h3>Display Options</h3>
+      <div class="toggle-group">
+        <label class="toggle-label">
+          <span class="toggle-switch">
+            <input type="checkbox" id="toggleDesc" checked>
+            <span class="toggle-slider"></span>
+          </span>
+          Show descriptions
+        </label>
+        <label class="toggle-label">
+          <span class="toggle-switch">
+            <input type="checkbox" id="toggleExamples">
+            <span class="toggle-slider"></span>
+          </span>
+          Show example values
+        </label>
+        <label class="toggle-label">
+          <span class="toggle-switch">
+            <input type="checkbox" id="toggleSource" checked>
+            <span class="toggle-slider"></span>
+          </span>
+          Show source sections
+        </label>
+      </div>
+    </div>
+
+    <!-- Quick Navigate -->
+    <div class="panel-section" id="quickNavSection">
+      <h3>Quick Navigate</h3>
+      <div class="quick-nav" id="quickNav"></div>
+    </div>
+
+    <!-- Presets -->
+    <div class="panel-section">
+      <h3>Presets</h3>
+      <div class="presets">
+        <button class="preset-btn" data-preset="full">
+          <span class="preset-name">Full Schema</span><br>
+          <span class="preset-desc">All types expanded to depth 2</span>
+        </button>
+        <button class="preset-btn" data-preset="phases">
+          <span class="preset-name">Phase Deep Dive</span><br>
+          <span class="preset-desc">Expand phases to full depth</span>
+        </button>
+        <button class="preset-btn" data-preset="feedback">
+          <span class="preset-name">Feedback Focus</span><br>
+          <span class="preset-desc">FeedbackPayload expanded fully</span>
+        </button>
+        <button class="preset-btn" data-preset="minimal">
+          <span class="preset-name">Minimal View</span><br>
+          <span class="preset-desc">Only top-level fields visible</span>
+        </button>
+        <button class="preset-btn" data-preset="changes">
+          <span class="preset-name">Changes &amp; Criteria</span><br>
+          <span class="preset-desc">Focus on changes and successCriteria</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Expand/Collapse -->
+    <div class="panel-section">
+      <h3>Actions</h3>
+      <div class="action-btns">
+        <button class="action-btn" id="expandAll">Expand All</button>
+        <button class="action-btn" id="collapseAll">Collapse All</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Right Panel -->
+  <div class="right-panel">
+    <div class="tree-container" id="treeContainer"></div>
+
+    <!-- Prompt Output -->
+    <div class="prompt-panel">
+      <div class="prompt-header">
+        <h3>Prompt Output</h3>
+        <button class="copy-btn" id="copyBtn">Copy</button>
+      </div>
+      <div class="prompt-text" id="promptOutput" contenteditable="true"></div>
+      <div class="prompt-editable-hint">Click to edit before copying</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ===== SCHEMA DEFINITIONS =====
+
+const SCHEMAS = {
+  PlanJson: {
+    fields: [
+      { name: 'schemaVersion', type: 'literal', literal: '1', desc: 'Schema version, always 1', source: 'Root of plan JSON', example: '1' },
+      { name: 'meta', type: 'object', desc: 'Plan metadata', source: 'Filename, H1 heading, parse info', fields: [
+        { name: 'title', type: 'string', desc: 'Plan title from H1 heading', source: '# heading', example: '"Authentication Refactor Plan"' },
+        { name: 'date', type: 'string', desc: 'Date from filename or today (YYYY-MM-DD)', source: 'Filename pattern', example: '"2026-02-23"' },
+        { name: 'ticketRef', type: 'string', optional: true, desc: 'Ticket reference extracted from filename (e.g., ENG-123)', source: 'Filename pattern', example: '"ENG-1234"' },
+        { name: 'markdownPath', type: 'string', desc: 'Absolute path to the source markdown file', source: 'CLI input', example: '"/home/user/plans/auth-refactor.md"' },
+        { name: 'projectDir', type: 'string', desc: 'Project directory path', source: 'CLI --project flag', example: '"/home/user/my-project"' },
+        { name: 'version', type: 'number', desc: 'Plan version, increments on each parse', source: 'Auto-incremented', example: '2' },
+        { name: 'createdAt', type: 'string', desc: 'ISO timestamp of first parse', source: 'Auto-generated', example: '"2026-02-23T10:30:00.000Z"' },
+        { name: 'updatedAt', type: 'string', desc: 'ISO timestamp of latest parse', source: 'Auto-generated', example: '"2026-02-23T14:15:00.000Z"' },
+      ]},
+      { name: 'overview', type: 'string', desc: 'Content of ## Overview section', source: '## Overview', example: '"This plan refactors the authentication system to use JWT tokens..."' },
+      { name: 'currentState', type: 'string', desc: 'Content of ## Current State section', source: '## Current State', example: '"The current auth uses session cookies stored in Redis..."' },
+      { name: 'keyDiscoveries', type: 'array', desc: 'From ### Key Discoveries within Current State', source: '### Key Discoveries', itemType: 'object', fields: [
+        { name: 'text', type: 'string', desc: 'Discovery description', source: '### Key Discoveries list item', example: '"Session store has 3x redundant lookups per request"' },
+        { name: 'codeRef', type: 'string', optional: true, desc: 'Code reference like file.ts:42', source: 'Inline code ref', example: '"src/auth/session.ts:42"' },
+      ]},
+      { name: 'scopeExclusions', type: 'array', desc: 'From ## What We\'re NOT Doing', source: '## What We\'re NOT Doing', itemType: 'object', fields: [
+        { name: 'title', type: 'string', desc: 'What\'s excluded', source: 'List item text', example: '"OAuth2 provider migration"' },
+        { name: 'reason', type: 'string', desc: 'Why it\'s excluded (after -- separator)', source: 'After -- in list item', example: '"Out of scope for Q1, tracked in ENG-5678"' },
+      ]},
+      { name: 'implementationApproach', type: 'string', desc: 'Content of ## Implementation Approach', source: '## Implementation Approach', example: '"We will migrate incrementally, one endpoint at a time..."' },
+      { name: 'phases', type: 'array', desc: 'Core plan structure, one per phase heading', source: '## Phase N: ... headings', itemType: 'Phase' },
+      { name: 'diagrams', type: 'array', desc: 'Auto-generated Mermaid diagrams', source: '```mermaid code blocks', itemType: 'Diagram' },
+      { name: 'testingStrategy', type: 'object', desc: 'Testing plan', source: '## Testing Strategy', fields: [
+        { name: 'unit', type: 'array', itemType: 'string', desc: 'Unit test items', source: '### Unit Tests', example: '["Test JWT token generation", "Test token refresh flow"]' },
+        { name: 'integration', type: 'array', itemType: 'string', desc: 'Integration/E2E test items', source: '### Integration Tests', example: '["Full login flow with new tokens", "Session migration smoke test"]' },
+        { name: 'manual', type: 'array', itemType: 'string', desc: 'Manual testing steps', source: '### Manual Tests', example: '["Verify cookie cleanup in browser DevTools"]' },
+      ]},
+      { name: 'references', type: 'array', itemType: 'string', desc: 'Items from ## References', source: '## References', example: '["RFC 7519 - JSON Web Tokens", "Internal Auth ADR #14"]' },
+      { name: 'additionalSections', type: 'array', optional: true, desc: 'Unrecognized H2 sections', source: 'Any unrecognized ## heading', itemType: 'object', fields: [
+        { name: 'heading', type: 'string', desc: 'Section heading', source: '## heading text', example: '"Performance Considerations"' },
+        { name: 'content', type: 'string', desc: 'Section content as markdown', source: 'Section body', example: '"Expected latency improvement: 40%..."' },
+      ]},
+    ]
+  },
+
+  Phase: {
+    fields: [
+      { name: 'id', type: 'string', desc: 'Phase identifier', source: 'Auto-generated from heading', example: '"phase-1"' },
+      { name: 'number', type: 'number', desc: 'Phase number (1-based)', source: '## Phase N heading', example: '1' },
+      { name: 'name', type: 'string', desc: 'Phase name from heading', source: '## Phase N: Name', example: '"Database Schema Migration"' },
+      { name: 'overview', type: 'string', desc: 'Content of ### Overview within phase', source: '### Overview', example: '"Migrate the users table to support JWT claims..."' },
+      { name: 'content', type: 'string', optional: true, desc: 'Additional content not in recognized sub-sections', source: 'Phase body text', example: '"Additional context about this phase..."' },
+      { name: 'subItems', type: 'array', desc: 'Sub-items like ### 1a. Setup', source: '### Na. SubItem headings', itemType: 'SubItem' },
+      { name: 'changes', type: 'array', desc: 'File changes from ### Changes Required', source: '### Changes Required', itemType: 'Change' },
+      { name: 'successCriteria', type: 'object', desc: 'Verification criteria', source: '### Success Criteria', fields: [
+        { name: 'automated', type: 'array', desc: 'From #### Automated Verification', source: '#### Automated Verification', itemType: 'Criterion' },
+        { name: 'manual', type: 'array', desc: 'From #### Manual Verification', source: '#### Manual Verification', itemType: 'Criterion' },
+      ]},
+    ]
+  },
+
+  SubItem: {
+    fields: [
+      { name: 'id', type: 'string', desc: 'Sub-item identifier', source: 'Auto-generated', example: '"phase-1-a"' },
+      { name: 'letter', type: 'string', desc: 'Single letter: a, b, c...', source: '### Na. heading', example: '"a"' },
+      { name: 'name', type: 'string', desc: 'Sub-item name', source: '### Na. Name', example: '"Setup migration scripts"' },
+      { name: 'content', type: 'string', desc: 'Sub-item content', source: 'Sub-item body', example: '"Create the Knex migration files for the users table..."' },
+    ]
+  },
+
+  Change: {
+    fields: [
+      { name: 'componentName', type: 'string', desc: 'Component/file name', source: 'Change heading', example: '"UserModel"' },
+      { name: 'filePath', type: 'string', desc: 'Full file path', source: 'Change path annotation', example: '"src/models/user.ts"' },
+      { name: 'description', type: 'string', desc: 'Change description', source: 'Change body', example: '"Add JWT claims columns to user model"' },
+      { name: 'codeSnippet', type: 'string', optional: true, desc: 'Code example', source: 'Code block in change', example: '"export interface UserClaims { sub: string; role: string; }"' },
+      { name: 'codeLanguage', type: 'string', optional: true, desc: 'Language for syntax highlighting', source: 'Code block language tag', example: '"typescript"' },
+    ]
+  },
+
+  Criterion: {
+    fields: [
+      { name: 'id', type: 'string', desc: 'Criterion identifier', source: 'Auto-generated', example: '"automated-1"' },
+      { name: 'text', type: 'string', desc: 'Criterion description', source: 'Criterion list item', example: '"All user model tests pass"' },
+      { name: 'command', type: 'string', optional: true, desc: 'Verification command (automated only)', source: 'Code in criterion item', example: '"npm test -- --grep UserModel"' },
+    ]
+  },
+
+  Diagram: {
+    fields: [
+      { name: 'id', type: 'string', desc: 'Diagram identifier', source: 'Auto-generated', example: '"diagram-1"' },
+      { name: 'title', type: 'string', desc: 'Diagram title', source: 'Comment or heading before mermaid block', example: '"Auth Flow Diagram"' },
+      { name: 'type', type: 'string', desc: 'Diagram type (e.g., flowchart)', source: 'First line of mermaid code', example: '"flowchart"' },
+      { name: 'mermaidCode', type: 'string', desc: 'Mermaid diagram source code', source: '```mermaid block', example: '"flowchart TD\\n  A[Login] --> B{Valid?}\\n  B -->|Yes| C[JWT]"' },
+    ]
+  },
+
+  FeedbackPayload: {
+    fields: [
+      { name: 'schemaVersion', type: 'literal', literal: '1', desc: 'Schema version, always 1', source: 'Root', example: '1' },
+      { name: 'planTitle', type: 'string', desc: 'Title of the plan being reviewed', source: 'From PlanJson.meta.title', example: '"Authentication Refactor Plan"' },
+      { name: 'planVersion', type: 'number', desc: 'Version of the plan', source: 'From PlanJson.meta.version', example: '2' },
+      { name: 'sessionId', type: 'string', desc: 'Review session identifier', source: 'Auto-generated', example: '"a1b2c3d4"' },
+      { name: 'status', type: 'union', unionOf: ['"reviewing"', '"approved"', '"needs-work"'], desc: 'Overall review status', source: 'Reviewer action', example: '"reviewing"' },
+      { name: 'phaseStatuses', type: 'record', desc: 'Status per phase', source: 'Phase-level review actions', keyType: 'string', valueType: 'object', fields: [
+        { name: 'phaseId', type: 'string', desc: 'Phase identifier', source: 'Phase ID', example: '"phase-1"' },
+        { name: 'status', type: 'union', unionOf: ['"pending"', '"approved"', '"needs-work"'], desc: 'Phase review status', source: 'Reviewer action', example: '"approved"' },
+        { name: 'note', type: 'string', optional: true, desc: 'Reviewer note for phase', source: 'Reviewer input', example: '"Looks good, minor naming nit"' },
+      ]},
+      { name: 'subItemStatuses', type: 'record', desc: 'Status per sub-item', source: 'Sub-item level review', keyType: 'string', valueType: 'object', fields: [
+        { name: 'subItemId', type: 'string', desc: 'Sub-item identifier', source: 'SubItem ID', example: '"phase-1-a"' },
+        { name: 'phaseId', type: 'string', desc: 'Parent phase', source: 'Phase ID', example: '"phase-1"' },
+        { name: 'status', type: 'union', unionOf: ['"pending"', '"approved"', '"needs-work"'], desc: 'Sub-item review status', source: 'Reviewer action', example: '"pending"' },
+      ]},
+      { name: 'comments', type: 'array', desc: 'Reviewer comments', source: 'Comment form', itemType: 'FeedbackComment' },
+      { name: 'submittedAt', type: 'string', optional: true, desc: 'When feedback was submitted', source: 'Auto-generated on submit', example: '"2026-02-23T16:00:00.000Z"' },
+      { name: 'updatedAt', type: 'string', desc: 'Last update timestamp', source: 'Auto-generated', example: '"2026-02-23T16:05:00.000Z"' },
+    ]
+  },
+
+  FeedbackComment: {
+    fields: [
+      { name: 'id', type: 'string', desc: 'Comment identifier', source: 'Auto-generated', example: '"comment-1"' },
+      { name: 'section', type: 'string', desc: 'Which section the comment is on', source: 'UI context', example: '"phases"' },
+      { name: 'quote', type: 'string', desc: 'Quoted text from the plan', source: 'Text selection', example: '"Migrate the users table to support JWT claims"' },
+      { name: 'comment', type: 'string', desc: 'The reviewer\'s comment', source: 'Reviewer input', example: '"Should we also handle the legacy sessions table?"' },
+      { name: 'phaseId', type: 'string', optional: true, desc: 'Which phase (if applicable)', source: 'UI context', example: '"phase-1"' },
+      { name: 'resolved', type: 'boolean', desc: 'Whether the comment is resolved', source: 'Reviewer action', example: 'false' },
+      { name: 'createdAt', type: 'string', desc: 'When comment was created', source: 'Auto-generated', example: '"2026-02-23T15:45:00.000Z"' },
+    ]
+  },
+
+  SessionMeta: {
+    fields: [
+      { name: 'id', type: 'string', desc: '8-char hex session ID', source: 'Auto-generated', example: '"a1b2c3d4"' },
+      { name: 'planTitle', type: 'string', desc: 'Title of the plan', source: 'From PlanJson.meta.title', example: '"Authentication Refactor Plan"' },
+      { name: 'markdownPath', type: 'string', desc: 'Path to source markdown', source: 'From PlanJson.meta.markdownPath', example: '"/home/user/plans/auth-refactor.md"' },
+      { name: 'projectDir', type: 'string', desc: 'Project directory', source: 'From PlanJson.meta.projectDir', example: '"/home/user/my-project"' },
+      { name: 'status', type: 'union', unionOf: ['"active"', '"approved"', '"archived"'], desc: 'Session status', source: 'Session lifecycle', example: '"active"' },
+      { name: 'planVersion', type: 'number', desc: 'Plan version at session creation', source: 'From PlanJson.meta.version', example: '2' },
+      { name: 'createdAt', type: 'string', desc: 'Session creation time', source: 'Auto-generated', example: '"2026-02-23T10:00:00.000Z"' },
+      { name: 'updatedAt', type: 'string', desc: 'Last session update', source: 'Auto-generated', example: '"2026-02-23T16:30:00.000Z"' },
+    ]
+  },
+};
+
+// Quick nav config per root type
+const QUICK_NAV = {
+  PlanJson: ['meta', 'phases', 'changes', 'successCriteria', 'diagrams', 'testingStrategy', 'keyDiscoveries', 'scopeExclusions'],
+  FeedbackPayload: ['phaseStatuses', 'subItemStatuses', 'comments'],
+  SessionMeta: [],
+};
+
+// ===== STATE =====
+let state = {
+  rootType: 'PlanJson',
+  filter: 'all',
+  search: '',
+  showDesc: true,
+  showExamples: false,
+  showSource: true,
+  expandedPaths: new Set(),
+  clickedFields: new Set(),
+};
+
+// ===== RESOLVE TYPE REF =====
+function resolveSchema(typeName) {
+  return SCHEMAS[typeName] || null;
+}
+
+function getFieldsForType(typeName) {
+  const s = resolveSchema(typeName);
+  return s ? s.fields : [];
+}
+
+// ===== TREE RENDERING =====
+function shouldShowField(field) {
+  if (state.filter === 'required' && field.optional) return false;
+  if (state.filter === 'optional' && !field.optional) return false;
+  if (state.search) {
+    const q = state.search.toLowerCase();
+    if (fieldMatchesSearch(field, q)) return true;
+    // Check children
+    if (field.fields) {
+      return field.fields.some(f => fieldMatchesSearch(f, q));
+    }
+    if (field.itemType && typeof field.itemType === 'string' && SCHEMAS[field.itemType]) {
+      return SCHEMAS[field.itemType].fields.some(f => fieldMatchesSearch(f, q));
+    }
+    return false;
+  }
+  return true;
+}
+
+function fieldMatchesSearch(field, q) {
+  if (field.name.toLowerCase().includes(q)) return true;
+  if (field.desc && field.desc.toLowerCase().includes(q)) return true;
+  if (field.type && field.type.toLowerCase().includes(q)) return true;
+  return false;
+}
+
+function getTypeLabel(field) {
+  if (field.type === 'literal') return `literal`;
+  if (field.type === 'union') return field.unionOf.join(' | ');
+  if (field.type === 'array') {
+    if (typeof field.itemType === 'string') {
+      if (SCHEMAS[field.itemType]) return `${field.itemType}[]`;
+      return `${field.itemType}[]`;
+    }
+    return 'object[]';
+  }
+  if (field.type === 'record') {
+    return `Record<${field.keyType}, {...}>`;
+  }
+  if (field.type === 'object') return '{...}';
+  return field.type;
+}
+
+function hasChildren(field) {
+  if (field.fields && field.fields.length > 0) return true;
+  if (field.type === 'array' && typeof field.itemType === 'string' && SCHEMAS[field.itemType]) return true;
+  return false;
+}
+
+function getChildren(field) {
+  if (field.fields) return field.fields;
+  if (field.type === 'array' && typeof field.itemType === 'string' && SCHEMAS[field.itemType]) {
+    return SCHEMAS[field.itemType].fields;
+  }
+  return [];
+}
+
+function countChildren(field) {
+  return getChildren(field).filter(f => shouldShowField(f)).length;
+}
+
+function renderField(field, path) {
+  const expanded = state.expandedPaths.has(path);
+  const expandable = hasChildren(field);
+  const children = expandable ? getChildren(field) : [];
+  const visibleChildren = children.filter(shouldShowField);
+  const clicked = state.clickedFields.has(path);
+
+  let html = `<div class="tree-node" data-path="${path}" data-field="${field.name}">`;
+  html += `<div class="tree-row${clicked ? ' highlighted' : ''}" data-path="${path}">`;
+
+  // Toggle or placeholder
+  if (expandable && visibleChildren.length > 0) {
+    html += `<span class="tree-toggle" data-path="${path}">${expanded ? '&#9660;' : '&#9654;'}</span>`;
+  } else {
+    html += `<span class="tree-toggle-placeholder"></span>`;
+  }
+
+  // Field name
+  html += `<span class="tree-field">${field.name}</span>`;
+
+  // Optional marker
+  if (field.optional) {
+    html += `<span class="tree-optional">?</span>`;
+  }
+
+  html += `<span class="tree-colon">:</span>`;
+
+  // Type
+  if (field.type === 'literal') {
+    html += `<span class="tree-literal">${field.literal}</span>`;
+    html += `<span class="tree-type" style="margin-left:4px">(literal)</span>`;
+  } else if (field.type === 'union') {
+    html += `<span class="tree-literal">${field.unionOf.join(' | ')}</span>`;
+  } else if (field.type === 'array') {
+    const label = getTypeLabel(field);
+    html += `<span class="tree-array-bracket">${escapeHtml(label)}</span>`;
+  } else if (field.type === 'record') {
+    html += `<span class="tree-type">${escapeHtml(getTypeLabel(field))}</span>`;
+  } else if (field.type === 'object') {
+    html += `<span class="tree-object-brace">{</span>`;
+    if (!expanded && visibleChildren.length > 0) {
+      html += `<span class="tree-type" style="color:var(--dim)">...</span>`;
+    }
+    if (!expanded) html += `<span class="tree-object-brace">}</span>`;
+  } else {
+    html += `<span class="tree-type">${field.type}</span>`;
+  }
+
+  // Child count badge
+  if (expandable && visibleChildren.length > 0) {
+    html += `<span class="field-count">${visibleChildren.length}</span>`;
+  }
+
+  // Description
+  if (state.showDesc && field.desc) {
+    html += `<span class="tree-desc">${escapeHtml(field.desc)}</span>`;
+  }
+
+  // Example
+  if (state.showExamples && field.example) {
+    html += `<span class="tree-example">${escapeHtml(field.example)}</span>`;
+  }
+
+  // Source section
+  if (state.showSource && field.source) {
+    html += `<span class="tree-source">${escapeHtml(field.source)}</span>`;
+  }
+
+  html += `</div>`; // end tree-row
+
+  // Children
+  if (expanded && visibleChildren.length > 0) {
+    html += `<div class="tree-children">`;
+    for (const child of visibleChildren) {
+      html += renderField(child, path + '.' + child.name);
+    }
+    html += `</div>`;
+    if (field.type === 'object') {
+      html += `<div class="tree-row" style="padding-left:24px"><span class="tree-object-brace">}</span></div>`;
+    }
+  }
+
+  html += `</div>`; // end tree-node
+  return html;
+}
+
+function escapeHtml(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function renderTree() {
+  const container = document.getElementById('treeContainer');
+  const rootSchema = SCHEMAS[state.rootType];
+  if (!rootSchema) {
+    container.innerHTML = '<p style="color:var(--text-dim)">Unknown type</p>';
+    return;
+  }
+
+  let html = `<div style="margin-bottom:8px;color:var(--dim);font-size:12px">type <span style="color:var(--accent);font-weight:600">${state.rootType}</span> <span class="tree-object-brace">{</span></div>`;
+  html += `<div class="tree-children" style="margin-left:0;border-left:none">`;
+
+  const visibleFields = rootSchema.fields.filter(shouldShowField);
+  for (const field of visibleFields) {
+    html += renderField(field, field.name);
+  }
+
+  html += `</div>`;
+  html += `<div style="color:var(--dim)">}</div>`;
+
+  container.innerHTML = html;
+
+  // Bind toggle clicks
+  container.querySelectorAll('.tree-toggle').forEach(el => {
+    el.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const path = el.dataset.path;
+      if (state.expandedPaths.has(path)) {
+        state.expandedPaths.delete(path);
+      } else {
+        state.expandedPaths.add(path);
+      }
+      renderTree();
+      updatePrompt();
+    });
+  });
+
+  // Bind row clicks for tracking
+  container.querySelectorAll('.tree-row[data-path]').forEach(el => {
+    el.addEventListener('click', () => {
+      const path = el.dataset.path;
+      state.clickedFields.add(path);
+      // Also toggle if expandable
+      const node = el.closest('.tree-node');
+      const toggle = node.querySelector(':scope > .tree-row > .tree-toggle');
+      if (toggle) {
+        if (state.expandedPaths.has(path)) {
+          state.expandedPaths.delete(path);
+        } else {
+          state.expandedPaths.add(path);
+        }
+      }
+      renderTree();
+      updatePrompt();
+    });
+  });
+}
+
+// ===== QUICK NAVIGATE =====
+function renderQuickNav() {
+  const nav = document.getElementById('quickNav');
+  const section = document.getElementById('quickNavSection');
+  const links = QUICK_NAV[state.rootType] || [];
+  if (links.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  section.style.display = 'block';
+  nav.innerHTML = links.map(l => `<span class="quick-nav-link" data-target="${l}">${l}</span>`).join('');
+  nav.querySelectorAll('.quick-nav-link').forEach(el => {
+    el.addEventListener('click', () => {
+      const target = el.dataset.target;
+      navigateToField(target);
+    });
+  });
+}
+
+function navigateToField(fieldName) {
+  // Expand path to field and scroll
+  const rootFields = SCHEMAS[state.rootType].fields;
+
+  // Find the field, possibly nested
+  const path = findFieldPath(rootFields, fieldName, '');
+  if (path) {
+    // Expand all ancestor paths
+    const parts = path.split('.');
+    let cumulative = '';
+    for (let i = 0; i < parts.length; i++) {
+      cumulative = i === 0 ? parts[0] : cumulative + '.' + parts[i];
+      state.expandedPaths.add(cumulative);
+    }
+    state.clickedFields.add(path);
+    renderTree();
+    updatePrompt();
+
+    // Scroll to element
+    setTimeout(() => {
+      const el = document.querySelector(`[data-path="${path}"]`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        el.classList.add('highlighted');
+        setTimeout(() => el.classList.remove('highlighted'), 2000);
+      }
+    }, 50);
+  }
+}
+
+function findFieldPath(fields, targetName, prefix) {
+  for (const f of fields) {
+    const currentPath = prefix ? prefix + '.' + f.name : f.name;
+    if (f.name === targetName) return currentPath;
+    const children = getChildren(f);
+    if (children.length > 0) {
+      const found = findFieldPath(children, targetName, currentPath);
+      if (found) return found;
+    }
+  }
+  return null;
+}
+
+// ===== PROMPT GENERATION =====
+function updatePrompt() {
+  const el = document.getElementById('promptOutput');
+  const expandedList = Array.from(state.expandedPaths);
+  const clickedList = Array.from(state.clickedFields);
+
+  let keySections = '';
+  if (state.rootType === 'PlanJson') {
+    keySections = `<code>meta</code> (title, date, version, paths), <code>phases[]</code> (each with changes[], successCriteria.automated/manual, subItems[]), <code>testingStrategy</code> (unit/integration/manual arrays)`;
+  } else if (state.rootType === 'FeedbackPayload') {
+    keySections = `<code>phaseStatuses</code> (per-phase review status), <code>subItemStatuses</code> (per-sub-item status), <code>comments[]</code> (reviewer comments with quotes)`;
+  } else {
+    keySections = `<code>id</code>, <code>planTitle</code>, <code>status</code> (active/approved/archived), and path/version metadata`;
+  }
+
+  const expandedStr = expandedList.length > 0
+    ? expandedList.map(p => `<code>${p}</code>`).join(', ')
+    : 'none yet';
+
+  const clickedStr = clickedList.length > 0
+    ? clickedList.slice(-8).map(p => `<code>${p}</code>`).join(', ')
+    : 'none yet';
+
+  el.innerHTML = `The <code>${state.rootType}</code> schema has these key sections: ${keySections}. The fields I expanded: ${expandedStr}. The fields I explored: ${clickedStr}. I want to [understand/modify/extend] the [specific area].\n\n[Playground: Plan JSON Schema Explorer]`;
+}
+
+function getPromptText() {
+  const el = document.getElementById('promptOutput');
+  return el.textContent;
+}
+
+// ===== PRESETS =====
+function applyPreset(preset) {
+  state.expandedPaths.clear();
+  state.clickedFields.clear();
+
+  switch (preset) {
+    case 'full':
+      state.rootType = 'PlanJson';
+      expandToDepth(SCHEMAS.PlanJson.fields, '', 2);
+      break;
+    case 'phases':
+      state.rootType = 'PlanJson';
+      state.expandedPaths.add('phases');
+      expandAllUnder(getChildren({ type: 'array', itemType: 'Phase' }), 'phases', 10);
+      break;
+    case 'feedback':
+      state.rootType = 'FeedbackPayload';
+      expandToDepth(SCHEMAS.FeedbackPayload.fields, '', 10);
+      break;
+    case 'minimal':
+      state.rootType = 'PlanJson';
+      // All collapsed
+      break;
+    case 'changes':
+      state.rootType = 'PlanJson';
+      state.expandedPaths.add('phases');
+      // Expand phases children selectively
+      const phaseFields = SCHEMAS.Phase.fields;
+      for (const f of phaseFields) {
+        if (f.name === 'changes' || f.name === 'successCriteria') {
+          state.expandedPaths.add('phases.' + f.name);
+          expandAllUnder(getChildren(f), 'phases.' + f.name, 10);
+        }
+      }
+      break;
+  }
+
+  // Update tab UI
+  document.querySelectorAll('.type-tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.type === state.rootType);
+  });
+
+  renderQuickNav();
+  renderTree();
+  updatePrompt();
+}
+
+function expandToDepth(fields, prefix, maxDepth) {
+  if (maxDepth <= 0) return;
+  for (const f of fields) {
+    const path = prefix ? prefix + '.' + f.name : f.name;
+    if (hasChildren(f)) {
+      state.expandedPaths.add(path);
+      if (maxDepth > 1) {
+        expandToDepth(getChildren(f), path, maxDepth - 1);
+      }
+    }
+  }
+}
+
+function expandAllUnder(fields, prefix, maxDepth) {
+  if (maxDepth <= 0) return;
+  for (const f of fields) {
+    const path = prefix + '.' + f.name;
+    if (hasChildren(f)) {
+      state.expandedPaths.add(path);
+      expandAllUnder(getChildren(f), path, maxDepth - 1);
+    }
+  }
+}
+
+// ===== EVENT BINDINGS =====
+function init() {
+  // Type tabs
+  document.querySelectorAll('.type-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      state.rootType = tab.dataset.type;
+      state.expandedPaths.clear();
+      state.clickedFields.clear();
+      document.querySelectorAll('.type-tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      renderQuickNav();
+      renderTree();
+      updatePrompt();
+    });
+  });
+
+  // Filter radios
+  document.querySelectorAll('input[name="filter"]').forEach(radio => {
+    radio.addEventListener('change', () => {
+      state.filter = radio.value;
+      renderTree();
+      updatePrompt();
+    });
+  });
+
+  // Search
+  document.getElementById('searchInput').addEventListener('input', (e) => {
+    state.search = e.target.value;
+    renderTree();
+    updatePrompt();
+  });
+
+  // Toggles
+  document.getElementById('toggleDesc').addEventListener('change', (e) => {
+    state.showDesc = e.target.checked;
+    renderTree();
+  });
+  document.getElementById('toggleExamples').addEventListener('change', (e) => {
+    state.showExamples = e.target.checked;
+    renderTree();
+  });
+  document.getElementById('toggleSource').addEventListener('change', (e) => {
+    state.showSource = e.target.checked;
+    renderTree();
+  });
+
+  // Presets
+  document.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+  });
+
+  // Expand/Collapse All
+  document.getElementById('expandAll').addEventListener('click', () => {
+    const rootSchema = SCHEMAS[state.rootType];
+    expandToDepth(rootSchema.fields, '', 20);
+    renderTree();
+    updatePrompt();
+  });
+  document.getElementById('collapseAll').addEventListener('click', () => {
+    state.expandedPaths.clear();
+    renderTree();
+    updatePrompt();
+  });
+
+  // Copy button
+  document.getElementById('copyBtn').addEventListener('click', () => {
+    const text = getPromptText();
+    navigator.clipboard.writeText(text).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = 'Copied!';
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.textContent = 'Copy';
+        btn.classList.remove('copied');
+      }, 1500);
+    });
+  });
+
+  // Initial render
+  renderQuickNav();
+  renderTree();
+  updatePrompt();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

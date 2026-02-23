@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan Assistant - Component State Gallery</title>
+<style>
+/* ── Theme Tokens ─────────────────────────────────────────────── */
+:root {
+  --bg:       #0d1117;
+  --surface:  #161b22;
+  --surface2: #1c2129;
+  --border:   #30363d;
+  --text:     #e6edf3;
+  --text-dim: #8b949e;
+  --accent:   #58a6ff;
+  --green:    #3fb950;
+  --red:      #f85149;
+  --orange:   #d29922;
+  --purple:   #bc8cff;
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', SFMono-Regular, Consolas, monospace;
+}
+
+/* ── Reset & Base ─────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: var(--font-sans);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.6;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── App Layout ───────────────────────────────────────────────── */
+.app {
+  display: grid;
+  grid-template-columns: 340px 1fr;
+  grid-template-rows: 1fr auto;
+  height: 100vh;
+}
+.left-panel {
+  grid-row: 1 / 3;
+  border-right: 1px solid var(--border);
+  background: var(--surface);
+  overflow-y: auto;
+  padding: 20px;
+}
+.right-panel {
+  grid-row: 1;
+  grid-column: 2;
+  overflow-y: auto;
+  padding: 32px;
+  display: flex;
+  justify-content: center;
+}
+.right-panel-inner {
+  max-width: 720px;
+  width: 100%;
+}
+.bottom-panel {
+  grid-row: 2;
+  grid-column: 2;
+  border-top: 1px solid var(--border);
+  background: var(--surface);
+  padding: 16px 24px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* ── Section Headings ─────────────────────────────────────────── */
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-dim);
+  margin-bottom: 10px;
+}
+
+/* ── Component Selector Grid ──────────────────────────────────── */
+.comp-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+.comp-card {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dim);
+  transition: all 0.15s;
+  text-align: left;
+}
+.comp-card:hover { color: var(--text); border-color: var(--text-dim); }
+.comp-card.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(88, 166, 255, 0.06);
+}
+
+/* ── Presets ───────────────────────────────────────────────────── */
+.presets { margin-bottom: 24px; }
+.preset-btn {
+  display: block;
+  width: 100%;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 12px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--text-dim);
+  text-align: left;
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+}
+.preset-btn:hover { color: var(--text); border-color: var(--text-dim); }
+.preset-btn.active { border-color: var(--purple); color: var(--purple); }
+
+/* ── Controls ─────────────────────────────────────────────────── */
+.controls { display: flex; flex-direction: column; gap: 14px; }
+.ctrl-group label {
+  display: block;
+  font-size: 12px;
+  color: var(--text-dim);
+  margin-bottom: 5px;
+  font-weight: 500;
+}
+.ctrl-row { display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* Radio pills */
+.radio-pill {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 12px;
+  color: var(--text-dim);
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+}
+.radio-pill:hover { color: var(--text); }
+.radio-pill.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(88, 166, 255, 0.1);
+}
+
+/* Toggle switch */
+.toggle-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.toggle-switch {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+.toggle-switch.on {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+.toggle-switch::after {
+  content: '';
+  position: absolute;
+  top: 2px; left: 2px;
+  width: 14px; height: 14px;
+  background: var(--text);
+  border-radius: 50%;
+  transition: transform 0.2s;
+}
+.toggle-switch.on::after { transform: translateX(16px); }
+
+/* Slider */
+.range-slider {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--surface2);
+  border-radius: 2px;
+  outline: none;
+}
+.range-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px; height: 14px;
+  background: var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+}
+.range-value {
+  font-size: 12px;
+  color: var(--accent);
+  font-weight: 600;
+  min-width: 36px;
+  text-align: right;
+}
+
+/* Dropdown */
+.ctrl-select {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 5px 10px;
+  color: var(--text);
+  font-size: 12px;
+  font-family: var(--font-sans);
+  outline: none;
+}
+.ctrl-select:focus { border-color: var(--accent); }
+
+/* ── Prompt Output ────────────────────────────────────────────── */
+.prompt-text {
+  flex: 1;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--text-dim);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow: hidden;
+  max-height: 60px;
+  cursor: text;
+}
+.prompt-text:focus {
+  outline: 1px solid #58a6ff;
+  outline-offset: 2px;
+}
+.prompt-editable-hint {
+  font-size: 11px;
+  color: #8b949e;
+  flex-shrink: 0;
+}
+.copy-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 18px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.copy-btn:hover { filter: brightness(1.15); }
+.copy-btn.copied { background: var(--green); }
+
+/* ── Preview Components ───────────────────────────────────────── */
+
+/* StatusBadge */
+.status-badge {
+  display: inline-block;
+  border-radius: 20px;
+  font-weight: 600;
+  line-height: 1;
+}
+.status-badge.small  { padding: 3px 10px; font-size: 11px; }
+.status-badge.medium { padding: 5px 14px; font-size: 13px; }
+.status-badge.reviewing { background: rgba(88,166,255,0.15); color: var(--accent); }
+.status-badge.approved  { background: rgba(63,185,80,0.15);  color: var(--green); }
+.status-badge.needs-work { background: rgba(210,153,34,0.15); color: var(--orange); }
+.status-badge.pending    { background: rgba(88,166,255,0.15); color: var(--accent); }
+
+/* PhaseCard */
+.phase-card { margin-bottom: 16px; }
+.phase-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+}
+.phase-title {
+  flex: 1;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--accent);
+  cursor: pointer;
+  background: none;
+  border: none;
+  text-align: left;
+  font-family: var(--font-sans);
+}
+.phase-title .arrow {
+  display: inline-block;
+  margin-right: 8px;
+  transition: transform 0.2s;
+  font-size: 14px;
+}
+.phase-title .arrow.expanded { transform: rotate(90deg); }
+.phase-body { margin-top: 16px; }
+.phase-body p { font-size: 14px; color: var(--text-dim); margin-bottom: 12px; }
+.phase-body h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; margin-top: 16px; }
+.phase-body h4 { font-size: 13px; font-weight: 500; color: var(--text-dim); margin-bottom: 4px; margin-top: 10px; }
+
+/* Sub-item card */
+.sub-item {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  margin-bottom: 10px;
+}
+.sub-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.sub-item-header h4 { font-size: 13px; font-weight: 600; }
+.sub-item p { font-size: 13px; color: var(--text-dim); margin-top: 8px; }
+
+/* Success criteria */
+.criteria-list { padding-left: 2px; }
+.criterion {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+}
+.criterion input[type="checkbox"] { margin-top: 2px; accent-color: var(--green); }
+.criterion code {
+  background: var(--surface2);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+/* PhaseStatusControl */
+.psc-group { display: flex; gap: 6px; }
+.psc-btn {
+  border-radius: 20px;
+  border: 1px solid transparent;
+  padding: 4px 12px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+  background: none;
+  color: var(--text-dim);
+}
+.psc-btn:hover { background: var(--surface2); }
+.psc-btn.active-pending {
+  background: rgba(88,166,255,0.15);
+  color: var(--accent);
+  border-color: rgba(88,166,255,0.3);
+}
+.psc-btn.active-approved {
+  background: rgba(63,185,80,0.15);
+  color: var(--green);
+  border-color: rgba(63,185,80,0.3);
+}
+.psc-btn.active-needs-work {
+  background: rgba(210,153,34,0.15);
+  color: var(--orange);
+  border-color: rgba(210,153,34,0.3);
+}
+.psc-note-input {
+  margin-top: 8px;
+  width: 100%;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  color: var(--text);
+  font-family: var(--font-sans);
+  outline: none;
+  resize: vertical;
+}
+.psc-note-input:focus { border-color: var(--accent); }
+
+/* FeedbackItem */
+.feedback-item {
+  border-radius: 8px;
+  border: 1px solid;
+  padding: 12px;
+  transition: opacity 0.2s;
+}
+.feedback-item.unresolved {
+  border-color: rgba(100, 116, 139, 0.4);
+  background: rgba(30, 41, 59, 0.9);
+}
+.feedback-item.resolved {
+  border-color: rgba(51, 65, 85, 1);
+  background: rgba(30, 41, 59, 0.4);
+  opacity: 0.6;
+}
+.fi-section { font-size: 11px; color: var(--accent); margin-bottom: 4px; }
+.fi-quote {
+  margin-bottom: 8px;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  padding: 6px 10px;
+  font-size: 12px;
+  font-style: italic;
+  color: rgba(203, 213, 225, 0.8);
+  border-left: 3px solid var(--accent);
+}
+.fi-comment { font-size: 12px; color: rgba(203, 213, 225, 0.8); }
+.fi-meta { font-size: 10px; color: var(--text-dim); margin-top: 4px; }
+.fi-actions { display: flex; gap: 6px; margin-top: 8px; }
+.fi-btn {
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  border: none;
+  font-family: var(--font-sans);
+  transition: all 0.15s;
+}
+.fi-btn-edit { background: rgba(29, 78, 216, 1); color: #fff; }
+.fi-btn-resolve { background: var(--surface2); color: rgba(203, 213, 225, 0.8); }
+.fi-btn-resolve.resolved-btn { background: rgba(22, 101, 52, 1); color: rgba(187, 247, 208, 1); }
+.fi-btn-delete { background: rgba(127, 29, 29, 1); color: rgba(254, 202, 202, 1); }
+.fi-btn-save { background: rgba(22, 163, 74, 1); color: rgba(240, 253, 244, 1); flex: 1; }
+.fi-btn-cancel { background: var(--surface2); color: rgba(203, 213, 225, 0.8); flex: 1; }
+.fi-textarea {
+  width: 100%;
+  resize: vertical;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  padding: 8px 10px;
+  font-family: var(--font-sans);
+  font-size: 12px;
+  color: var(--text);
+  outline: none;
+  min-height: 60px;
+}
+.fi-textarea:focus { border-color: var(--accent); }
+
+/* ApprovalBar */
+.approval-bar {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 12px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.ab-left { font-size: 13px; color: var(--text-dim); }
+.ab-right { display: flex; gap: 10px; }
+.ab-btn {
+  border-radius: 8px;
+  padding: 8px 18px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  border: none;
+  font-family: var(--font-sans);
+  transition: all 0.15s;
+}
+.ab-btn-changes {
+  background: rgba(210,153,34,0.15);
+  color: var(--orange);
+}
+.ab-btn-changes:hover { background: rgba(210,153,34,0.25); }
+.ab-btn-approve {
+  background: var(--green);
+  color: #fff;
+}
+.ab-btn-approve:hover { filter: brightness(1.1); }
+.ab-flash {
+  font-weight: 600;
+  animation: flash-in 0.3s ease;
+}
+.ab-flash.success { color: var(--green); }
+.ab-flash.error   { color: var(--red); }
+@keyframes flash-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ProgressBar */
+.progress-wrap { width: 100%; }
+.progress-label {
+  font-size: 13px;
+  color: var(--text-dim);
+  margin-bottom: 6px;
+  font-weight: 500;
+}
+.progress-track {
+  width: 100%;
+  height: 6px;
+  background: var(--surface2);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #388bfd);
+  border-radius: 3px;
+  transition: width 0.4s ease-out;
+}
+
+/* ChangeBlock */
+.change-block { margin-bottom: 14px; }
+.cb-name { font-size: 13px; font-weight: 500; color: var(--text-dim); margin-bottom: 4px; }
+.cb-file {
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+.cb-file code {
+  background: var(--surface2);
+  color: var(--accent);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.cb-desc { font-size: 13px; color: var(--text-dim); }
+.cb-code {
+  margin-top: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 12px;
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+/* Syntax colors */
+.token-keyword  { color: var(--red); }
+.token-string   { color: #a5d6ff; }
+.token-type     { color: var(--orange); }
+.token-func     { color: var(--purple); }
+.token-comment  { color: var(--text-dim); font-style: italic; }
+.token-prop     { color: #7ee787; }
+.token-punct    { color: var(--text-dim); }
+.token-number   { color: #79c0ff; }
+.token-selector { color: var(--green); }
+.token-value    { color: #a5d6ff; }
+
+/* DiffView */
+.diff-view {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  overflow: hidden;
+}
+.diff-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+}
+.diff-header h3 { font-size: 13px; font-weight: 600; }
+.diff-header span { font-size: 12px; color: var(--text-dim); margin-left: 12px; }
+.diff-entry {
+  padding: 14px 16px;
+  border-left: 3px solid transparent;
+}
+.diff-entry + .diff-entry { border-top: 1px solid var(--border); }
+.diff-entry.added   { border-left-color: var(--green);  background: rgba(63,185,80,0.05); }
+.diff-entry.removed { border-left-color: var(--red);    background: rgba(248,81,73,0.05); }
+.diff-entry.changed { border-left-color: var(--orange); background: rgba(210,153,34,0.05); }
+.diff-entry-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.diff-badge {
+  display: inline-block;
+  border-radius: 20px;
+  padding: 2px 10px;
+  font-size: 11px;
+  font-weight: 600;
+}
+.diff-badge.added   { background: rgba(63,185,80,0.15);  color: var(--green); }
+.diff-badge.removed { background: rgba(248,81,73,0.15);  color: var(--red); }
+.diff-badge.changed { background: rgba(210,153,34,0.15); color: var(--orange); }
+.diff-field { font-size: 13px; font-weight: 500; }
+.diff-values {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.diff-val-label { font-size: 11px; font-weight: 500; margin-bottom: 4px; }
+.diff-val-label.old { color: var(--red); }
+.diff-val-label.new { color: var(--green); }
+.diff-val {
+  background: var(--bg);
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+}
+.diff-single-val {
+  background: var(--bg);
+  border-radius: 4px;
+  padding: 8px;
+  font-size: 12px;
+  color: var(--text-dim);
+  white-space: pre-wrap;
+}
+.diff-single-val.strike { text-decoration: line-through; }
+
+/* ── Scrollbar ────────────────────────────────────────────────── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- ═══ LEFT PANEL ═══ -->
+  <div class="left-panel">
+    <div class="section-title">Components</div>
+    <div class="comp-grid" id="compGrid"></div>
+
+    <div class="section-title">Presets</div>
+    <div class="presets" id="presets"></div>
+
+    <div class="section-title">State Controls</div>
+    <div class="controls" id="controls"></div>
+  </div>
+
+  <!-- ═══ RIGHT PANEL (Preview) ═══ -->
+  <div class="right-panel">
+    <div class="right-panel-inner" id="preview"></div>
+  </div>
+
+  <!-- ═══ BOTTOM PANEL (Prompt) ═══ -->
+  <div class="bottom-panel">
+    <div class="prompt-text" id="promptText" contenteditable="true"></div>
+    <div class="prompt-editable-hint">Click to edit before copying</div>
+    <button class="copy-btn" id="copyBtn">Copy</button>
+  </div>
+</div>
+
+<script>
+// ────────────────────────────────────────────────────────────────
+// State
+// ────────────────────────────────────────────────────────────────
+const COMPONENTS = [
+  'PhaseCard', 'PhaseStatusControl', 'FeedbackItem', 'ApprovalBar',
+  'StatusBadge', 'ProgressBar', 'ChangeBlock', 'DiffView'
+];
+
+const DEFAULTS = {
+  PhaseCard:           { expanded: true, status: 'pending', subItems: false, codeSnippets: false },
+  PhaseStatusControl:  { status: 'pending', withNote: false },
+  FeedbackItem:        { withQuote: false, editing: false, resolved: false },
+  ApprovalBar:         { unresolvedCount: '0', withFlash: false, flashType: 'success' },
+  StatusBadge:         { status: 'reviewing', size: 'medium' },
+  ProgressBar:         { fill: 33, showLabel: true },
+  ChangeBlock:         { withCode: false, codeLang: 'typescript', withFilePath: true },
+  DiffView:            { diffType: 'added', sectionCount: 3 }
+};
+
+let activeComp = 'PhaseCard';
+let state = {};
+let activePreset = null;
+
+// Deep-clone defaults into state
+function resetState() {
+  state = {};
+  for (const c of COMPONENTS) state[c] = { ...DEFAULTS[c] };
+}
+resetState();
+
+// ────────────────────────────────────────────────────────────────
+// Presets
+// ────────────────────────────────────────────────────────────────
+const PRESETS = [
+  {
+    name: 'All Approved',
+    apply() {
+      activeComp = 'PhaseCard';
+      state.PhaseCard = { expanded: true, status: 'approved', subItems: true, codeSnippets: true };
+      state.StatusBadge.status = 'approved';
+      state.PhaseStatusControl.status = 'approved';
+    }
+  },
+  {
+    name: 'Needs Work',
+    apply() {
+      activeComp = 'FeedbackItem';
+      state.FeedbackItem = { withQuote: true, editing: false, resolved: false };
+      state.ApprovalBar = { unresolvedCount: '5', withFlash: false, flashType: 'success' };
+      state.StatusBadge.status = 'needs-work';
+    }
+  },
+  {
+    name: 'Empty State',
+    apply() {
+      activeComp = 'ProgressBar';
+      state.ProgressBar = { fill: 0, showLabel: true };
+      state.PhaseCard = { expanded: false, status: 'pending', subItems: false, codeSnippets: false };
+      state.StatusBadge.status = 'pending';
+    }
+  },
+  {
+    name: 'Complete Review',
+    apply() {
+      activeComp = 'ProgressBar';
+      state.ProgressBar = { fill: 100, showLabel: true };
+      state.ApprovalBar = { unresolvedCount: '0', withFlash: true, flashType: 'success' };
+      state.StatusBadge.status = 'approved';
+    }
+  },
+  {
+    name: 'Editing Feedback',
+    apply() {
+      activeComp = 'FeedbackItem';
+      state.FeedbackItem = { withQuote: true, editing: true, resolved: false };
+    }
+  }
+];
+
+// ────────────────────────────────────────────────────────────────
+// Render: Component Grid
+// ────────────────────────────────────────────────────────────────
+function renderGrid() {
+  const el = document.getElementById('compGrid');
+  el.innerHTML = COMPONENTS.map(c =>
+    `<button class="comp-card ${c === activeComp ? 'active' : ''}" data-comp="${c}">${c}</button>`
+  ).join('');
+  el.querySelectorAll('.comp-card').forEach(btn => {
+    btn.addEventListener('click', () => { activeComp = btn.dataset.comp; activePreset = null; render(); });
+  });
+}
+
+// ────────────────────────────────────────────────────────────────
+// Render: Presets
+// ────────────────────────────────────────────────────────────────
+function renderPresets() {
+  const el = document.getElementById('presets');
+  el.innerHTML = PRESETS.map((p, i) =>
+    `<button class="preset-btn ${activePreset === i ? 'active' : ''}" data-idx="${i}">${p.name}</button>`
+  ).join('');
+  el.querySelectorAll('.preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx);
+      activePreset = idx;
+      resetState();
+      PRESETS[idx].apply();
+      render();
+    });
+  });
+}
+
+// ────────────────────────────────────────────────────────────────
+// Render: Controls
+// ────────────────────────────────────────────────────────────────
+function toggle(comp, key) {
+  return `<div class="ctrl-group">
+    <div class="toggle-wrap">
+      <label>${key}</label>
+      <div class="toggle-switch ${state[comp][key] ? 'on' : ''}" data-comp="${comp}" data-key="${key}" data-type="toggle"></div>
+    </div>
+  </div>`;
+}
+
+function radios(comp, key, options) {
+  return `<div class="ctrl-group">
+    <label>${key}</label>
+    <div class="ctrl-row">
+      ${options.map(o => `<button class="radio-pill ${state[comp][key] === o ? 'active' : ''}" data-comp="${comp}" data-key="${key}" data-val="${o}" data-type="radio">${o}</button>`).join('')}
+    </div>
+  </div>`;
+}
+
+function slider(comp, key, min, max, step) {
+  const val = state[comp][key];
+  return `<div class="ctrl-group">
+    <label>${key}</label>
+    <div style="display:flex;gap:10px;align-items:center">
+      <input type="range" class="range-slider" min="${min}" max="${max}" step="${step}" value="${val}" data-comp="${comp}" data-key="${key}" data-type="slider">
+      <span class="range-value">${val}${key === 'fill' ? '%' : ''}</span>
+    </div>
+  </div>`;
+}
+
+function dropdown(comp, key, options) {
+  return `<div class="ctrl-group">
+    <label>${key}</label>
+    <select class="ctrl-select" data-comp="${comp}" data-key="${key}" data-type="dropdown">
+      ${options.map(o => `<option value="${o}" ${state[comp][key] === o ? 'selected' : ''}>${o}</option>`).join('')}
+    </select>
+  </div>`;
+}
+
+function renderControls() {
+  const el = document.getElementById('controls');
+  let html = '';
+  const c = activeComp;
+  switch (c) {
+    case 'PhaseCard':
+      html += toggle(c, 'expanded');
+      html += radios(c, 'status', ['pending', 'approved', 'needs-work']);
+      html += toggle(c, 'subItems');
+      html += toggle(c, 'codeSnippets');
+      break;
+    case 'PhaseStatusControl':
+      html += radios(c, 'status', ['pending', 'approved', 'needs-work']);
+      html += toggle(c, 'withNote');
+      break;
+    case 'FeedbackItem':
+      html += toggle(c, 'withQuote');
+      html += toggle(c, 'editing');
+      html += toggle(c, 'resolved');
+      break;
+    case 'ApprovalBar':
+      html += radios(c, 'unresolvedCount', ['0', '5', '12']);
+      html += toggle(c, 'withFlash');
+      if (state[c].withFlash) html += radios(c, 'flashType', ['success', 'error']);
+      break;
+    case 'StatusBadge':
+      html += radios(c, 'status', ['reviewing', 'approved', 'needs-work', 'pending']);
+      html += radios(c, 'size', ['small', 'medium']);
+      break;
+    case 'ProgressBar':
+      html += slider(c, 'fill', 0, 100, 1);
+      html += toggle(c, 'showLabel');
+      break;
+    case 'ChangeBlock':
+      html += toggle(c, 'withCode');
+      if (state[c].withCode) html += dropdown(c, 'codeLang', ['typescript', 'javascript', 'css', 'none']);
+      html += toggle(c, 'withFilePath');
+      break;
+    case 'DiffView':
+      html += radios(c, 'diffType', ['added', 'removed', 'changed']);
+      html += slider(c, 'sectionCount', 1, 5, 1);
+      break;
+  }
+  el.innerHTML = html;
+
+  // Bind toggles
+  el.querySelectorAll('[data-type="toggle"]').forEach(sw => {
+    sw.addEventListener('click', () => {
+      state[sw.dataset.comp][sw.dataset.key] = !state[sw.dataset.comp][sw.dataset.key];
+      activePreset = null;
+      render();
+    });
+  });
+  // Bind radios
+  el.querySelectorAll('[data-type="radio"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      state[btn.dataset.comp][btn.dataset.key] = btn.dataset.val;
+      activePreset = null;
+      render();
+    });
+  });
+  // Bind sliders
+  el.querySelectorAll('[data-type="slider"]').forEach(inp => {
+    inp.addEventListener('input', () => {
+      state[inp.dataset.comp][inp.dataset.key] = parseInt(inp.value);
+      activePreset = null;
+      render();
+    });
+  });
+  // Bind dropdowns
+  el.querySelectorAll('[data-type="dropdown"]').forEach(sel => {
+    sel.addEventListener('change', () => {
+      state[sel.dataset.comp][sel.dataset.key] = sel.value;
+      activePreset = null;
+      render();
+    });
+  });
+}
+
+// ────────────────────────────────────────────────────────────────
+// Render: Preview
+// ────────────────────────────────────────────────────────────────
+function pscBtnClass(current, value) {
+  if (current !== value) return 'psc-btn';
+  if (value === 'pending')    return 'psc-btn active-pending';
+  if (value === 'approved')   return 'psc-btn active-approved';
+  if (value === 'needs-work') return 'psc-btn active-needs-work';
+  return 'psc-btn';
+}
+
+function renderPSC(status) {
+  return `<div class="psc-group" role="radiogroup">
+    <button class="${pscBtnClass(status, 'pending')}">Pending</button>
+    <button class="${pscBtnClass(status, 'approved')}">Approved</button>
+    <button class="${pscBtnClass(status, 'needs-work')}">Needs Work</button>
+  </div>`;
+}
+
+function simpleHighlight(code, lang) {
+  if (lang === 'none' || !lang) return esc(code);
+  // Very simple token highlighting
+  let text = esc(code);
+  // Keywords
+  const kwMap = {
+    typescript: /\b(import|export|from|const|let|var|function|return|if|else|interface|type|class|extends|implements|new|async|await|default)\b/g,
+    javascript: /\b(import|export|from|const|let|var|function|return|if|else|class|extends|new|async|await|default)\b/g,
+    css: /(@media|@import|@keyframes|@layer)\b/g
+  };
+  const kws = kwMap[lang] || kwMap.typescript;
+  text = text.replace(kws, '<span class="token-keyword">$1</span>');
+  // Strings
+  text = text.replace(/(&#39;[^&#]*?&#39;|&quot;[^&]*?&quot;|`[^`]*?`)/g, '<span class="token-string">$&</span>');
+  // Comments
+  text = text.replace(/(\/\/.*)/g, '<span class="token-comment">$1</span>');
+  // Numbers
+  text = text.replace(/\b(\d+)\b/g, '<span class="token-number">$1</span>');
+  // Types (PascalCase)
+  text = text.replace(/\b([A-Z][a-zA-Z0-9]+)\b/g, '<span class="token-type">$1</span>');
+  return text;
+}
+
+function esc(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+
+const CODE_SAMPLES = {
+  typescript: `import type { Phase } from '$lib/types/plan.js';
+
+export function getPhaseStatus(phase: Phase): string {
+  // Check if all criteria are met
+  const total = phase.successCriteria.automated.length;
+  return total > 0 ? 'approved' : 'pending';
+}`,
+  javascript: `export function getPhaseStatus(phase) {
+  // Check if all criteria are met
+  const total = phase.successCriteria.automated.length;
+  return total > 0 ? 'approved' : 'pending';
+}`,
+  css: `.phase-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+}`,
+  none: `function example() {
+  return "no language specified";
+}`
+};
+
+const DIFF_FIELDS = [
+  { section: 'Overview', oldValue: 'Refactor the auth module to support OAuth2.', newValue: 'Refactor the auth module to support OAuth2 and SAML.' },
+  { section: 'Phase 1: Setup', oldValue: 'Install dependencies and configure environment.', newValue: 'Install dependencies, configure environment, and add Docker support.' },
+  { section: 'Phase 2: Implementation', oldValue: 'Implement the core logic for token exchange.', newValue: 'Implement core logic for token exchange with refresh token rotation.' },
+  { section: 'Testing Strategy', oldValue: 'Unit tests for auth service.', newValue: 'Unit tests and integration tests for auth service.' },
+  { section: 'Phase 3: Migration', oldValue: 'Migrate existing sessions to new format.', newValue: 'Migrate existing sessions with zero-downtime strategy.' }
+];
+
+function renderPreview() {
+  const el = document.getElementById('preview');
+  const s = state[activeComp];
+  let html = '';
+
+  switch (activeComp) {
+    case 'PhaseCard': {
+      html += `<div class="phase-card">
+        <div class="phase-header">
+          <button class="phase-title">
+            <span class="arrow ${s.expanded ? 'expanded' : ''}">&#9654;</span>
+            Phase 1: Authentication Refactor
+          </button>
+          ${renderPSC(s.status)}
+        </div>`;
+      if (s.expanded) {
+        html += `<div class="phase-body">
+          <p>Refactor the authentication module to support OAuth2 flow with PKCE. This phase establishes the foundation for all subsequent security improvements.</p>`;
+
+        if (s.subItems) {
+          html += `<div style="margin-top:14px">
+            <div class="sub-item">
+              <div class="sub-item-header">
+                <h4>1a. Token Service</h4>
+                ${renderPSC(s.status)}
+              </div>
+              <p>Implement token exchange and refresh logic with secure storage.</p>
+            </div>
+            <div class="sub-item">
+              <div class="sub-item-header">
+                <h4>1b. Session Manager</h4>
+                ${renderPSC(s.status)}
+              </div>
+              <p>Create session lifecycle management with automatic renewal.</p>
+            </div>
+          </div>`;
+        }
+
+        html += `<h3>Changes Required</h3>`;
+        html += `<div class="change-block">
+          <div class="cb-name">AuthService</div>
+          <div class="cb-file"><strong>File:</strong> <code>src/lib/services/auth.ts</code></div>
+          <div class="cb-desc">Add OAuth2 PKCE flow with token refresh and secure cookie storage.</div>`;
+        if (s.codeSnippets) {
+          html += `<div class="cb-code"><pre style="margin:0">${simpleHighlight(CODE_SAMPLES.typescript, 'typescript')}</pre></div>`;
+        }
+        html += `</div>`;
+
+        html += `<h3>Success Criteria</h3>
+          <h4>Automated Verification</h4>
+          <div class="criteria-list">
+            <div class="criterion"><input type="checkbox"><span><code>npm run test:auth</code> &mdash; All auth unit tests pass</span></div>
+            <div class="criterion"><input type="checkbox"><span><code>npm run lint</code> &mdash; No lint errors in auth module</span></div>
+          </div>
+          <h4>Manual Verification</h4>
+          <div class="criteria-list">
+            <div class="criterion"><input type="checkbox"><span>Login flow works end-to-end in browser</span></div>
+            <div class="criterion"><input type="checkbox"><span>Token refresh happens silently before expiry</span></div>
+          </div>`;
+        html += `</div>`;
+      }
+      html += `</div><hr style="border-color:var(--border);margin-top:20px">`;
+      break;
+    }
+
+    case 'PhaseStatusControl': {
+      html += `<div style="padding:20px">
+        ${renderPSC(s.status)}`;
+      if (s.withNote) {
+        html += `<textarea class="psc-note-input" placeholder="Add a note about this status change..." rows="3">The token refresh logic needs error handling for network failures.</textarea>`;
+      }
+      html += `</div>`;
+      break;
+    }
+
+    case 'FeedbackItem': {
+      const resolvedClass = s.resolved ? 'resolved' : 'unresolved';
+      html += `<article class="feedback-item ${resolvedClass}">
+        <div class="fi-section">Phase 1: Authentication Refactor &gt; Token Service</div>`;
+      if (s.withQuote) {
+        html += `<div class="fi-quote">"Add OAuth2 PKCE flow with token refresh and secure cookie storage."</div>`;
+      }
+      if (s.editing) {
+        html += `<textarea class="fi-textarea">Consider using httpOnly cookies instead of localStorage for token storage. This prevents XSS attacks from accessing the tokens.</textarea>
+        <div class="fi-actions">
+          <button class="fi-btn fi-btn-save">Save <kbd style="opacity:0.7;font-size:10px">&#8984;&#8629;</kbd></button>
+          <button class="fi-btn fi-btn-cancel">Cancel <kbd style="opacity:0.7;font-size:10px">Esc</kbd></button>
+        </div>`;
+      } else {
+        html += `<div class="fi-comment">Consider using httpOnly cookies instead of localStorage for token storage. This prevents XSS attacks from accessing the tokens.</div>
+        <div class="fi-meta">2 minutes ago</div>
+        <div class="fi-actions">
+          <button class="fi-btn fi-btn-edit">Edit</button>
+          <button class="fi-btn fi-btn-resolve ${s.resolved ? 'resolved-btn' : ''}">${s.resolved ? 'Resolved' : 'Resolve'}</button>
+          <button class="fi-btn fi-btn-delete">Delete</button>
+        </div>`;
+      }
+      html += `</article>`;
+      break;
+    }
+
+    case 'ApprovalBar': {
+      const count = parseInt(s.unresolvedCount);
+      html += `<div class="approval-bar">
+        <div class="ab-left">`;
+      if (s.withFlash) {
+        const flashMsg = s.flashType === 'success'
+          ? 'Feedback submitted &mdash; plan approved'
+          : 'Error submitting feedback &mdash; please try again';
+        html += `<span class="ab-flash ${s.flashType}">${flashMsg}</span>`;
+      } else {
+        html += `${count} unresolved comment${count !== 1 ? 's' : ''}`;
+      }
+      html += `</div>
+        <div class="ab-right">
+          <button class="ab-btn ab-btn-changes">Request Changes</button>
+          <button class="ab-btn ab-btn-approve">Approve Plan</button>
+        </div>
+      </div>`;
+      break;
+    }
+
+    case 'StatusBadge': {
+      const sizeClass = s.size;
+      const statusClass = s.status;
+      const labels = { reviewing: 'Reviewing', approved: 'Approved', 'needs-work': 'Needs Work', pending: 'Pending' };
+      html += `<div style="padding:40px;text-align:center">
+        <span class="status-badge ${sizeClass} ${statusClass}">${labels[s.status]}</span>
+      </div>`;
+      break;
+    }
+
+    case 'ProgressBar': {
+      const fill = s.fill;
+      // Calculate a human-readable label
+      const total = 6;
+      const approved = Math.round(fill / 100 * total);
+      html += `<div class="progress-wrap">`;
+      if (s.showLabel) {
+        html += `<div class="progress-label">${approved}/${total} phases approved</div>`;
+      }
+      html += `<div class="progress-track"><div class="progress-fill" style="width:${fill}%"></div></div>
+      </div>`;
+      break;
+    }
+
+    case 'ChangeBlock': {
+      html += `<div class="change-block">
+        <div class="cb-name">AuthService</div>`;
+      if (s.withFilePath) {
+        html += `<div class="cb-file"><strong>File:</strong> <code>src/lib/services/auth.ts</code></div>`;
+      }
+      html += `<div class="cb-desc">Add OAuth2 PKCE flow with token refresh and secure cookie storage.</div>`;
+      if (s.withCode) {
+        const lang = s.codeLang;
+        const code = CODE_SAMPLES[lang] || CODE_SAMPLES.none;
+        html += `<div class="cb-code"><pre style="margin:0">${simpleHighlight(code, lang)}</pre></div>`;
+      }
+      html += `</div>`;
+      break;
+    }
+
+    case 'DiffView': {
+      const count = state.DiffView.sectionCount;
+      const type = state.DiffView.diffType;
+      const entries = DIFF_FIELDS.slice(0, count);
+      const statusIcon = { added: '+', removed: '&minus;', changed: '~' };
+      html += `<div class="diff-view">
+        <div class="diff-header">
+          <div style="display:flex;align-items:center;gap:12px">
+            <h3>Changes: v1 &rarr; v2</h3>
+            <span>${count} section${count !== 1 ? 's' : ''} changed</span>
+          </div>
+        </div>`;
+      entries.forEach(d => {
+        html += `<div class="diff-entry ${type}">
+          <div class="diff-entry-header">
+            <span class="diff-badge ${type}">${statusIcon[type]} ${type}</span>
+            <span class="diff-field">${d.section}</span>
+          </div>`;
+        if (type === 'changed') {
+          html += `<div class="diff-values">
+            <div><div class="diff-val-label old">v1</div><div class="diff-val">${esc(d.oldValue)}</div></div>
+            <div><div class="diff-val-label new">v2</div><div class="diff-val">${esc(d.newValue)}</div></div>
+          </div>`;
+        } else if (type === 'added') {
+          html += `<div class="diff-single-val">${esc(d.newValue)}</div>`;
+        } else {
+          html += `<div class="diff-single-val strike">${esc(d.oldValue)}</div>`;
+        }
+        html += `</div>`;
+      });
+      html += `</div>`;
+      break;
+    }
+  }
+
+  el.innerHTML = html;
+}
+
+// ────────────────────────────────────────────────────────────────
+// Render: Prompt Output
+// ────────────────────────────────────────────────────────────────
+function renderPrompt() {
+  const s = state[activeComp];
+  const d = DEFAULTS[activeComp];
+  const diffs = [];
+
+  for (const [key, val] of Object.entries(s)) {
+    if (JSON.stringify(val) !== JSON.stringify(d[key])) {
+      diffs.push(`${key}: ${val}`);
+    }
+  }
+
+  const stateDesc = diffs.length > 0 ? diffs.join(', ') : 'default state';
+
+  // Visual description
+  const visuals = {
+    PhaseCard: 'display as a card with phase header (number + name + status badge), overview text, change blocks, and success criteria list',
+    PhaseStatusControl: 'render three pill buttons (Pending, Approved, Needs Work) with the active status highlighted using its theme color',
+    FeedbackItem: 'show as a comment card with section label, optional quoted text, comment body, timestamp, and action buttons',
+    ApprovalBar: 'render as a sticky bottom bar with unresolved comment count, Request Changes button (orange), and Approve Plan button (green)',
+    StatusBadge: 'display as a pill-shaped badge with appropriate background color tint and matching text color',
+    ProgressBar: 'show a horizontal track with colored fill indicating phase approval progress',
+    ChangeBlock: 'render as a card with component name, file path in monospace, description, and optional code block',
+    DiffView: 'display as a list of diff entries with colored left borders, status badges, and field values'
+  };
+
+  const prompt = `Update ${activeComp} to ${stateDesc}. The component should ${visuals[activeComp]}. Apply using the project's theme tokens (bg: #0d1117, surface: #161b22, accent: #58a6ff, etc.).\n\n[Playground: Component State Gallery]`;
+
+  document.getElementById('promptText').textContent = prompt;
+}
+
+// ────────────────────────────────────────────────────────────────
+// Copy Button
+// ────────────────────────────────────────────────────────────────
+document.getElementById('copyBtn').addEventListener('click', function() {
+  const text = document.getElementById('promptText').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => { btn.textContent = 'Copy'; btn.classList.remove('copied'); }, 1500);
+  });
+});
+
+// ────────────────────────────────────────────────────────────────
+// Main render
+// ────────────────────────────────────────────────────────────────
+function render() {
+  renderGrid();
+  renderPresets();
+  renderControls();
+  renderPreview();
+  renderPrompt();
+}
+
+render();
+</script>
+
+</body>
+</html>

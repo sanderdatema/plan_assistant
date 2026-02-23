@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan Assistant - Theme Token Explorer</title>
+<style>
+  /* ============================================================
+     Base / Reset
+     ============================================================ */
+  *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+
+  :root {
+    --ui-bg: #0d1117;
+    --ui-surface: #161b22;
+    --ui-surface2: #1c2129;
+    --ui-border: #30363d;
+    --ui-text: #e6edf3;
+    --ui-text-dim: #8b949e;
+    --ui-accent: #58a6ff;
+  }
+
+  html, body { height:100%; overflow:hidden; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--ui-bg);
+    color: var(--ui-text);
+    line-height: 1.5;
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    grid-template-rows: 1fr;
+    height: 100vh;
+  }
+
+  /* ============================================================
+     Scrollbar styling
+     ============================================================ */
+  ::-webkit-scrollbar { width:8px; height:8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--ui-border); border-radius:4px; }
+  ::-webkit-scrollbar-thumb:hover { background: var(--ui-text-dim); }
+
+  /* ============================================================
+     Left Panel - Controls
+     ============================================================ */
+  #controls-panel {
+    background: var(--ui-surface);
+    border-right: 1px solid var(--ui-border);
+    overflow-y: auto;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  #controls-panel h1 {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--ui-text);
+    letter-spacing: -0.02em;
+  }
+  #controls-panel h1 span { color: var(--ui-text-dim); font-weight:400; font-size:14px; margin-left:6px; }
+
+  .section-title {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--ui-text-dim);
+    margin-bottom: 10px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--ui-border);
+  }
+
+  .control-group { display:flex; flex-direction:column; gap:8px; }
+
+  /* Radio selector */
+  .radio-group {
+    display: flex;
+    gap: 2px;
+    background: var(--ui-bg);
+    border-radius: 8px;
+    padding: 3px;
+  }
+  .radio-group label {
+    flex: 1;
+    text-align: center;
+    padding: 7px 10px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    color: var(--ui-text-dim);
+  }
+  .radio-group input { display:none; }
+  .radio-group input:checked + span {
+    display: block;
+  }
+  .radio-group label.active {
+    background: var(--ui-surface2);
+    color: var(--ui-text);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.3);
+  }
+
+  /* Token row */
+  .token-row {
+    display: grid;
+    grid-template-columns: 20px 72px 72px 1fr;
+    gap: 6px;
+    align-items: center;
+  }
+  .token-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: 4px;
+    border: 1px solid rgba(255,255,255,0.1);
+    flex-shrink: 0;
+  }
+  .token-name {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--ui-text);
+  }
+  .token-hex {
+    font-size: 11px;
+    font-family: 'SF Mono', Consolas, monospace;
+    color: var(--ui-text-dim);
+    cursor: pointer;
+  }
+  .token-hex:hover { color: var(--ui-accent); }
+
+  /* HSL slider group */
+  .hsl-sliders {
+    display: none;
+    grid-column: 1 / -1;
+    padding: 8px 0 4px 0;
+    gap: 4px;
+    flex-direction: column;
+  }
+  .hsl-sliders.open { display:flex; }
+
+  .hsl-row {
+    display: grid;
+    grid-template-columns: 16px 1fr 36px;
+    gap: 6px;
+    align-items: center;
+  }
+  .hsl-label {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--ui-text-dim);
+    text-transform: uppercase;
+  }
+  .hsl-value {
+    font-size: 10px;
+    font-family: 'SF Mono', Consolas, monospace;
+    color: var(--ui-text-dim);
+    text-align: right;
+  }
+
+  /* Range inputs */
+  input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 6px;
+    border-radius: 3px;
+    background: var(--ui-bg);
+    outline: none;
+  }
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--ui-accent);
+    cursor: pointer;
+    border: 2px solid var(--ui-surface);
+  }
+  input[type="range"].hue-slider {
+    background: linear-gradient(to right,
+      hsl(0,100%,50%), hsl(60,100%,50%), hsl(120,100%,50%),
+      hsl(180,100%,50%), hsl(240,100%,50%), hsl(300,100%,50%), hsl(360,100%,50%)
+    );
+  }
+  input[type="range"].sat-slider {
+    background: linear-gradient(to right, hsl(0,0%,50%), hsl(0,100%,50%));
+  }
+  input[type="range"].lit-slider {
+    background: linear-gradient(to right, #000, hsl(0,100%,50%), #fff);
+  }
+
+  /* Select / dropdown */
+  select {
+    background: var(--ui-bg);
+    color: var(--ui-text);
+    border: 1px solid var(--ui-border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 13px;
+    outline: none;
+    cursor: pointer;
+    width: 100%;
+  }
+  select:focus { border-color: var(--ui-accent); }
+
+  /* Mini labeled control */
+  .mini-control {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .mini-control label {
+    font-size: 11px;
+    color: var(--ui-text-dim);
+    font-weight: 600;
+  }
+
+  /* Toggle switch */
+  .toggle-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .toggle-wrap label { font-size:12px; color:var(--ui-text-dim); font-weight:600; }
+  .toggle {
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    position: relative;
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .toggle.on { background: var(--ui-accent); border-color: var(--ui-accent); }
+  .toggle::after {
+    content: '';
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #fff;
+    transition: transform 0.15s;
+  }
+  .toggle.on::after { transform: translateX(16px); }
+
+  /* Preset buttons */
+  .preset-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .preset-btn {
+    padding: 5px 10px;
+    border-radius: 6px;
+    border: 1px solid var(--ui-border);
+    background: var(--ui-bg);
+    color: var(--ui-text-dim);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .preset-btn:hover {
+    border-color: var(--ui-accent);
+    color: var(--ui-text);
+    background: var(--ui-surface2);
+  }
+
+  /* ============================================================
+     Right Panel - Previews + Prompt
+     ============================================================ */
+  #right-panel {
+    display: grid;
+    grid-template-rows: 1fr auto;
+    overflow: hidden;
+  }
+
+  #previews {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+    padding: 16px;
+    overflow-y: auto;
+  }
+
+  .preview-col {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    min-width: 0;
+  }
+  .preview-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 8px 16px;
+    border-radius: 8px 8px 0 0;
+    flex-shrink: 0;
+  }
+  .preview-frame {
+    border-radius: 0 0 8px 8px;
+    padding: 20px;
+    overflow-y: auto;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* ============================================================
+     Preview Mock Components (dynamically styled via JS)
+     ============================================================ */
+  .mock-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 4px;
+    flex-wrap: wrap;
+  }
+  .mock-title {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+  }
+  .mock-badge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1;
+  }
+  .mock-meta {
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+
+  .mock-phase {
+    border-radius: 8px;
+    margin-bottom: 12px;
+  }
+  .mock-phase-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+  }
+  .mock-phase-title {
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  .mock-change {
+    border-radius: 6px;
+    margin-bottom: 10px;
+  }
+  .mock-change-name { font-size:14px; font-weight:700; margin-bottom:4px; }
+  .mock-change-path { font-size:13px; margin-bottom:6px; }
+  .mock-change-desc { font-size:13px; margin-bottom:8px; }
+  .mock-code-block {
+    border-radius: 4px;
+    font-size: 13px;
+    line-height: 1.45;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .mock-comment {
+    border-radius: 0 4px 4px 0;
+    margin-bottom: 10px;
+  }
+  .mock-quote { font-style:italic; font-size:13px; margin-bottom:4px; }
+  .mock-comment-text { font-size:13px; }
+  .mock-resolve-btn {
+    font-size: 12px;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    padding: 3px 10px;
+    cursor: pointer;
+    margin-top: 6px;
+    opacity: 0.8;
+  }
+  .mock-resolve-btn:hover { opacity:1; }
+
+  .mock-approval-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    border-radius: 8px;
+  }
+  .mock-approval-text { font-size:13px; font-weight:600; flex:1; }
+  .mock-btn {
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    padding: 6px 14px;
+    cursor: pointer;
+    transition: filter 0.1s;
+  }
+  .mock-btn:hover { filter: brightness(1.15); }
+
+  /* ============================================================
+     Prompt Output
+     ============================================================ */
+  #prompt-panel {
+    background: var(--ui-surface);
+    border-top: 1px solid var(--ui-border);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    max-height: 220px;
+  }
+  #prompt-panel .section-title { margin-bottom:0; padding-bottom:0; border:none; }
+  #prompt-output {
+    font-family: 'SF Mono', Consolas, monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    color: var(--ui-text);
+    background: var(--ui-bg);
+    border: 1px solid var(--ui-border);
+    border-radius: 6px;
+    padding: 10px 12px;
+    overflow-y: auto;
+    flex: 1;
+    white-space: pre-wrap;
+    word-break: break-word;
+    cursor: text;
+  }
+  #prompt-output:focus {
+    outline: 1px solid #58a6ff;
+    outline-offset: 2px;
+  }
+  .prompt-editable-hint {
+    font-size: 11px;
+    color: #8b949e;
+  }
+  #copy-btn {
+    align-self: flex-end;
+    padding: 5px 14px;
+    border-radius: 6px;
+    border: 1px solid var(--ui-border);
+    background: var(--ui-surface2);
+    color: var(--ui-text);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  #copy-btn:hover { border-color:var(--ui-accent); color:var(--ui-accent); }
+  #copy-btn.copied { border-color: #3fb950; color: #3fb950; }
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     LEFT PANEL - Controls
+     ============================================================ -->
+<div id="controls-panel">
+  <h1>Theme Explorer <span>Plan Assistant</span></h1>
+
+  <!-- Theme Selector -->
+  <div class="control-group">
+    <div class="section-title">Theme Selector</div>
+    <div class="radio-group" id="theme-selector">
+      <label class="active" onclick="selectTheme('webui')">
+        <input type="radio" name="theme" value="webui" checked>
+        <span>Web UI</span>
+      </label>
+      <label onclick="selectTheme('export')">
+        <input type="radio" name="theme" value="export">
+        <span>HTML Export</span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Color Tokens -->
+  <div class="control-group">
+    <div class="section-title">Color Tokens</div>
+    <div id="token-list"></div>
+  </div>
+
+  <!-- Typography -->
+  <div class="control-group">
+    <div class="section-title">Typography</div>
+    <div class="mini-control">
+      <label>Sans Font Family</label>
+      <select id="font-sans" onchange="onFontChange()">
+        <option value="'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">Inter</option>
+        <option value="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">System UI</option>
+        <option value="'Roboto', -apple-system, sans-serif">Roboto</option>
+        <option value="'Geist Sans', -apple-system, sans-serif">Geist Sans</option>
+      </select>
+    </div>
+    <div class="mini-control">
+      <label>Mono Font Family</label>
+      <select id="font-mono" onchange="onFontChange()">
+        <option value="'JetBrains Mono', monospace">JetBrains Mono</option>
+        <option value="'SF Mono', SFMono-Regular, monospace">SF Mono</option>
+        <option value="'Fira Code', monospace">Fira Code</option>
+        <option value="'Cascadia Code', monospace">Cascadia Code</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Layout -->
+  <div class="control-group">
+    <div class="section-title">Layout</div>
+    <div class="mini-control">
+      <label>Preview Density: <span id="density-val">1.0x</span></label>
+      <input type="range" id="density-slider" min="0.6" max="1.6" step="0.05" value="1.0"
+             oninput="onLayoutChange()">
+    </div>
+    <div class="mini-control">
+      <label>Badge Border Radius: <span id="badge-radius-val">pill</span></label>
+      <input type="range" id="badge-radius-slider" min="0" max="17" step="1" value="17"
+             oninput="onLayoutChange()" title="2px - 16px, then pill (9999px)">
+    </div>
+    <div class="toggle-wrap">
+      <label>Code Block Border</label>
+      <div class="toggle on" id="code-border-toggle" onclick="toggleCodeBorder()"></div>
+    </div>
+  </div>
+
+  <!-- Presets -->
+  <div class="control-group">
+    <div class="section-title">Presets</div>
+    <div class="preset-grid">
+      <button class="preset-btn" onclick="applyPreset('default')">Default</button>
+      <button class="preset-btn" onclick="applyPreset('tokyonight')">Tokyo Night</button>
+      <button class="preset-btn" onclick="applyPreset('nord')">Nord</button>
+      <button class="preset-btn" onclick="applyPreset('dracula')">Dracula</button>
+      <button class="preset-btn" onclick="applyPreset('highcontrast')">High Contrast</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     RIGHT PANEL - Previews + Prompt
+     ============================================================ -->
+<div id="right-panel">
+  <div id="previews">
+    <!-- Web UI Preview -->
+    <div class="preview-col">
+      <div class="preview-label" id="label-webui">Web UI Theme</div>
+      <div class="preview-frame" id="preview-webui"></div>
+    </div>
+    <!-- HTML Export Preview -->
+    <div class="preview-col">
+      <div class="preview-label" id="label-export">HTML Export Theme</div>
+      <div class="preview-frame" id="preview-export"></div>
+    </div>
+  </div>
+
+  <!-- Prompt Output -->
+  <div id="prompt-panel">
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="section-title">Prompt Output</div>
+      <button id="copy-btn" onclick="copyPrompt()">Copy</button>
+    </div>
+    <div id="prompt-output" contenteditable="true">No changes from defaults.</div>
+    <div class="prompt-editable-hint">Click to edit before copying</div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// Theme defaults
+// ============================================================
+const TOKEN_NAMES = ['bg','surface','surface2','border','text','text-dim','accent','green','red','orange'];
+
+const DEFAULTS = {
+  webui: {
+    bg: '#0d1117', surface: '#161b22', surface2: '#1c2129', border: '#30363d',
+    text: '#e6edf3', 'text-dim': '#8b949e', accent: '#58a6ff',
+    green: '#3fb950', red: '#f85149', orange: '#d29922'
+  },
+  export: {
+    bg: '#11111b', surface: '#181825', surface2: '#1e1e2e', border: '#313244',
+    text: '#cdd6f4', 'text-dim': '#a6adc8', accent: '#89b4fa',
+    green: '#a6e3a1', red: '#f38ba8', orange: '#fab387'
+  }
+};
+
+const DEFAULT_FONTS = {
+  webui: {
+    sans: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+    mono: "'JetBrains Mono', 'SF Mono', Consolas, monospace"
+  },
+  export: {
+    sans: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    mono: "'SF Mono', 'Fira Code', 'JetBrains Mono', monospace"
+  }
+};
+
+// ============================================================
+// State
+// ============================================================
+let activeTheme = 'webui'; // which theme's controls are shown
+let tokens = {
+  webui: {...DEFAULTS.webui},
+  export: {...DEFAULTS.export}
+};
+let fonts = {
+  sans: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+  mono: "'JetBrains Mono', monospace"
+};
+let layout = {
+  density: 1.0,
+  badgeRadius: 9999,
+  codeBorder: true
+};
+
+// ============================================================
+// Color helpers
+// ============================================================
+function hexToRgb(hex) {
+  hex = hex.replace('#','');
+  const r = parseInt(hex.substring(0,2),16);
+  const g = parseInt(hex.substring(2,4),16);
+  const b = parseInt(hex.substring(4,6),16);
+  return [r,g,b];
+}
+
+function rgbToHsl(r,g,b) {
+  r/=255; g/=255; b/=255;
+  const max=Math.max(r,g,b), min=Math.min(r,g,b);
+  let h=0, s=0, l=(max+min)/2;
+  if(max!==min){
+    const d=max-min;
+    s=l>0.5?d/(2-max-min):d/(max+min);
+    switch(max){
+      case r: h=((g-b)/d+(g<b?6:0))/6; break;
+      case g: h=((b-r)/d+2)/6; break;
+      case b: h=((r-g)/d+4)/6; break;
+    }
+  }
+  return [Math.round(h*360), Math.round(s*100), Math.round(l*100)];
+}
+
+function hslToRgb(h,s,l) {
+  h/=360; s/=100; l/=100;
+  let r,g,b;
+  if(s===0){ r=g=b=l; }
+  else {
+    const hue2rgb=(p,q,t)=>{
+      if(t<0)t+=1;if(t>1)t-=1;
+      if(t<1/6)return p+(q-p)*6*t;
+      if(t<1/2)return q;
+      if(t<2/3)return p+(q-p)*(2/3-t)*6;
+      return p;
+    };
+    const q=l<0.5?l*(1+s):l+s-l*s;
+    const p=2*l-q;
+    r=hue2rgb(p,q,h+1/3);
+    g=hue2rgb(p,q,h);
+    b=hue2rgb(p,q,h-1/3);
+  }
+  return [Math.round(r*255),Math.round(g*255),Math.round(b*255)];
+}
+
+function rgbToHex(r,g,b) {
+  return '#'+[r,g,b].map(v=>v.toString(16).padStart(2,'0')).join('');
+}
+
+function hexToHsl(hex) {
+  return rgbToHsl(...hexToRgb(hex));
+}
+
+function hslToHex(h,s,l) {
+  return rgbToHex(...hslToRgb(h,s,l));
+}
+
+// ============================================================
+// UI: Token list builder
+// ============================================================
+function buildTokenList() {
+  const container = document.getElementById('token-list');
+  container.innerHTML = '';
+  const themeTokens = tokens[activeTheme];
+
+  TOKEN_NAMES.forEach(name => {
+    const hex = themeTokens[name];
+    const [h,s,l] = hexToHsl(hex);
+
+    const wrapper = document.createElement('div');
+    wrapper.style.marginBottom = '4px';
+
+    // Main row
+    const row = document.createElement('div');
+    row.className = 'token-row';
+    row.style.cursor = 'pointer';
+    row.innerHTML = `
+      <div class="token-swatch" id="swatch-${name}" style="background:${hex}"></div>
+      <div class="token-name">${name}</div>
+      <div class="token-hex" id="hex-${name}" title="Click to expand">${hex}</div>
+      <div style="font-size:10px;color:var(--ui-text-dim);text-align:right" id="hsl-display-${name}">${h} ${s}% ${l}%</div>
+    `;
+    row.onclick = () => toggleSliders(name);
+
+    // HSL sliders
+    const sliders = document.createElement('div');
+    sliders.className = 'hsl-sliders';
+    sliders.id = `sliders-${name}`;
+    sliders.innerHTML = `
+      <div class="hsl-row">
+        <span class="hsl-label">H</span>
+        <input type="range" class="hue-slider" id="h-${name}" min="0" max="360" value="${h}"
+               oninput="onSliderChange('${name}')">
+        <span class="hsl-value" id="hv-${name}">${h}</span>
+      </div>
+      <div class="hsl-row">
+        <span class="hsl-label">S</span>
+        <input type="range" class="sat-slider" id="s-${name}" min="0" max="100" value="${s}"
+               oninput="onSliderChange('${name}')">
+        <span class="hsl-value" id="sv-${name}">${s}%</span>
+      </div>
+      <div class="hsl-row">
+        <span class="hsl-label">L</span>
+        <input type="range" class="lit-slider" id="l-${name}" min="0" max="100" value="${l}"
+               oninput="onSliderChange('${name}')">
+        <span class="hsl-value" id="lv-${name}">${l}%</span>
+      </div>
+    `;
+
+    wrapper.appendChild(row);
+    wrapper.appendChild(sliders);
+    container.appendChild(wrapper);
+
+    // Update slider gradient backgrounds for sat/lit contextually
+    updateSliderGradients(name, h, s, l);
+  });
+}
+
+function toggleSliders(name) {
+  const el = document.getElementById(`sliders-${name}`);
+  el.classList.toggle('open');
+}
+
+function updateSliderGradients(name, h, s, l) {
+  const satSlider = document.getElementById(`s-${name}`);
+  const litSlider = document.getElementById(`l-${name}`);
+  if (satSlider) {
+    satSlider.style.background = `linear-gradient(to right, hsl(${h},0%,${l}%), hsl(${h},100%,${l}%))`;
+  }
+  if (litSlider) {
+    litSlider.style.background = `linear-gradient(to right, hsl(${h},${s}%,0%), hsl(${h},${s}%,50%), hsl(${h},${s}%,100%))`;
+  }
+}
+
+function onSliderChange(name) {
+  const h = parseInt(document.getElementById(`h-${name}`).value);
+  const s = parseInt(document.getElementById(`s-${name}`).value);
+  const l = parseInt(document.getElementById(`l-${name}`).value);
+
+  const hex = hslToHex(h,s,l);
+  tokens[activeTheme][name] = hex;
+
+  document.getElementById(`swatch-${name}`).style.background = hex;
+  document.getElementById(`hex-${name}`).textContent = hex;
+  document.getElementById(`hsl-display-${name}`).textContent = `${h} ${s}% ${l}%`;
+  document.getElementById(`hv-${name}`).textContent = h;
+  document.getElementById(`sv-${name}`).textContent = s + '%';
+  document.getElementById(`lv-${name}`).textContent = l + '%';
+
+  updateSliderGradients(name, h, s, l);
+  renderPreviews();
+  updatePrompt();
+}
+
+// ============================================================
+// Theme selector
+// ============================================================
+function selectTheme(theme) {
+  activeTheme = theme;
+  document.querySelectorAll('#theme-selector label').forEach(lbl => {
+    lbl.classList.toggle('active', lbl.querySelector('input').value === theme);
+  });
+  // Update font dropdowns to match selected theme defaults if font hasn't been changed
+  buildTokenList();
+  renderPreviews();
+  updatePrompt();
+}
+
+// ============================================================
+// Font / Layout controls
+// ============================================================
+function onFontChange() {
+  fonts.sans = document.getElementById('font-sans').value;
+  fonts.mono = document.getElementById('font-mono').value;
+  renderPreviews();
+  updatePrompt();
+}
+
+function onLayoutChange() {
+  layout.density = parseFloat(document.getElementById('density-slider').value);
+  const sliderVal = parseInt(document.getElementById('badge-radius-slider').value);
+  // Slider 0-15 maps to 2px-16px, slider 16-17 maps to pill (9999px)
+  if (sliderVal >= 16) {
+    layout.badgeRadius = 9999;
+    document.getElementById('badge-radius-val').textContent = 'pill';
+  } else {
+    layout.badgeRadius = sliderVal + 2; // 0->2, 1->3, ... 14->16
+    document.getElementById('badge-radius-val').textContent = layout.badgeRadius + 'px';
+  }
+  document.getElementById('density-val').textContent = layout.density.toFixed(2) + 'x';
+  renderPreviews();
+  updatePrompt();
+}
+
+function toggleCodeBorder() {
+  layout.codeBorder = !layout.codeBorder;
+  document.getElementById('code-border-toggle').classList.toggle('on', layout.codeBorder);
+  renderPreviews();
+  updatePrompt();
+}
+
+// ============================================================
+// Preview rendering
+// ============================================================
+const CODE_SNIPPET = `export interface User {
+  id: string;
+  email: string;
+  role: 'admin' | 'user';
+}`;
+
+function syntaxHighlight(code, t) {
+  // Simple keyword-based highlighting for TypeScript
+  let escaped = code
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;');
+
+  // Strings
+  escaped = escaped.replace(/'([^']*)'/g, `<span style="color:${t.green}">'$1'</span>`);
+
+  // Keywords
+  const keywords = ['export','interface','type','const','let','string','number','boolean','void'];
+  keywords.forEach(kw => {
+    const re = new RegExp(`\\b(${kw})\\b`, 'g');
+    escaped = escaped.replace(re, `<span style="color:${t.accent}">$1</span>`);
+  });
+
+  // Types/identifiers after :
+  escaped = escaped.replace(/:\s*(string|number|boolean)/g, (m, type) => {
+    return `: <span style="color:${t.orange}">${type}</span>`;
+  });
+
+  return escaped;
+}
+
+function renderMockPlan(themeKey) {
+  const t = tokens[themeKey];
+  const d = layout.density;
+  const pad = Math.round(16 * d);
+  const padSm = Math.round(10 * d);
+  const gap = Math.round(12 * d);
+  const br = layout.badgeRadius;
+  const codeBorder = layout.codeBorder ? `border:1px solid ${t.border};` : '';
+  const ff = fonts.sans;
+  const fm = fonts.mono;
+
+  return `
+    <div style="font-family:${ff};color:${t.text};line-height:1.6">
+      <!-- Plan Header -->
+      <div style="margin-bottom:${gap}px">
+        <div class="mock-header">
+          <div class="mock-title" style="color:${t.text}">Authentication Refactor Plan</div>
+          <span class="mock-badge" style="background:${t.accent};color:#fff;padding:4px 12px;border-radius:${br}px;">reviewing</span>
+        </div>
+        <div class="mock-meta" style="color:${t['text-dim']};margin-top:4px;">
+          Version v2 &middot; 2026-02-23
+        </div>
+      </div>
+
+      <!-- Phase -->
+      <div class="mock-phase" style="background:${t.surface};border:1px solid ${t.border};padding:${pad}px;border-radius:8px;margin-bottom:${gap}px">
+        <div class="mock-phase-header">
+          <div class="mock-phase-title" style="color:${t.text}">Phase 1: Database Schema</div>
+          <span class="mock-badge" style="background:${t.green};color:#000;padding:2px 8px;border-radius:${br}px;font-size:12px;">Approved</span>
+          <span class="mock-badge" style="background:${t.red};color:#fff;padding:2px 8px;border-radius:${br}px;font-size:12px;">Needs Work</span>
+          <span class="mock-badge" style="background:${t['text-dim']};color:#fff;padding:2px 8px;border-radius:${br}px;font-size:12px;">Pending</span>
+        </div>
+
+        <!-- Change Block -->
+        <div class="mock-change" style="background:${t.surface2};padding:${padSm}px ${pad}px;border-radius:6px;margin-bottom:${padSm}px">
+          <div class="mock-change-name" style="color:${t.text}">UserModel</div>
+          <div class="mock-change-path" style="color:${t.accent};font-family:${fm}">src/models/user.ts</div>
+          <div class="mock-change-desc" style="color:${t['text-dim']}">Add user interface with role-based access control fields.</div>
+          <pre class="mock-code-block" style="background:${t.bg};padding:${padSm}px;${codeBorder}border-radius:4px;font-family:${fm};color:${t.text};margin-top:8px"><code>${syntaxHighlight(CODE_SNIPPET, t)}</code></pre>
+        </div>
+
+        <!-- Feedback Comment -->
+        <div class="mock-comment" style="border-left:3px solid ${t.accent};background:${t.accent}18;padding:${padSm}px ${pad}px;margin-top:${padSm}px">
+          <div class="mock-quote" style="color:${t['text-dim']}">"This interface should include createdAt"</div>
+          <div class="mock-comment-text" style="color:${t.text}">Agreed, also add updatedAt for audit trail.</div>
+          <button class="mock-resolve-btn" style="background:${t.surface2};color:${t['text-dim']};border:1px solid ${t.border}">Resolve</button>
+        </div>
+      </div>
+
+      <!-- Approval Bar -->
+      <div class="mock-approval-bar" style="background:${t.surface};border:1px solid ${t.border};padding:${padSm}px ${pad}px;border-radius:8px">
+        <div class="mock-approval-text" style="color:${t.orange}">3 unresolved comments</div>
+        <button class="mock-btn" style="background:${t.green};color:#000">Approve</button>
+        <button class="mock-btn" style="background:${t.red};color:#fff">Needs Work</button>
+      </div>
+    </div>
+  `;
+}
+
+function renderPreviews() {
+  // Web UI preview
+  const webuiLabel = document.getElementById('label-webui');
+  const webuiFrame = document.getElementById('preview-webui');
+  webuiLabel.style.background = tokens.webui.surface;
+  webuiLabel.style.color = tokens.webui['text-dim'];
+  webuiLabel.style.borderTop = `1px solid ${tokens.webui.border}`;
+  webuiLabel.style.borderLeft = `1px solid ${tokens.webui.border}`;
+  webuiLabel.style.borderRight = `1px solid ${tokens.webui.border}`;
+  webuiFrame.style.background = tokens.webui.bg;
+  webuiFrame.style.border = `1px solid ${tokens.webui.border}`;
+  webuiFrame.style.borderTop = 'none';
+  webuiFrame.innerHTML = renderMockPlan('webui');
+
+  // Export preview
+  const exportLabel = document.getElementById('label-export');
+  const exportFrame = document.getElementById('preview-export');
+  exportLabel.style.background = tokens.export.surface;
+  exportLabel.style.color = tokens.export['text-dim'];
+  exportLabel.style.borderTop = `1px solid ${tokens.export.border}`;
+  exportLabel.style.borderLeft = `1px solid ${tokens.export.border}`;
+  exportLabel.style.borderRight = `1px solid ${tokens.export.border}`;
+  exportFrame.style.background = tokens.export.bg;
+  exportFrame.style.border = `1px solid ${tokens.export.border}`;
+  exportFrame.style.borderTop = 'none';
+  exportFrame.innerHTML = renderMockPlan('export');
+}
+
+// ============================================================
+// Prompt output
+// ============================================================
+function updatePrompt() {
+  const changes = [];
+  const webuiChanges = [];
+  const exportChanges = [];
+
+  // Check each theme for token diffs
+  TOKEN_NAMES.forEach(name => {
+    if (tokens.webui[name] !== DEFAULTS.webui[name]) {
+      webuiChanges.push(`${name} from ${DEFAULTS.webui[name]} to ${tokens.webui[name]}`);
+    }
+    if (tokens.export[name] !== DEFAULTS.export[name]) {
+      exportChanges.push(`${name} from ${DEFAULTS.export[name]} to ${tokens.export[name]}`);
+    }
+  });
+
+  // Layout changes
+  const layoutChanges = [];
+  if (layout.density !== 1.0) {
+    layoutChanges.push(`set preview density to ${layout.density.toFixed(2)}x`);
+  }
+  if (layout.badgeRadius !== 9999) {
+    layoutChanges.push(`change badge border-radius to ${layout.badgeRadius}px`);
+  }
+  if (!layout.codeBorder) {
+    layoutChanges.push('remove code block borders');
+  }
+
+  // Font changes
+  const fontDefSans = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif";
+  const fontDefMono = "'JetBrains Mono', monospace";
+  if (fonts.sans !== fontDefSans) {
+    layoutChanges.push(`change sans font to ${fonts.sans.split(',')[0].replace(/'/g,'')}`);
+  }
+  if (fonts.mono !== fontDefMono) {
+    layoutChanges.push(`change mono font to ${fonts.mono.split(',')[0].replace(/'/g,'')}`);
+  }
+
+  if (webuiChanges.length === 0 && exportChanges.length === 0 && layoutChanges.length === 0) {
+    document.getElementById('prompt-output').textContent = 'No changes from defaults.\n\n[Playground: Theme Token Explorer]';
+    return;
+  }
+
+  let prompt = 'Update the Plan Assistant theme tokens:\n\n';
+
+  if (webuiChanges.length > 0) {
+    prompt += 'In `src/app.css` (Web UI theme):\n';
+    webuiChanges.forEach(c => { prompt += `- Change ${c}\n`; });
+    prompt += '\n';
+  }
+
+  if (exportChanges.length > 0) {
+    prompt += 'In `src/cli/export-html.ts` (HTML Export theme):\n';
+    exportChanges.forEach(c => { prompt += `- Change ${c}\n`; });
+    prompt += '\n';
+  }
+
+  if (layoutChanges.length > 0) {
+    prompt += 'Layout adjustments (apply to both themes):\n';
+    layoutChanges.forEach(c => { prompt += `- ${c}\n`; });
+    prompt += '\n';
+  }
+
+  prompt += 'Apply to both the Tailwind theme in `src/app.css` and the inline CSS in `src/cli/export-html.ts`.';
+
+  prompt += '\n\n[Playground: Theme Token Explorer]';
+
+  document.getElementById('prompt-output').textContent = prompt;
+}
+
+function copyPrompt() {
+  const text = document.getElementById('prompt-output').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copy-btn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+    }, 1500);
+  });
+}
+
+// ============================================================
+// Presets
+// ============================================================
+const PRESETS = {
+  default: {
+    webui: {...DEFAULTS.webui},
+    export: {...DEFAULTS.export}
+  },
+  tokyonight: {
+    webui: {
+      bg: '#1a1b26', surface: '#1f2335', surface2: '#24283b', border: '#3b4261',
+      text: '#c0caf5', 'text-dim': '#565f89', accent: '#7aa2f7',
+      green: '#9ece6a', red: '#f7768e', orange: '#e0af68'
+    },
+    export: {
+      bg: '#1a1b26', surface: '#1f2335', surface2: '#24283b', border: '#3b4261',
+      text: '#c0caf5', 'text-dim': '#565f89', accent: '#7aa2f7',
+      green: '#9ece6a', red: '#f7768e', orange: '#e0af68'
+    }
+  },
+  nord: {
+    webui: {
+      bg: '#2e3440', surface: '#3b4252', surface2: '#434c5e', border: '#4c566a',
+      text: '#eceff4', 'text-dim': '#d8dee9', accent: '#88c0d0',
+      green: '#a3be8c', red: '#bf616a', orange: '#d08770'
+    },
+    export: {
+      bg: '#2e3440', surface: '#3b4252', surface2: '#434c5e', border: '#4c566a',
+      text: '#eceff4', 'text-dim': '#d8dee9', accent: '#88c0d0',
+      green: '#a3be8c', red: '#bf616a', orange: '#d08770'
+    }
+  },
+  dracula: {
+    webui: {
+      bg: '#282a36', surface: '#2d303e', surface2: '#343746', border: '#44475a',
+      text: '#f8f8f2', 'text-dim': '#6272a4', accent: '#bd93f9',
+      green: '#50fa7b', red: '#ff5555', orange: '#ffb86c'
+    },
+    export: {
+      bg: '#282a36', surface: '#2d303e', surface2: '#343746', border: '#44475a',
+      text: '#f8f8f2', 'text-dim': '#6272a4', accent: '#bd93f9',
+      green: '#50fa7b', red: '#ff5555', orange: '#ffb86c'
+    }
+  },
+  highcontrast: {
+    webui: {
+      bg: '#000000', surface: '#0a0a0a', surface2: '#141414', border: '#333333',
+      text: '#ffffff', 'text-dim': '#aaaaaa', accent: '#66bbff',
+      green: '#44dd55', red: '#ff4444', orange: '#ffaa22'
+    },
+    export: {
+      bg: '#000000', surface: '#0a0a0a', surface2: '#141414', border: '#333333',
+      text: '#ffffff', 'text-dim': '#aaaaaa', accent: '#99ccff',
+      green: '#88ff99', red: '#ff6666', orange: '#ffcc55'
+    }
+  }
+};
+
+function applyPreset(name) {
+  const preset = PRESETS[name];
+  tokens.webui = {...preset.webui};
+  tokens.export = {...preset.export};
+  buildTokenList();
+  renderPreviews();
+  updatePrompt();
+}
+
+// ============================================================
+// Init
+// ============================================================
+buildTokenList();
+renderPreviews();
+updatePrompt();
+</script>
+</body>
+</html>

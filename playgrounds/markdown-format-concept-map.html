@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan Assistant — Markdown Format Concept Map</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface2: #1c2129;
+  --border: #30363d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --accent: #58a6ff;
+  --green: #3fb950;
+  --orange: #d29922;
+  --red: #f85149;
+  --blue: #58a6ff;
+}
+
+html, body {
+  height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+  font-size: 14px;
+  overflow: hidden;
+}
+
+#app {
+  display: grid;
+  grid-template-rows: 1fr 320px;
+  grid-template-columns: 340px 1fr;
+  height: 100vh;
+  gap: 1px;
+  background: var(--border);
+}
+
+/* Canvas area — spans full width on top row */
+#canvas-wrap {
+  grid-column: 1 / -1;
+  grid-row: 1;
+  background: var(--bg);
+  position: relative;
+  overflow: hidden;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+#canvas-toolbar {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  gap: 8px;
+  z-index: 10;
+}
+
+#canvas-toolbar button, #canvas-toolbar select {
+  background: var(--surface);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background .15s;
+}
+#canvas-toolbar button:hover, #canvas-toolbar select:hover {
+  background: var(--surface2);
+}
+
+#canvas-title {
+  position: absolute;
+  top: 12px;
+  right: 16px;
+  font-size: 13px;
+  color: var(--text-muted);
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* Tooltip */
+#tooltip {
+  position: absolute;
+  display: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 10px 14px;
+  max-width: 320px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--text);
+  pointer-events: none;
+  z-index: 20;
+  box-shadow: 0 8px 24px rgba(0,0,0,.4);
+}
+#tooltip .tt-title { font-weight: 600; margin-bottom: 4px; }
+#tooltip .tt-desc { color: var(--text-muted); }
+#tooltip .tt-level { margin-top: 6px; font-size: 12px; }
+
+/* Sidebar — bottom-left */
+#sidebar {
+  grid-column: 1;
+  grid-row: 2;
+  background: var(--surface);
+  overflow-y: auto;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+}
+
+#sidebar h2 {
+  font-size: 15px;
+  margin-bottom: 10px;
+  color: var(--accent);
+}
+
+#sidebar h3 {
+  font-size: 13px;
+  margin: 12px 0 6px;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: .5px;
+}
+
+.legend-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  font-size: 13px;
+}
+.legend-dot {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.edge-legend {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 5px;
+  font-size: 13px;
+}
+.edge-sample {
+  width: 32px;
+  height: 0;
+  flex-shrink: 0;
+}
+
+#node-list {
+  margin-top: 8px;
+}
+.node-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background .1s;
+}
+.node-item:hover {
+  background: var(--surface2);
+}
+.node-item .ni-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Prompt area — bottom-right */
+#prompt-area {
+  grid-column: 2;
+  grid-row: 2;
+  background: var(--surface);
+  overflow-y: auto;
+  padding: 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+}
+
+#prompt-area h2 {
+  font-size: 15px;
+  margin-bottom: 10px;
+  color: var(--accent);
+  flex-shrink: 0;
+}
+
+#prompt-text {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text);
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  cursor: text;
+}
+#prompt-text:focus {
+  outline: 1px solid #58a6ff;
+  outline-offset: 2px;
+}
+.prompt-editable-hint {
+  font-size: 11px;
+  color: #8b949e;
+  margin-top: 4px;
+  flex-shrink: 0;
+}
+
+#copy-btn {
+  align-self: flex-end;
+  margin-top: 10px;
+  background: var(--accent);
+  color: var(--bg);
+  border: none;
+  border-radius: 6px;
+  padding: 8px 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s;
+  flex-shrink: 0;
+}
+#copy-btn:hover { opacity: .85; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<div id="app">
+  <!-- Canvas -->
+  <div id="canvas-wrap">
+    <div id="canvas-toolbar">
+      <button id="btn-layout" title="Force-directed auto-layout (or double-click canvas)">Auto Layout</button>
+      <button id="btn-reset-view" title="Reset zoom and pan">Reset View</button>
+      <select id="preset-select">
+        <option value="all">Full Format Map</option>
+        <option value="phase">Phase Structure Only</option>
+        <option value="changes">Changes Deep Dive</option>
+        <option value="criteria">Criteria &amp; Testing</option>
+      </select>
+    </div>
+    <div id="canvas-title">Scroll to zoom &middot; Drag nodes &middot; Click node to cycle level &middot; Double-click canvas for auto-layout</div>
+    <canvas id="c"></canvas>
+    <div id="tooltip">
+      <div class="tt-title"></div>
+      <div class="tt-desc"></div>
+      <div class="tt-level"></div>
+    </div>
+  </div>
+
+  <!-- Sidebar -->
+  <div id="sidebar">
+    <h2>Concept Map</h2>
+
+    <h3>Knowledge Levels</h3>
+    <div class="legend-row"><div class="legend-dot" style="background:var(--green)"></div> Know — I understand this</div>
+    <div class="legend-row"><div class="legend-dot" style="background:var(--orange)"></div> Fuzzy — Seen but unclear</div>
+    <div class="legend-row"><div class="legend-dot" style="background:var(--red)"></div> Unknown — Never encountered</div>
+
+    <h3>Connection Types</h3>
+    <div class="edge-legend"><svg width="32" height="10"><line x1="0" y1="5" x2="32" y2="5" stroke="#8b949e" stroke-width="2"/></svg> contains</div>
+    <div class="edge-legend"><svg width="32" height="10"><line x1="0" y1="5" x2="32" y2="5" stroke="#58a6ff" stroke-width="2" stroke-dasharray="6,3"/></svg> alternative format</div>
+    <div class="edge-legend"><svg width="32" height="10"><line x1="0" y1="5" x2="32" y2="5" stroke="#d29922" stroke-width="2" stroke-dasharray="2,4"/></svg> falls back to</div>
+    <div class="edge-legend"><svg width="32" height="10"><line x1="0" y1="5" x2="32" y2="5" stroke="#f85149" stroke-width="2"/></svg> requires</div>
+    <div class="edge-legend"><svg width="32" height="10"><line x1="0" y1="5" x2="32" y2="5" stroke="#3fb950" stroke-width="2" stroke-dasharray="2,4"/></svg> optional</div>
+
+    <h3>Nodes</h3>
+    <div id="node-list"></div>
+  </div>
+
+  <!-- Prompt output -->
+  <div id="prompt-area">
+    <h2>Prompt Output</h2>
+    <div id="prompt-text" contenteditable="true"></div>
+    <div class="prompt-editable-hint">Click to edit before copying</div>
+    <button id="copy-btn">Copy Prompt</button>
+  </div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+// DATA — Nodes
+// ════════════════════════════════════════════
+const LEVELS = ['know', 'fuzzy', 'unknown'];
+const LEVEL_COLORS = { know: '#3fb950', fuzzy: '#d29922', unknown: '#f85149' };
+const LEVEL_LABELS = { know: 'Know', fuzzy: 'Fuzzy', unknown: 'Unknown' };
+const CATEGORIES = { top: 'top', phase: 'phase', detail: 'detail' };
+const CAT_RADIUS = { top: 38, phase: 28, detail: 20 };
+
+// Each node: { id, label, desc, category, level, x, y, vx, vy, pinned, visible }
+let nodes = [
+  // Top-Level Sections
+  { id: 'h1',                label: 'H1 Title',              desc: 'First H1 heading becomes plan title',                              category: 'top',    group: 'top' },
+  { id: 'overview',          label: 'Overview',               desc: '## Overview section, plain text content',                           category: 'top',    group: 'top' },
+  { id: 'current_state',     label: 'Current State',          desc: '## Current State with optional ### Key Discoveries sub-section',    category: 'top',    group: 'top' },
+  { id: 'key_discoveries',   label: 'Key Discoveries',        desc: '### Key Discoveries \u2014 list items with optional code refs: `file:line`', category: 'top', group: 'top' },
+  { id: 'scope_exclusions',  label: 'Scope Exclusions',       desc: '## What We\'re NOT Doing \u2014 items with `--` separator for reason',     category: 'top',    group: 'top' },
+  { id: 'impl_approach',     label: 'Implementation Approach',desc: '## Implementation Approach \u2014 free-form strategy text',                 category: 'top',    group: 'top' },
+  { id: 'phases',            label: 'Phases',                 desc: '## Phase N: Name \u2014 the core structure unit',                           category: 'top',    group: 'top' },
+  { id: 'testing_strategy',  label: 'Testing Strategy',       desc: '## Testing Strategy with ### Unit Tests, ### Integration Tests, ### Manual Testing', category: 'top', group: 'top' },
+  { id: 'references',        label: 'References',             desc: '## References \u2014 list of links/files',                                 category: 'top',    group: 'top' },
+  { id: 'additional',        label: 'Additional Sections',    desc: 'Unrecognized H2s are captured as additionalSections',               category: 'top',    group: 'top' },
+
+  // Phase Internals
+  { id: 'phase_heading',     label: 'Phase Heading',          desc: '4 format variants accepted',                                        category: 'phase',  group: 'phase' },
+  { id: 'fmt_canonical',     label: 'Canonical',              desc: 'Phase N: Name \u2014 default format',                                      category: 'detail', group: 'phase' },
+  { id: 'fmt_dash',          label: 'Dash Format',            desc: 'Phase N - Name \u2014 alternative separator',                               category: 'detail', group: 'phase' },
+  { id: 'fmt_step',          label: 'Step Format',            desc: 'Step N: Name \u2014 alternative keyword',                                   category: 'detail', group: 'phase' },
+  { id: 'fmt_task',          label: 'Task Format',            desc: 'Task N: Name \u2014 alternative keyword',                                   category: 'detail', group: 'phase' },
+  { id: 'phase_overview',    label: 'Phase Overview',         desc: '### Overview within a phase',                                        category: 'phase',  group: 'phase' },
+  { id: 'sub_items',         label: 'Sub-Items',              desc: '### Na. Name format (e.g., ### 1a. Setup Config)',                    category: 'phase',  group: 'phase' },
+  { id: 'changes_section',   label: 'Changes Section',        desc: '### Changes Required (or Changes, File Changes, Modifications)',      category: 'phase',  group: 'phase' },
+  { id: 'success_criteria',  label: 'Success Criteria',       desc: '### Success Criteria (or Criteria, Verification)',                    category: 'phase',  group: 'phase' },
+
+  // Change Details
+  { id: 'heading_changes',   label: 'Heading-based Changes',  desc: '#### N. ComponentName with **File**: `path`',                        category: 'detail', group: 'changes' },
+  { id: 'list_changes',      label: 'List-based Changes',     desc: '- **path/to/file.ts**: description',                                 category: 'detail', group: 'changes' },
+  { id: 'code_snippets',     label: 'Code Snippets',          desc: 'Fenced code blocks within a change',                                 category: 'detail', group: 'changes' },
+  { id: 'file_path_patterns',label: 'File Path Patterns',     desc: '**File**: `path`, File: `path`, **Path**: `path`',                   category: 'detail', group: 'changes' },
+
+  // Criteria
+  { id: 'auto_criteria',     label: 'Automated Criteria',     desc: '#### Automated Verification \u2014 items with : `command`',                 category: 'detail', group: 'criteria' },
+  { id: 'manual_criteria',   label: 'Manual Criteria',        desc: '#### Manual Verification \u2014 plain text items',                          category: 'detail', group: 'criteria' },
+];
+
+// Initialize runtime fields
+nodes.forEach((n, i) => {
+  n.level = 'fuzzy';
+  n.x = 400 + Math.cos(i * 0.7) * 250 + Math.random() * 60;
+  n.y = 300 + Math.sin(i * 0.7) * 200 + Math.random() * 60;
+  n.vx = 0;
+  n.vy = 0;
+  n.pinned = false;
+  n.visible = true;
+});
+
+// ════════════════════════════════════════════
+// DATA — Edges
+// ════════════════════════════════════════════
+// type: 'contains' | 'alternative' | 'fallback' | 'requires' | 'optional'
+const EDGE_STYLES = {
+  contains:    { color: '#8b949e', dash: [],      width: 1.5, label: 'contains' },
+  alternative: { color: '#58a6ff', dash: [6, 3],  width: 1.5, label: 'alt format' },
+  fallback:    { color: '#d29922', dash: [2, 4],  width: 1.5, label: 'falls back to' },
+  requires:    { color: '#f85149', dash: [],      width: 1.5, label: 'requires' },
+  optional:    { color: '#3fb950', dash: [2, 4],  width: 1.5, label: 'optional' },
+};
+
+let edges = [
+  // contains
+  { from: 'current_state',    to: 'key_discoveries',   type: 'contains' },
+  { from: 'phases',           to: 'phase_heading',     type: 'contains' },
+  { from: 'phases',           to: 'phase_overview',    type: 'contains' },
+  { from: 'phases',           to: 'sub_items',         type: 'contains' },
+  { from: 'phases',           to: 'changes_section',   type: 'contains' },
+  { from: 'phases',           to: 'success_criteria',  type: 'contains' },
+  { from: 'changes_section',  to: 'heading_changes',   type: 'contains' },
+  { from: 'changes_section',  to: 'list_changes',      type: 'contains' },
+  { from: 'heading_changes',  to: 'code_snippets',     type: 'contains' },
+  { from: 'heading_changes',  to: 'file_path_patterns',type: 'contains' },
+  { from: 'success_criteria', to: 'auto_criteria',     type: 'contains' },
+  { from: 'success_criteria', to: 'manual_criteria',   type: 'contains' },
+  { from: 'testing_strategy', to: 'auto_criteria',     type: 'contains' },
+  { from: 'testing_strategy', to: 'manual_criteria',   type: 'contains' },
+
+  // alternative format
+  { from: 'fmt_canonical',    to: 'fmt_dash',          type: 'alternative' },
+  { from: 'fmt_canonical',    to: 'fmt_step',          type: 'alternative' },
+  { from: 'fmt_canonical',    to: 'fmt_task',          type: 'alternative' },
+  { from: 'heading_changes',  to: 'list_changes',      type: 'alternative' },
+
+  // falls back to
+  { from: 'heading_changes',  to: 'list_changes',      type: 'fallback' },
+  { from: 'fmt_canonical',    to: 'fmt_dash',          type: 'fallback' },
+  { from: 'fmt_dash',         to: 'fmt_step',          type: 'fallback' },
+  { from: 'fmt_step',         to: 'fmt_task',          type: 'fallback' },
+
+  // requires
+  { from: 'sub_items',        to: 'phases',            type: 'requires', note: 'heading must start with phase number' },
+  { from: 'auto_criteria',    to: 'code_snippets',     type: 'requires', note: 'command in backticks' },
+
+  // optional
+  { from: 'phases',           to: 'overview',          type: 'optional' },
+  { from: 'phases',           to: 'current_state',     type: 'optional' },
+  { from: 'phases',           to: 'scope_exclusions',  type: 'optional' },
+  { from: 'phases',           to: 'impl_approach',     type: 'optional' },
+  { from: 'phases',           to: 'testing_strategy',  type: 'optional' },
+  { from: 'phases',           to: 'references',        type: 'optional' },
+  { from: 'phases',           to: 'additional',        type: 'optional' },
+  { from: 'changes_section',  to: 'code_snippets',     type: 'optional' },
+  { from: 'current_state',    to: 'key_discoveries',   type: 'optional' },
+  // phase_heading contains its formats
+  { from: 'phase_heading',    to: 'fmt_canonical',     type: 'contains' },
+  { from: 'phase_heading',    to: 'fmt_dash',          type: 'contains' },
+  { from: 'phase_heading',    to: 'fmt_step',          type: 'contains' },
+  { from: 'phase_heading',    to: 'fmt_task',          type: 'contains' },
+];
+
+// ════════════════════════════════════════════
+// PRESETS
+// ════════════════════════════════════════════
+const PRESETS = {
+  all: null, // show everything
+  phase: new Set([
+    'phases', 'phase_heading', 'fmt_canonical', 'fmt_dash', 'fmt_step', 'fmt_task',
+    'phase_overview', 'sub_items', 'changes_section', 'success_criteria',
+  ]),
+  changes: new Set([
+    'changes_section', 'heading_changes', 'list_changes', 'code_snippets', 'file_path_patterns',
+  ]),
+  criteria: new Set([
+    'success_criteria', 'auto_criteria', 'manual_criteria', 'testing_strategy',
+  ]),
+};
+
+// ════════════════════════════════════════════
+// CANVAS STATE
+// ════════════════════════════════════════════
+const canvas = document.getElementById('c');
+const ctx = canvas.getContext('2d');
+let W, H, dpr;
+let panX = 0, panY = 0, scale = 1;
+let dragging = null; // node being dragged
+let dragOffX = 0, dragOffY = 0;
+let isPanning = false, panStartX = 0, panStartY = 0, panStartPanX = 0, panStartPanY = 0;
+let hoveredNode = null;
+let hoveredEdge = null;
+let layoutRunning = false;
+let layoutTimer = null;
+let lastClickTime = 0;
+
+function resize() {
+  const rect = canvas.parentElement.getBoundingClientRect();
+  dpr = window.devicePixelRatio || 1;
+  W = rect.width;
+  H = rect.height;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + 'px';
+  canvas.style.height = H + 'px';
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  draw();
+}
+window.addEventListener('resize', resize);
+
+// ════════════════════════════════════════════
+// COORDINATE TRANSFORMS
+// ════════════════════════════════════════════
+function screenToWorld(sx, sy) {
+  return [(sx - panX) / scale, (sy - panY) / scale];
+}
+function worldToScreen(wx, wy) {
+  return [wx * scale + panX, wy * scale + panY];
+}
+
+// ════════════════════════════════════════════
+// HIT TESTING
+// ════════════════════════════════════════════
+function nodeAt(sx, sy) {
+  const [wx, wy] = screenToWorld(sx, sy);
+  // iterate in reverse (top-drawn last)
+  for (let i = nodes.length - 1; i >= 0; i--) {
+    const n = nodes[i];
+    if (!n.visible) continue;
+    const r = CAT_RADIUS[n.category];
+    const dx = wx - n.x, dy = wy - n.y;
+    if (dx * dx + dy * dy <= r * r) return n;
+  }
+  return null;
+}
+
+function edgeAt(sx, sy) {
+  const [wx, wy] = screenToWorld(sx, sy);
+  let best = null, bestDist = 12 / scale; // 12px threshold
+  for (const e of edges) {
+    const a = nodes.find(n => n.id === e.from);
+    const b = nodes.find(n => n.id === e.to);
+    if (!a || !b || !a.visible || !b.visible) continue;
+    const d = pointToSegmentDist(wx, wy, a.x, a.y, b.x, b.y);
+    if (d < bestDist) { bestDist = d; best = e; }
+  }
+  return best;
+}
+
+function pointToSegmentDist(px, py, ax, ay, bx, by) {
+  const dx = bx - ax, dy = by - ay;
+  const len2 = dx * dx + dy * dy;
+  if (len2 === 0) return Math.hypot(px - ax, py - ay);
+  let t = ((px - ax) * dx + (py - ay) * dy) / len2;
+  t = Math.max(0, Math.min(1, t));
+  return Math.hypot(px - (ax + t * dx), py - (ay + t * dy));
+}
+
+// ════════════════════════════════════════════
+// DRAWING
+// ════════════════════════════════════════════
+function draw() {
+  ctx.save();
+  ctx.clearRect(0, 0, W, H);
+
+  // Background
+  ctx.fillStyle = '#0d1117';
+  ctx.fillRect(0, 0, W, H);
+
+  // Subtle grid
+  ctx.save();
+  ctx.translate(panX, panY);
+  ctx.scale(scale, scale);
+  drawGrid();
+  drawEdges();
+  drawNodes();
+  ctx.restore();
+  ctx.restore();
+}
+
+function drawGrid() {
+  const gridSize = 60;
+  const [x0, y0] = screenToWorld(0, 0);
+  const [x1, y1] = screenToWorld(W, H);
+  ctx.strokeStyle = 'rgba(48, 54, 61, 0.4)';
+  ctx.lineWidth = 0.5 / scale;
+  ctx.beginPath();
+  const startX = Math.floor(x0 / gridSize) * gridSize;
+  const startY = Math.floor(y0 / gridSize) * gridSize;
+  for (let x = startX; x <= x1; x += gridSize) {
+    ctx.moveTo(x, y0);
+    ctx.lineTo(x, y1);
+  }
+  for (let y = startY; y <= y1; y += gridSize) {
+    ctx.moveTo(x0, y);
+    ctx.lineTo(x1, y);
+  }
+  ctx.stroke();
+}
+
+function drawEdges() {
+  // Group edges by from-to pair to offset parallel edges
+  const edgeCounts = {};
+  const edgeIndices = {};
+  for (const e of edges) {
+    if (!nodeVisible(e.from) || !nodeVisible(e.to)) continue;
+    const key = [e.from, e.to].sort().join('::');
+    if (!edgeCounts[key]) edgeCounts[key] = 0;
+    edgeCounts[key]++;
+  }
+  const edgeSeen = {};
+
+  for (const e of edges) {
+    const a = nodes.find(n => n.id === e.from);
+    const b = nodes.find(n => n.id === e.to);
+    if (!a || !b || !a.visible || !b.visible) continue;
+
+    const key = [e.from, e.to].sort().join('::');
+    if (!edgeSeen[key]) edgeSeen[key] = 0;
+    const idx = edgeSeen[key]++;
+    const total = edgeCounts[key];
+
+    const st = EDGE_STYLES[e.type];
+    ctx.strokeStyle = st.color;
+    ctx.lineWidth = st.width / scale * (hoveredEdge === e ? 2.5 : 1);
+    ctx.setLineDash(st.dash.map(d => d / scale));
+
+    // Offset for parallel edges
+    const dx = b.x - a.x, dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = -dy / len, ny = dx / len;
+    const offset = (idx - (total - 1) / 2) * 8;
+
+    const ax = a.x + nx * offset;
+    const ay = a.y + ny * offset;
+    const bx = b.x + nx * offset;
+    const by = b.y + ny * offset;
+
+    ctx.beginPath();
+    ctx.moveTo(ax, ay);
+    ctx.lineTo(bx, by);
+    ctx.stroke();
+
+    // Arrowhead
+    const arrowLen = 10 / scale;
+    const angle = Math.atan2(by - ay, bx - ax);
+    const rB = CAT_RADIUS[b.category];
+    const tipX = bx - Math.cos(angle) * rB;
+    const tipY = by - Math.sin(angle) * rB;
+    ctx.setLineDash([]);
+    ctx.beginPath();
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(tipX - arrowLen * Math.cos(angle - 0.35), tipY - arrowLen * Math.sin(angle - 0.35));
+    ctx.moveTo(tipX, tipY);
+    ctx.lineTo(tipX - arrowLen * Math.cos(angle + 0.35), tipY - arrowLen * Math.sin(angle + 0.35));
+    ctx.stroke();
+
+    // Edge label on hover
+    if (hoveredEdge === e) {
+      const mx = (ax + bx) / 2, my = (ay + by) / 2;
+      ctx.save();
+      ctx.font = `${11 / scale}px -apple-system, sans-serif`;
+      ctx.fillStyle = st.color;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+      const label = e.note || st.label;
+      ctx.fillText(label, mx, my - 4 / scale);
+      ctx.restore();
+    }
+  }
+  ctx.setLineDash([]);
+}
+
+function nodeVisible(id) {
+  const n = nodes.find(n => n.id === id);
+  return n && n.visible;
+}
+
+function drawNodes() {
+  for (const n of nodes) {
+    if (!n.visible) continue;
+    const r = CAT_RADIUS[n.category];
+    const col = LEVEL_COLORS[n.level];
+    const isHovered = hoveredNode === n;
+
+    // Glow
+    if (isHovered) {
+      ctx.save();
+      ctx.shadowColor = col;
+      ctx.shadowBlur = 18 / scale;
+      ctx.beginPath();
+      ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(0,0,0,0)';
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Node body (rounded rect for top-level, circle for others)
+    ctx.beginPath();
+    if (n.category === 'top') {
+      roundedRect(n.x - r * 1.3, n.y - r * 0.75, r * 2.6, r * 1.5, 10 / scale);
+    } else if (n.category === 'phase') {
+      roundedRect(n.x - r * 1.2, n.y - r * 0.7, r * 2.4, r * 1.4, 8 / scale);
+    } else {
+      ctx.arc(n.x, n.y, r, 0, Math.PI * 2);
+    }
+    ctx.fillStyle = '#161b22';
+    ctx.fill();
+    ctx.strokeStyle = col;
+    ctx.lineWidth = (isHovered ? 3 : 2) / scale;
+    ctx.stroke();
+
+    // Label
+    const fontSize = n.category === 'top' ? 12 : n.category === 'phase' ? 10 : 9;
+    ctx.font = `600 ${fontSize / scale}px -apple-system, BlinkMacSystemFont, sans-serif`;
+    ctx.fillStyle = '#e6edf3';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    // Word-wrap for longer labels
+    const maxWidth = (n.category === 'detail' ? r * 1.6 : r * 2) ;
+    const words = n.label.split(' ');
+    const lines = [];
+    let cur = '';
+    for (const w of words) {
+      const test = cur ? cur + ' ' + w : w;
+      if (ctx.measureText(test).width > maxWidth && cur) {
+        lines.push(cur);
+        cur = w;
+      } else {
+        cur = test;
+      }
+    }
+    if (cur) lines.push(cur);
+    const lineH = (fontSize + 2) / scale;
+    const startY = n.y - (lines.length - 1) * lineH / 2;
+    for (let i = 0; i < lines.length; i++) {
+      ctx.fillText(lines[i], n.x, startY + i * lineH);
+    }
+
+    // Small knowledge dot in bottom-right
+    const dotR = 5 / scale;
+    let dotX, dotY;
+    if (n.category === 'top') {
+      dotX = n.x + r * 1.3 - 4 / scale;
+      dotY = n.y + r * 0.75 - 4 / scale;
+    } else if (n.category === 'phase') {
+      dotX = n.x + r * 1.2 - 4 / scale;
+      dotY = n.y + r * 0.7 - 4 / scale;
+    } else {
+      const a = -Math.PI / 4;
+      dotX = n.x + Math.cos(a) * (r - 2 / scale);
+      dotY = n.y - Math.sin(a) * (r - 2 / scale);
+    }
+    ctx.beginPath();
+    ctx.arc(dotX, dotY, dotR, 0, Math.PI * 2);
+    ctx.fillStyle = col;
+    ctx.fill();
+  }
+}
+
+function roundedRect(x, y, w, h, r) {
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+// ════════════════════════════════════════════
+// FORCE-DIRECTED LAYOUT
+// ════════════════════════════════════════════
+function runLayout(iterations) {
+  layoutRunning = true;
+  let iter = 0;
+  const step = () => {
+    if (iter >= iterations) { layoutRunning = false; return; }
+    forceStep();
+    draw();
+    iter++;
+    layoutTimer = requestAnimationFrame(step);
+  };
+  step();
+}
+
+function forceStep() {
+  const visibleNodes = nodes.filter(n => n.visible);
+  const visibleEdges = edges.filter(e => nodeVisible(e.from) && nodeVisible(e.to));
+  const repulsion = 8000;
+  const attraction = 0.005;
+  const damping = 0.85;
+  const centerPull = 0.002;
+
+  // Center of visible canvas in world coords
+  const [cx, cy] = screenToWorld(W / 2, H / 2);
+
+  for (const n of visibleNodes) {
+    if (n.pinned || n === dragging) continue;
+    let fx = 0, fy = 0;
+
+    // Repulsion from other nodes
+    for (const m of visibleNodes) {
+      if (m === n) continue;
+      let dx = n.x - m.x, dy = n.y - m.y;
+      const dist2 = dx * dx + dy * dy;
+      const dist = Math.sqrt(dist2) || 1;
+      const force = repulsion / dist2;
+      fx += (dx / dist) * force;
+      fy += (dy / dist) * force;
+    }
+
+    // Attraction along edges
+    for (const e of visibleEdges) {
+      let other = null;
+      if (e.from === n.id) other = nodes.find(m => m.id === e.to);
+      else if (e.to === n.id) other = nodes.find(m => m.id === e.from);
+      if (!other) continue;
+      const dx = other.x - n.x, dy = other.y - n.y;
+      const idealLen = (CAT_RADIUS[n.category] + CAT_RADIUS[other.category]) * 3.5;
+      const dist = Math.hypot(dx, dy) || 1;
+      const force = (dist - idealLen) * attraction;
+      fx += (dx / dist) * force;
+      fy += (dy / dist) * force;
+    }
+
+    // Pull toward center
+    fx += (cx - n.x) * centerPull;
+    fy += (cy - n.y) * centerPull;
+
+    n.vx = (n.vx + fx) * damping;
+    n.vy = (n.vy + fy) * damping;
+    n.x += n.vx;
+    n.y += n.vy;
+  }
+}
+
+// ════════════════════════════════════════════
+// TOOLTIP
+// ════════════════════════════════════════════
+const tooltip = document.getElementById('tooltip');
+const ttTitle = tooltip.querySelector('.tt-title');
+const ttDesc = tooltip.querySelector('.tt-desc');
+const ttLevel = tooltip.querySelector('.tt-level');
+
+function showTooltip(n, sx, sy) {
+  ttTitle.textContent = n.label;
+  ttDesc.textContent = n.desc;
+  ttLevel.textContent = 'Level: ' + LEVEL_LABELS[n.level];
+  ttLevel.style.color = LEVEL_COLORS[n.level];
+  tooltip.style.display = 'block';
+
+  // Position
+  const rect = canvas.parentElement.getBoundingClientRect();
+  let tx = sx + 16, ty = sy - 10;
+  if (tx + 320 > rect.width) tx = sx - 330;
+  if (ty + 100 > rect.height) ty = rect.height - 110;
+  if (ty < 0) ty = 10;
+  tooltip.style.left = tx + 'px';
+  tooltip.style.top = ty + 'px';
+}
+
+function hideTooltip() {
+  tooltip.style.display = 'none';
+}
+
+// ════════════════════════════════════════════
+// MOUSE EVENTS
+// ════════════════════════════════════════════
+function getCanvasPos(e) {
+  const rect = canvas.getBoundingClientRect();
+  return [e.clientX - rect.left, e.clientY - rect.top];
+}
+
+canvas.addEventListener('mousedown', e => {
+  const [sx, sy] = getCanvasPos(e);
+  const n = nodeAt(sx, sy);
+
+  // Double-click detection
+  const now = Date.now();
+  if (now - lastClickTime < 350 && !n) {
+    runLayout(200);
+    lastClickTime = 0;
+    return;
+  }
+  lastClickTime = now;
+
+  if (n) {
+    dragging = n;
+    const [wx, wy] = screenToWorld(sx, sy);
+    dragOffX = wx - n.x;
+    dragOffY = wy - n.y;
+    canvas.style.cursor = 'grabbing';
+  } else {
+    isPanning = true;
+    panStartX = sx;
+    panStartY = sy;
+    panStartPanX = panX;
+    panStartPanY = panY;
+    canvas.style.cursor = 'move';
+  }
+});
+
+canvas.addEventListener('mousemove', e => {
+  const [sx, sy] = getCanvasPos(e);
+
+  if (dragging) {
+    const [wx, wy] = screenToWorld(sx, sy);
+    dragging.x = wx - dragOffX;
+    dragging.y = wy - dragOffY;
+    draw();
+    showTooltip(dragging, sx, sy);
+    return;
+  }
+
+  if (isPanning) {
+    panX = panStartPanX + (sx - panStartX);
+    panY = panStartPanY + (sy - panStartY);
+    draw();
+    return;
+  }
+
+  // Hover detection
+  const n = nodeAt(sx, sy);
+  const prevHovered = hoveredNode;
+  hoveredNode = n;
+  if (n) {
+    canvas.style.cursor = 'pointer';
+    showTooltip(n, sx, sy);
+  } else {
+    canvas.style.cursor = 'default';
+    hideTooltip();
+  }
+
+  // Edge hover
+  const prevEdge = hoveredEdge;
+  hoveredEdge = n ? null : edgeAt(sx, sy);
+  if (hoveredEdge && !n) canvas.style.cursor = 'help';
+
+  if (hoveredNode !== prevHovered || hoveredEdge !== prevEdge) draw();
+});
+
+canvas.addEventListener('mouseup', e => {
+  if (dragging) {
+    const [sx, sy] = getCanvasPos(e);
+    // If minimal movement, treat as click -> cycle level
+    dragging = null;
+    canvas.style.cursor = 'default';
+  }
+  isPanning = false;
+});
+
+canvas.addEventListener('click', e => {
+  const [sx, sy] = getCanvasPos(e);
+  const n = nodeAt(sx, sy);
+  if (n) {
+    cycleLevel(n);
+    showTooltip(n, sx, sy);
+    draw();
+    updatePrompt();
+    buildNodeList();
+  }
+});
+
+canvas.addEventListener('wheel', e => {
+  e.preventDefault();
+  const [sx, sy] = getCanvasPos(e);
+  const [wx, wy] = screenToWorld(sx, sy);
+  const factor = e.deltaY < 0 ? 1.1 : 0.9;
+  const newScale = Math.max(0.15, Math.min(4, scale * factor));
+  // Zoom toward mouse position
+  panX = sx - wx * newScale;
+  panY = sy - wy * newScale;
+  scale = newScale;
+  draw();
+}, { passive: false });
+
+// ════════════════════════════════════════════
+// LEVEL CYCLING
+// ════════════════════════════════════════════
+function cycleLevel(n) {
+  const idx = LEVELS.indexOf(n.level);
+  n.level = LEVELS[(idx + 1) % LEVELS.length];
+}
+
+// ════════════════════════════════════════════
+// PRESETS
+// ════════════════════════════════════════════
+const presetSelect = document.getElementById('preset-select');
+presetSelect.addEventListener('change', () => {
+  applyPreset(presetSelect.value);
+});
+
+function applyPreset(key) {
+  const set = PRESETS[key];
+  for (const n of nodes) {
+    n.visible = set === null ? true : set.has(n.id);
+  }
+  draw();
+  buildNodeList();
+  updatePrompt();
+  // Auto-layout after preset change
+  setTimeout(() => runLayout(150), 50);
+}
+
+// ════════════════════════════════════════════
+// SIDEBAR — NODE LIST
+// ════════════════════════════════════════════
+const nodeListEl = document.getElementById('node-list');
+function buildNodeList() {
+  nodeListEl.innerHTML = '';
+  for (const n of nodes) {
+    if (!n.visible) continue;
+    const div = document.createElement('div');
+    div.className = 'node-item';
+    div.innerHTML = `<div class="ni-dot" style="background:${LEVEL_COLORS[n.level]}"></div><span>${n.label}</span>`;
+    div.addEventListener('click', () => {
+      cycleLevel(n);
+      draw();
+      buildNodeList();
+      updatePrompt();
+    });
+    nodeListEl.appendChild(div);
+  }
+}
+
+// ════════════════════════════════════════════
+// PROMPT OUTPUT
+// ════════════════════════════════════════════
+const promptText = document.getElementById('prompt-text');
+const copyBtn = document.getElementById('copy-btn');
+
+function updatePrompt() {
+  const visible = nodes.filter(n => n.visible);
+  const know = visible.filter(n => n.level === 'know').map(n => n.label);
+  const fuzzy = visible.filter(n => n.level === 'fuzzy').map(n => n.label);
+  const unknown = visible.filter(n => n.level === 'unknown').map(n => n.label);
+
+  let text = "I'm working with Plan Assistant's markdown parser.\n\n";
+  if (know.length)    text += "I understand: " + know.join(', ') + ".\n\n";
+  if (fuzzy.length)   text += "I'm fuzzy on: " + fuzzy.join(', ') + ".\n\n";
+  if (unknown.length) text += "I don't know about: " + unknown.join(', ') + ".\n\n";
+  text += "Please explain the fuzzy and unknown concepts with concrete markdown examples. Build on what I already know.";
+  text += "\n\n[Playground: Markdown Format Concept Map]";
+  promptText.textContent = text;
+}
+
+copyBtn.addEventListener('click', () => {
+  navigator.clipboard.writeText(promptText.textContent).then(() => {
+    copyBtn.textContent = 'Copied!';
+    setTimeout(() => { copyBtn.textContent = 'Copy Prompt'; }, 1500);
+  });
+});
+
+// ════════════════════════════════════════════
+// TOOLBAR
+// ════════════════════════════════════════════
+document.getElementById('btn-layout').addEventListener('click', () => runLayout(200));
+document.getElementById('btn-reset-view').addEventListener('click', () => {
+  panX = 0;
+  panY = 0;
+  scale = 1;
+  draw();
+});
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+function init() {
+  resize();
+
+  // Center initial positions roughly
+  const cx = W / 2, cy = H / 2;
+  // Place top-level in a ring
+  const topNodes = nodes.filter(n => n.group === 'top');
+  topNodes.forEach((n, i) => {
+    const angle = (i / topNodes.length) * Math.PI * 2 - Math.PI / 2;
+    n.x = cx + Math.cos(angle) * 260;
+    n.y = cy + Math.sin(angle) * 200;
+  });
+  // Phase nodes in inner ring
+  const phaseNodes = nodes.filter(n => n.group === 'phase');
+  phaseNodes.forEach((n, i) => {
+    const angle = (i / phaseNodes.length) * Math.PI * 2;
+    n.x = cx + Math.cos(angle) * 130;
+    n.y = cy + Math.sin(angle) * 100;
+  });
+  // Detail nodes scattered inside
+  const detailNodes = nodes.filter(n => n.group === 'changes' || n.group === 'criteria');
+  detailNodes.forEach((n, i) => {
+    const angle = (i / detailNodes.length) * Math.PI * 2 + 0.5;
+    n.x = cx + Math.cos(angle) * 60;
+    n.y = cy + Math.sin(angle) * 50;
+  });
+  // Format variants clustered
+  const fmtNodes = nodes.filter(n => n.id.startsWith('fmt_'));
+  fmtNodes.forEach((n, i) => {
+    const phNode = nodes.find(m => m.id === 'phase_heading');
+    n.x = phNode.x + (i - 1.5) * 55;
+    n.y = phNode.y + 70;
+  });
+
+  buildNodeList();
+  updatePrompt();
+  draw();
+
+  // Run initial layout
+  setTimeout(() => runLayout(250), 100);
+}
+
+init();
+</script>
+</body>
+</html>

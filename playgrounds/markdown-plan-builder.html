@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Plan Assistant - Markdown Plan Builder</title>
+<style>
+/* ─── Reset & Base ────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0d1117;
+  --surface: #161b22;
+  --surface-raised: #1c2129;
+  --border: #30363d;
+  --border-light: #3d444d;
+  --text: #e6edf3;
+  --text-muted: #8b949e;
+  --text-dim: #484f58;
+  --accent: #58a6ff;
+  --accent-hover: #79b8ff;
+  --accent-dim: #1f6feb33;
+  --green: #3fb950;
+  --orange: #d29922;
+  --red: #f85149;
+  --radius: 6px;
+  --font-mono: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+}
+
+html, body {
+  height: 100%;
+  font-family: var(--font-sans);
+  font-size: 14px;
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+/* ─── App Layout ──────────────────────────────────────────────────── */
+.app {
+  display: grid;
+  grid-template-columns: 360px 1fr;
+  grid-template-rows: auto 1fr;
+  height: 100vh;
+  gap: 0;
+}
+
+.header {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+}
+
+.header h1 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+
+.header h1 span { color: var(--accent); }
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* ─── Left Panel (Controls) ───────────────────────────────────────── */
+.controls-panel {
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.controls-panel::-webkit-scrollbar { width: 6px; }
+.controls-panel::-webkit-scrollbar-track { background: transparent; }
+.controls-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+/* ─── Right Panel ─────────────────────────────────────────────────── */
+.right-panel {
+  display: grid;
+  grid-template-rows: 1fr auto;
+  overflow: hidden;
+}
+
+.preview-panel {
+  overflow-y: auto;
+  padding: 24px 28px;
+  background: var(--bg);
+}
+
+.preview-panel::-webkit-scrollbar { width: 6px; }
+.preview-panel::-webkit-scrollbar-track { background: transparent; }
+.preview-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+.prompt-panel {
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  padding: 14px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+}
+
+.prompt-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.prompt-panel-header h3 {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+}
+
+.prompt-text {
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text);
+  overflow-y: auto;
+  max-height: 120px;
+  cursor: text;
+}
+
+.prompt-text:focus {
+  outline: 1px solid #58a6ff;
+  outline-offset: 2px;
+}
+
+.prompt-editable-hint {
+  font-size: 11px;
+  color: #8b949e;
+}
+
+.prompt-text::-webkit-scrollbar { width: 4px; }
+.prompt-text::-webkit-scrollbar-track { background: transparent; }
+.prompt-text::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+/* ─── Controls: Section Group ─────────────────────────────────────── */
+.control-group {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+
+.control-group-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: var(--surface-raised);
+  cursor: pointer;
+  user-select: none;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.control-group-header .chevron {
+  font-size: 10px;
+  transition: transform 0.15s;
+  color: var(--text-dim);
+}
+
+.control-group-header.collapsed .chevron { transform: rotate(-90deg); }
+
+.control-group-body {
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.control-group-body.hidden { display: none; }
+
+/* ─── Controls: Toggle Row ────────────────────────────────────────── */
+.toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2px 0;
+}
+
+.toggle-row.sub { padding-left: 20px; }
+
+.toggle-label {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.toggle-label.muted { color: var(--text-muted); font-size: 12px; }
+
+/* Toggle switch */
+.toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.toggle-track {
+  position: absolute;
+  inset: 0;
+  background: var(--border);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  background: var(--text);
+  border-radius: 50%;
+  transition: transform 0.15s;
+}
+
+.toggle input:checked + .toggle-track {
+  background: var(--accent);
+}
+
+.toggle input:checked + .toggle-track::after {
+  transform: translateX(16px);
+}
+
+/* ─── Controls: Slider ────────────────────────────────────────────── */
+.slider-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.slider-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.slider-label {
+  font-size: 13px;
+  color: var(--text);
+}
+
+.slider-value {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent);
+  font-family: var(--font-mono);
+  min-width: 18px;
+  text-align: right;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  width: 100%;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  background: var(--accent);
+  border-radius: 50%;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  background: var(--accent);
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+/* ─── Controls: Select ────────────────────────────────────────────── */
+.select-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.select-label {
+  font-size: 13px;
+  color: var(--text);
+}
+
+select {
+  background: var(--bg);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 6px 10px;
+  font-size: 13px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  outline: none;
+  width: 100%;
+}
+
+select:focus { border-color: var(--accent); }
+
+/* ─── Controls: Radio Group ───────────────────────────────────────── */
+.radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.radio-group-label {
+  font-size: 13px;
+  color: var(--text);
+  margin-bottom: 2px;
+}
+
+.radio-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  padding: 3px 0;
+}
+
+.radio-option input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 2px solid var(--border-light);
+  border-radius: 50%;
+  flex-shrink: 0;
+  cursor: pointer;
+  position: relative;
+}
+
+.radio-option input[type="radio"]:checked {
+  border-color: var(--accent);
+}
+
+.radio-option input[type="radio"]:checked::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 6px;
+  height: 6px;
+  background: var(--accent);
+  border-radius: 50%;
+}
+
+.radio-option span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+/* ─── Presets ─────────────────────────────────────────────────────── */
+.presets-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.preset-btn {
+  background: var(--bg);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 5px 10px;
+  font-size: 12px;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: all 0.1s;
+  white-space: nowrap;
+}
+
+.preset-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.preset-btn.active {
+  background: var(--accent-dim);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* ─── Copy Button ─────────────────────────────────────────────────── */
+.copy-btn {
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--radius);
+  padding: 5px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.copy-btn:hover { background: var(--accent-hover); }
+
+.copy-btn.copied {
+  background: var(--green);
+}
+
+/* ─── Markdown Preview ────────────────────────────────────────────── */
+.md-preview {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: var(--text-muted);
+}
+
+.md-preview .md-h1 { color: #fff; font-size: 18px; font-weight: 700; }
+.md-preview .md-h2 { color: var(--accent); font-size: 15px; font-weight: 600; }
+.md-preview .md-h3 { color: #79b8ff; font-size: 14px; font-weight: 600; }
+.md-preview .md-h4 { color: #8b949e; font-size: 13px; font-weight: 600; }
+.md-preview .md-bold { color: var(--orange); }
+.md-preview .md-code { color: var(--green); }
+.md-preview .md-bullet { color: var(--text-dim); }
+.md-preview .md-comment { color: #30363d; font-style: italic; }
+.md-preview .md-text { color: var(--text); }
+.md-preview .md-blank { display: block; height: 1.7em; }
+
+/* ─── Divider ─────────────────────────────────────────────────────── */
+.divider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 0;
+}
+
+/* ─── Conditional visibility ──────────────────────────────────────── */
+.conditional { overflow: hidden; transition: max-height 0.2s, opacity 0.15s; }
+.conditional.shown { max-height: 400px; opacity: 1; }
+.conditional.hidden-cond { max-height: 0; opacity: 0; pointer-events: none; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Header -->
+  <div class="header">
+    <h1><span>Plan Assistant</span> / Markdown Plan Builder</h1>
+    <div class="header-right">
+      <div class="presets-bar" id="presetsBar"></div>
+    </div>
+  </div>
+
+  <!-- Left: Controls -->
+  <div class="controls-panel" id="controlsPanel"></div>
+
+  <!-- Right: Preview + Prompt -->
+  <div class="right-panel">
+    <div class="preview-panel">
+      <div class="md-preview" id="markdownPreview"></div>
+    </div>
+    <div class="prompt-panel">
+      <div class="prompt-panel-header">
+        <h3>Prompt Output</h3>
+        <button class="copy-btn" id="copyBtn" onclick="copyPrompt()">Copy</button>
+      </div>
+      <div class="prompt-text" id="promptOutput" contenteditable="true"></div>
+      <div class="prompt-editable-hint">Click to edit before copying</div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ═══════════════════════════════════════════════════════════════════
+// State
+// ═══════════════════════════════════════════════════════════════════
+
+const DEFAULTS = {
+  // Sections
+  secOverview: true,
+  secCurrentState: true,
+  secKeyDiscoveries: true,
+  secScopeExclusions: true,
+  secImplementation: true,
+  secTesting: true,
+  secTestUnit: true,
+  secTestIntegration: true,
+  secTestManual: true,
+  secReferences: true,
+
+  // Phase config
+  phaseCount: 2,
+  phaseHeadingStyle: 'phase-colon',
+
+  // Per-phase changes
+  changesFormat: 'heading',
+  changesCount: 2,
+  subItems: false,
+  subItemsCount: 2,
+
+  // Success criteria
+  automatedCriteria: true,
+  automatedCriteriaCount: 2,
+  manualCriteria: true,
+  manualCriteriaCount: 2,
+};
+
+let state = { ...DEFAULTS };
+let activePreset = null;
+
+// ═══════════════════════════════════════════════════════════════════
+// Presets
+// ═══════════════════════════════════════════════════════════════════
+
+const PRESETS = {
+  minimal: {
+    label: 'Minimal',
+    values: {
+      secOverview: true, secCurrentState: true, secKeyDiscoveries: true,
+      secScopeExclusions: true, secImplementation: true,
+      secTesting: false, secTestUnit: true, secTestIntegration: true, secTestManual: true,
+      secReferences: true,
+      phaseCount: 1, phaseHeadingStyle: 'phase-colon',
+      changesFormat: 'heading', changesCount: 1,
+      subItems: false, subItemsCount: 2,
+      automatedCriteria: true, automatedCriteriaCount: 2,
+      manualCriteria: true, manualCriteriaCount: 2,
+    }
+  },
+  standard: {
+    label: 'Standard',
+    values: { ...DEFAULTS }
+  },
+  comprehensive: {
+    label: 'Comprehensive',
+    values: {
+      secOverview: true, secCurrentState: true, secKeyDiscoveries: true,
+      secScopeExclusions: true, secImplementation: true,
+      secTesting: true, secTestUnit: true, secTestIntegration: true, secTestManual: true,
+      secReferences: true,
+      phaseCount: 4, phaseHeadingStyle: 'phase-colon',
+      changesFormat: 'heading', changesCount: 3,
+      subItems: true, subItemsCount: 2,
+      automatedCriteria: true, automatedCriteriaCount: 2,
+      manualCriteria: true, manualCriteriaCount: 2,
+    }
+  },
+  listFormat: {
+    label: 'List Format',
+    values: {
+      secOverview: true, secCurrentState: true, secKeyDiscoveries: true,
+      secScopeExclusions: true, secImplementation: true,
+      secTesting: true, secTestUnit: true, secTestIntegration: true, secTestManual: true,
+      secReferences: true,
+      phaseCount: 2, phaseHeadingStyle: 'phase-colon',
+      changesFormat: 'list', changesCount: 3,
+      subItems: false, subItemsCount: 2,
+      automatedCriteria: false, automatedCriteriaCount: 2,
+      manualCriteria: true, manualCriteriaCount: 2,
+    }
+  },
+  quickBugFix: {
+    label: 'Quick Bug Fix',
+    values: {
+      secOverview: true, secCurrentState: true, secKeyDiscoveries: true,
+      secScopeExclusions: true, secImplementation: true,
+      secTesting: false, secTestUnit: true, secTestIntegration: true, secTestManual: true,
+      secReferences: true,
+      phaseCount: 1, phaseHeadingStyle: 'phase-colon',
+      changesFormat: 'heading', changesCount: 1,
+      subItems: false, subItemsCount: 2,
+      automatedCriteria: true, automatedCriteriaCount: 2,
+      manualCriteria: false, manualCriteriaCount: 2,
+    }
+  },
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// Sample content
+// ═══════════════════════════════════════════════════════════════════
+
+const SAMPLE = {
+  projectName: 'Authentication Refactor',
+  overview: 'Refactor the authentication module to support OAuth 2.0 and improve session management across all services.',
+  currentState: 'The existing auth system uses a custom token scheme built in 2021. It handles ~50k logins/day but lacks refresh token rotation and has no support for third-party identity providers.',
+  keyDiscoveries: [
+    'Session tokens are stored in localStorage with no expiry check on the client',
+    'The `/auth/verify` endpoint adds 120ms latency due to synchronous DB lookup',
+    'Three separate middleware functions duplicate token validation logic',
+  ],
+  scopeExclusions: [
+    'Migration of existing user sessions (handled in Phase 2 project)',
+    'Admin dashboard auth changes (separate workstream)',
+    'Mobile app deep-link authentication flows',
+  ],
+  implementationApproach: 'Incremental refactor behind a feature flag. Each phase delivers a working auth flow so we can ship intermediate states safely. The new OAuth layer wraps the existing token system first, then replaces internals.',
+  phaseNames: [
+    'OAuth Provider Setup',
+    'Token Service Refactor',
+    'Session Management',
+    'Client Integration',
+    'Cleanup & Migration',
+    'Performance Tuning',
+    'Monitoring & Alerts',
+    'Documentation & Handoff',
+  ],
+  changes: [
+    [
+      { name: 'OAuth Configuration Module', file: 'src/auth/oauth-config.ts', desc: 'Add provider configuration for Google, GitHub, and custom OIDC. Validates redirect URIs and scopes at startup.', subs: ['Add provider-specific scope mappings', 'Implement redirect URI allowlist validation', 'Add configuration schema validation with Zod', 'Create provider factory for extensibility'] },
+      { name: 'Authorization Endpoint', file: 'src/auth/routes/authorize.ts', desc: 'New endpoint that initiates the OAuth flow. Generates PKCE challenge, stores state parameter, and redirects to provider.', subs: ['Generate cryptographic PKCE code verifier', 'Store auth state in Redis with 10min TTL', 'Build provider-specific authorization URLs', 'Add CSRF protection via state parameter'] },
+      { name: 'Callback Handler', file: 'src/auth/routes/callback.ts', desc: 'Handles the OAuth callback, exchanges code for tokens, and creates or links user accounts.', subs: ['Validate state parameter against stored value', 'Exchange authorization code with PKCE verifier', 'Upsert user profile from provider claims', 'Issue internal session token pair'] },
+      { name: 'Token Validation Middleware', file: 'src/middleware/auth.ts', desc: 'Unified middleware replacing the three duplicate validators. Supports both legacy and OAuth tokens during migration.', subs: ['Consolidate duplicate validation logic', 'Add dual-mode token detection', 'Implement graceful fallback chain', 'Add structured logging for auth failures'] },
+      { name: 'Provider Registry', file: 'src/auth/providers/registry.ts', desc: 'Dynamic provider registry that loads OAuth provider configurations and handles provider-specific token formats.', subs: ['Implement provider plugin interface', 'Add hot-reload for provider configs', 'Cache provider metadata with TTL', 'Add health checks per provider'] },
+      { name: 'Error Handler', file: 'src/auth/errors.ts', desc: 'Structured error types for OAuth flows with proper error codes and user-facing messages.', subs: ['Define typed error hierarchy', 'Map provider errors to internal codes', 'Add error serialization for API responses', 'Implement error tracking integration'] },
+    ],
+    [
+      { name: 'Token Service', file: 'src/services/token-service.ts', desc: 'New service encapsulating all token operations: creation, validation, refresh, and revocation.', subs: ['Implement refresh token rotation', 'Add token family tracking for reuse detection', 'Create async validation with caching', 'Add token introspection endpoint support'] },
+      { name: 'Session Store', file: 'src/services/session-store.ts', desc: 'Redis-backed session store replacing the in-memory implementation. Supports distributed sessions across instances.', subs: ['Implement Redis session backend', 'Add session serialization with versioning', 'Create session garbage collection job', 'Add session activity tracking'] },
+      { name: 'Migration Script', file: 'scripts/migrate-tokens.ts', desc: 'One-time migration script to convert existing tokens to the new format while preserving active sessions.', subs: ['Batch process existing tokens', 'Validate migrated token integrity', 'Generate migration audit log', 'Add rollback capability'] },
+      { name: 'Rate Limiter', file: 'src/middleware/rate-limit.ts', desc: 'Token-aware rate limiter that applies different limits based on authentication status and token type.', subs: ['Implement sliding window algorithm', 'Add per-user and per-IP limits', 'Create rate limit headers', 'Add bypass for service accounts'] },
+      { name: 'Audit Logger', file: 'src/services/audit-log.ts', desc: 'Structured audit logging for all authentication events including login, logout, token refresh, and failures.', subs: ['Define audit event schema', 'Implement async log pipeline', 'Add PII redaction filters', 'Create audit query API'] },
+      { name: 'Health Check', file: 'src/routes/health.ts', desc: 'Extended health check endpoint that verifies auth service dependencies including OAuth providers and Redis.', subs: ['Add provider connectivity checks', 'Implement Redis health verification', 'Create degraded state reporting', 'Add response time tracking'] },
+    ],
+    [
+      { name: 'Session Manager', file: 'src/auth/session-manager.ts', desc: 'High-level session lifecycle manager handling creation, extension, termination, and concurrent session limits.', subs: ['Implement session creation pipeline', 'Add configurable concurrent session limits', 'Create session extension logic', 'Add forced termination for security events'] },
+      { name: 'Cookie Handler', file: 'src/auth/cookies.ts', desc: 'Secure cookie management with proper SameSite, HttpOnly, and Secure attributes. Handles cookie rotation.', subs: ['Implement secure cookie defaults', 'Add cookie rotation on refresh', 'Create cookie encryption layer', 'Handle cross-domain cookie sharing'] },
+      { name: 'WebSocket Auth', file: 'src/ws/auth-handler.ts', desc: 'WebSocket authentication adapter that validates tokens on connection and handles mid-session token refresh.', subs: ['Add connection-time token validation', 'Implement transparent token refresh', 'Create disconnection on revocation', 'Add heartbeat with auth check'] },
+      { name: 'CORS Configuration', file: 'src/middleware/cors.ts', desc: 'Updated CORS configuration supporting OAuth redirect origins and credential-bearing requests.', subs: ['Add dynamic origin allowlist', 'Configure credential headers', 'Handle preflight for auth endpoints', 'Add origin validation logging'] },
+      { name: 'Session API', file: 'src/routes/sessions.ts', desc: 'REST API for session management allowing users to view active sessions and revoke specific ones.', subs: ['List active sessions endpoint', 'Revoke session by ID', 'Revoke all other sessions', 'Add device information display'] },
+      { name: 'Test Helpers', file: 'src/test/auth-helpers.ts', desc: 'Shared test utilities for authentication testing including token factories and mock providers.', subs: ['Create token factory functions', 'Implement mock OAuth provider', 'Add session simulation helpers', 'Create auth assertion utilities'] },
+    ],
+    [
+      { name: 'Auth Hook', file: 'src/client/hooks/useAuth.ts', desc: 'React hook providing authentication state, login/logout actions, and automatic token refresh.', subs: ['Implement auth state management', 'Add automatic token refresh', 'Create login/logout actions', 'Handle auth error recovery'] },
+      { name: 'Login Page', file: 'src/client/pages/Login.tsx', desc: 'Updated login page with OAuth provider buttons and existing username/password form.', subs: ['Add OAuth provider buttons', 'Implement provider selection UI', 'Create loading and error states', 'Add remember me functionality'] },
+      { name: 'Auth Context', file: 'src/client/context/AuthContext.tsx', desc: 'React context providing auth state to the entire application with SSR support.', subs: ['Create auth context provider', 'Implement SSR-safe initialization', 'Add auth state persistence', 'Create protected route wrapper'] },
+      { name: 'API Client', file: 'src/client/api/client.ts', desc: 'Updated API client with automatic token attachment and 401 retry logic.', subs: ['Add token interceptor', 'Implement 401 retry with refresh', 'Create request queue during refresh', 'Add auth header management'] },
+      { name: 'Session View', file: 'src/client/pages/Sessions.tsx', desc: 'User-facing session management page showing active sessions with revocation controls.', subs: ['Display active session list', 'Add session revocation UI', 'Show device and location info', 'Implement current session indicator'] },
+      { name: 'E2E Tests', file: 'tests/e2e/auth-flow.spec.ts', desc: 'End-to-end test suite covering the complete OAuth login flow including error scenarios.', subs: ['Test happy path OAuth flow', 'Test token refresh scenarios', 'Test session revocation', 'Test concurrent session limits'] },
+    ],
+    [
+      { name: 'Legacy Removal', file: 'src/auth/legacy/', desc: 'Remove deprecated authentication code paths after migration period completes.', subs: ['Remove legacy token validation', 'Clean up feature flag checks', 'Remove deprecated endpoints', 'Update documentation references'] },
+      { name: 'Config Cleanup', file: 'src/config/auth.ts', desc: 'Consolidate authentication configuration and remove dual-mode settings.', subs: ['Merge legacy and new config', 'Remove migration toggles', 'Validate final configuration', 'Update environment templates'] },
+      { name: 'Dependency Audit', file: 'package.json', desc: 'Remove unused authentication dependencies and update remaining ones.', subs: ['Remove legacy auth packages', 'Update OAuth library versions', 'Audit transitive dependencies', 'Run security vulnerability scan'] },
+      { name: 'Performance Baseline', file: 'benchmarks/auth-perf.ts', desc: 'Establish performance baselines for the new authentication system.', subs: ['Benchmark token validation', 'Measure session creation latency', 'Profile token refresh cycle', 'Compare against legacy metrics'] },
+      { name: 'Documentation', file: 'docs/auth/', desc: 'Comprehensive documentation for the new authentication system including architecture decisions.', subs: ['Write architecture overview', 'Document API endpoints', 'Create troubleshooting guide', 'Add runbook for incidents'] },
+      { name: 'Monitoring Setup', file: 'src/monitoring/auth-metrics.ts', desc: 'Prometheus metrics and Grafana dashboards for authentication system observability.', subs: ['Define key auth metrics', 'Create Grafana dashboards', 'Set up alerting rules', 'Add SLO tracking'] },
+    ],
+    [
+      { name: 'Cache Layer', file: 'src/auth/cache.ts', desc: 'Multi-tier caching for token validation reducing database lookups by 90%.', subs: ['Implement in-memory LRU cache', 'Add Redis distributed cache', 'Create cache invalidation events', 'Add cache hit rate metrics'] },
+      { name: 'Connection Pool', file: 'src/db/pool.ts', desc: 'Optimized database connection pooling for auth queries with prepared statements.', subs: ['Configure pool sizing', 'Add prepared statement cache', 'Implement connection health checks', 'Add pool metrics'] },
+      { name: 'Batch Validation', file: 'src/auth/batch-validate.ts', desc: 'Batch token validation for internal service-to-service calls reducing round trips.', subs: ['Implement batch validation API', 'Add request coalescing', 'Create batch result caching', 'Add timeout handling'] },
+      { name: 'Load Test Suite', file: 'tests/load/auth-load.ts', desc: 'Load testing suite simulating realistic authentication patterns at scale.', subs: ['Define load test scenarios', 'Implement gradual ramp-up', 'Add success rate assertions', 'Create performance reports'] },
+      { name: 'CDN Integration', file: 'src/middleware/cdn-auth.ts', desc: 'Edge authentication for CDN-served resources using signed tokens.', subs: ['Implement token signing', 'Add edge validation logic', 'Create signed URL generator', 'Add TTL management'] },
+      { name: 'Query Optimizer', file: 'src/db/auth-queries.ts', desc: 'Optimized database queries for authentication with proper indexing and query plans.', subs: ['Add covering indexes', 'Optimize user lookup queries', 'Implement query result caching', 'Add slow query detection'] },
+    ],
+    [
+      { name: 'Metrics Collector', file: 'src/monitoring/collector.ts', desc: 'Custom metrics collector aggregating authentication events for dashboards and alerting.', subs: ['Implement event aggregation', 'Add histogram buckets for latency', 'Create error rate counters', 'Add active session gauges'] },
+      { name: 'Alert Rules', file: 'monitoring/alerts.yml', desc: 'Alerting rules for authentication anomalies including spike detection and availability monitoring.', subs: ['Define critical alert thresholds', 'Add anomaly detection rules', 'Create escalation policies', 'Implement alert suppression'] },
+      { name: 'Dashboard Templates', file: 'monitoring/dashboards/', desc: 'Grafana dashboard templates for auth system overview, performance, and security views.', subs: ['Create overview dashboard', 'Add performance drill-down', 'Build security event view', 'Add SLO compliance panel'] },
+      { name: 'Log Pipeline', file: 'src/logging/auth-pipeline.ts', desc: 'Structured logging pipeline for authentication events with retention policies.', subs: ['Implement structured log format', 'Add log level configuration', 'Create log rotation policy', 'Add log search indexing'] },
+      { name: 'Incident Runbook', file: 'docs/runbooks/auth-incidents.md', desc: 'Operational runbook for common authentication incidents and recovery procedures.', subs: ['Document common failure modes', 'Add recovery procedures', 'Create communication templates', 'Define escalation paths'] },
+      { name: 'Synthetic Monitoring', file: 'monitoring/synthetic/', desc: 'Synthetic test probes continuously validating authentication flows from external locations.', subs: ['Implement login flow probe', 'Add token refresh probe', 'Create multi-region checks', 'Add SSL certificate monitoring'] },
+    ],
+    [
+      { name: 'API Documentation', file: 'docs/api/auth.md', desc: 'OpenAPI specification and developer guide for the authentication API endpoints.', subs: ['Write endpoint documentation', 'Add request/response examples', 'Create error code reference', 'Add rate limit documentation'] },
+      { name: 'Architecture Doc', file: 'docs/architecture/auth.md', desc: 'Architecture decision records and system design documentation for the auth refactor.', subs: ['Document design decisions', 'Create system diagrams', 'Add security considerations', 'Write trade-off analysis'] },
+      { name: 'Migration Guide', file: 'docs/guides/auth-migration.md', desc: 'Step-by-step migration guide for teams consuming the authentication API.', subs: ['Write migration checklist', 'Add code examples', 'Create FAQ section', 'Document breaking changes'] },
+      { name: 'Security Review', file: 'docs/security/auth-review.md', desc: 'Security review document covering threat model, mitigations, and compliance requirements.', subs: ['Define threat model', 'Document mitigations', 'Add compliance checklist', 'Create penetration test plan'] },
+      { name: 'Knowledge Transfer', file: 'docs/internal/auth-kt.md', desc: 'Internal knowledge transfer materials including video recordings and Q&A documentation.', subs: ['Create presentation slides', 'Document Q&A from sessions', 'Write quick-start guide', 'Add troubleshooting tips'] },
+      { name: 'Release Notes', file: 'CHANGELOG.md', desc: 'Comprehensive release notes documenting all changes, migration requirements, and known issues.', subs: ['Write feature summaries', 'Document breaking changes', 'Add migration instructions', 'List known issues'] },
+    ],
+  ],
+  automatedCriteria: [
+    'All OAuth providers return valid tokens within 500ms p99 latency',
+    'Token refresh succeeds without user intervention for active sessions',
+    'Rate limiting correctly throttles after threshold with 429 responses',
+    'Session revocation propagates to all instances within 2 seconds',
+  ],
+  manualCriteria: [
+    'Login flow feels responsive with clear loading states and error messages',
+    'Session management page clearly shows device info and allows revocation',
+    'OAuth consent screen properly displays requested permissions',
+    'Error recovery gracefully guides users back to a working state',
+  ],
+  testingUnit: 'Unit tests covering token validation, session management, and OAuth configuration modules with >90% branch coverage.',
+  testingIntegration: 'Integration tests validating the full OAuth flow against mock providers, Redis session persistence, and database operations.',
+  testingManual: 'Manual QA checklist: test login with each OAuth provider, verify session limits, confirm token refresh in long-running sessions, validate error pages.',
+  references: [
+    '[OAuth 2.0 RFC 6749](https://tools.ietf.org/html/rfc6749)',
+    '[PKCE Extension RFC 7636](https://tools.ietf.org/html/rfc7636)',
+    '[Project Auth Epic - JIRA-1234](https://jira.example.com/browse/JIRA-1234)',
+  ],
+};
+
+// ═══════════════════════════════════════════════════════════════════
+// Control Rendering
+// ═══════════════════════════════════════════════════════════════════
+
+function buildControls() {
+  const panel = document.getElementById('controlsPanel');
+  panel.innerHTML = '';
+
+  // --- Presets ---
+  panel.innerHTML += buildControlGroup('Presets', `<div class="presets-bar" id="presetsInner">${
+    Object.entries(PRESETS).map(([key, p]) =>
+      `<button class="preset-btn${activePreset === key ? ' active' : ''}" data-preset="${key}">${p.label}</button>`
+    ).join('')
+  }</div>`, false);
+
+  // --- Sections ---
+  panel.innerHTML += buildControlGroup('Sections', `
+    ${toggle('secOverview', 'Overview')}
+    ${toggle('secCurrentState', 'Current State')}
+    ${toggle('secKeyDiscoveries', 'Key Discoveries', true, 'secCurrentState')}
+    ${toggle('secScopeExclusions', 'Scope Exclusions')}
+    ${toggle('secImplementation', 'Implementation Approach')}
+    ${toggle('secTesting', 'Testing Strategy')}
+    ${toggle('secTestUnit', 'Unit Tests', true, 'secTesting')}
+    ${toggle('secTestIntegration', 'Integration Tests', true, 'secTesting')}
+    ${toggle('secTestManual', 'Manual Testing', true, 'secTesting')}
+    ${toggle('secReferences', 'References')}
+  `, false);
+
+  // --- Phase Configuration ---
+  panel.innerHTML += buildControlGroup('Phase Configuration', `
+    ${slider('phaseCount', 'Phase count', 1, 8)}
+    ${selectControl('phaseHeadingStyle', 'Heading style', [
+      ['phase-colon', 'Phase N: Name'],
+      ['phase-dash', 'Phase N - Name'],
+      ['step-colon', 'Step N: Name'],
+      ['task-colon', 'Task N: Name'],
+      ['unnumbered', 'Unnumbered H2'],
+    ])}
+  `, false);
+
+  // --- Per-Phase Changes ---
+  panel.innerHTML += buildControlGroup('Per-Phase Changes', `
+    ${radioGroup('changesFormat', 'Changes format', [
+      ['heading', 'Heading-based (H4 per change)'],
+      ['list', 'List-based (bullet per change)'],
+    ])}
+    <div class="divider"></div>
+    ${slider('changesCount', 'Changes per phase', 1, 6)}
+    <div class="divider"></div>
+    ${toggle('subItems', 'Sub-items')}
+    ${conditionalSlider('subItemsCount', 'Sub-items per change', 1, 4, 'subItems')}
+  `, false);
+
+  // --- Success Criteria ---
+  panel.innerHTML += buildControlGroup('Success Criteria', `
+    ${toggle('automatedCriteria', 'Automated criteria')}
+    ${conditionalSlider('automatedCriteriaCount', 'Count', 1, 4, 'automatedCriteria')}
+    <div class="divider"></div>
+    ${toggle('manualCriteria', 'Manual criteria')}
+    ${conditionalSlider('manualCriteriaCount', 'Count', 1, 4, 'manualCriteria')}
+  `, false);
+
+  attachControlListeners();
+}
+
+function buildControlGroup(title, body, startCollapsed) {
+  const cls = startCollapsed ? ' collapsed' : '';
+  const hidden = startCollapsed ? ' hidden' : '';
+  return `
+    <div class="control-group">
+      <div class="control-group-header${cls}" onclick="toggleGroup(this)">
+        <span class="chevron">&#9660;</span> ${title}
+      </div>
+      <div class="control-group-body${hidden ? ' hidden' : ''}">${body}</div>
+    </div>`;
+}
+
+function toggle(key, label, isSub, parentKey) {
+  const sub = isSub ? ' sub' : '';
+  const muted = isSub ? ' muted' : '';
+  const depClass = parentKey ? ` data-depends="${parentKey}"` : '';
+  const hidden = parentKey && !state[parentKey] ? ' hidden-cond' : ' shown';
+  return `
+    <div class="toggle-row${sub} conditional${hidden}"${depClass}>
+      <span class="toggle-label${muted}">${label}</span>
+      <label class="toggle">
+        <input type="checkbox" data-key="${key}" ${state[key] ? 'checked' : ''}>
+        <span class="toggle-track"></span>
+      </label>
+    </div>`;
+}
+
+function slider(key, label, min, max) {
+  return `
+    <div class="slider-row">
+      <div class="slider-header">
+        <span class="slider-label">${label}</span>
+        <span class="slider-value" data-display="${key}">${state[key]}</span>
+      </div>
+      <input type="range" data-key="${key}" min="${min}" max="${max}" value="${state[key]}">
+    </div>`;
+}
+
+function conditionalSlider(key, label, min, max, parentKey) {
+  const hidden = !state[parentKey] ? ' hidden-cond' : ' shown';
+  return `
+    <div class="conditional${hidden}" data-depends="${parentKey}">
+      ${slider(key, label, min, max)}
+    </div>`;
+}
+
+function selectControl(key, label, options) {
+  const opts = options.map(([val, text]) =>
+    `<option value="${val}"${state[key] === val ? ' selected' : ''}>${text}</option>`
+  ).join('');
+  return `
+    <div class="select-row">
+      <span class="select-label">${label}</span>
+      <select data-key="${key}">${opts}</select>
+    </div>`;
+}
+
+function radioGroup(key, label, options) {
+  const items = options.map(([val, text]) => `
+    <label class="radio-option">
+      <input type="radio" name="${key}" data-key="${key}" value="${val}" ${state[key] === val ? 'checked' : ''}>
+      <span>${text}</span>
+    </label>
+  `).join('');
+  return `<div class="radio-group"><div class="radio-group-label">${label}</div>${items}</div>`;
+}
+
+function toggleGroup(header) {
+  header.classList.toggle('collapsed');
+  const body = header.nextElementSibling;
+  body.classList.toggle('hidden');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Event Binding
+// ═══════════════════════════════════════════════════════════════════
+
+function attachControlListeners() {
+  // Checkboxes
+  document.querySelectorAll('input[type="checkbox"][data-key]').forEach(el => {
+    el.addEventListener('change', () => {
+      state[el.dataset.key] = el.checked;
+      activePreset = detectPreset();
+      updateConditionals();
+      render();
+    });
+  });
+
+  // Sliders
+  document.querySelectorAll('input[type="range"][data-key]').forEach(el => {
+    el.addEventListener('input', () => {
+      state[el.dataset.key] = parseInt(el.value);
+      const display = document.querySelector(`[data-display="${el.dataset.key}"]`);
+      if (display) display.textContent = el.value;
+      activePreset = detectPreset();
+      render();
+    });
+  });
+
+  // Selects
+  document.querySelectorAll('select[data-key]').forEach(el => {
+    el.addEventListener('change', () => {
+      state[el.dataset.key] = el.value;
+      activePreset = detectPreset();
+      render();
+    });
+  });
+
+  // Radios
+  document.querySelectorAll('input[type="radio"][data-key]').forEach(el => {
+    el.addEventListener('change', () => {
+      state[el.dataset.key] = el.value;
+      activePreset = detectPreset();
+      render();
+    });
+  });
+
+  // Preset buttons
+  document.querySelectorAll('.preset-btn[data-preset]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      applyPreset(btn.dataset.preset);
+    });
+  });
+}
+
+function updateConditionals() {
+  document.querySelectorAll('[data-depends]').forEach(el => {
+    const parentKey = el.dataset.depends;
+    if (state[parentKey]) {
+      el.classList.remove('hidden-cond');
+      el.classList.add('shown');
+    } else {
+      el.classList.add('hidden-cond');
+      el.classList.remove('shown');
+    }
+  });
+}
+
+function detectPreset() {
+  for (const [key, preset] of Object.entries(PRESETS)) {
+    const match = Object.entries(preset.values).every(([k, v]) => state[k] === v);
+    if (match) return key;
+  }
+  return null;
+}
+
+function applyPreset(key) {
+  const preset = PRESETS[key];
+  if (!preset) return;
+  state = { ...preset.values };
+  activePreset = key;
+  buildControls();
+  render();
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Markdown Generation
+// ═══════════════════════════════════════════════════════════════════
+
+function generateMarkdown() {
+  const lines = [];
+  const S = SAMPLE;
+
+  lines.push(`# ${S.projectName}`);
+  lines.push('');
+
+  // Overview
+  if (state.secOverview) {
+    lines.push('## Overview');
+    lines.push('');
+    lines.push(S.overview);
+    lines.push('');
+  }
+
+  // Current State
+  if (state.secCurrentState) {
+    lines.push('## Current State');
+    lines.push('');
+    lines.push(S.currentState);
+    lines.push('');
+
+    if (state.secKeyDiscoveries) {
+      lines.push('### Key Discoveries');
+      lines.push('');
+      S.keyDiscoveries.forEach(d => lines.push(`- ${d}`));
+      lines.push('');
+    }
+  }
+
+  // Scope Exclusions
+  if (state.secScopeExclusions) {
+    lines.push("## What We're NOT Doing");
+    lines.push('');
+    S.scopeExclusions.forEach(s => lines.push(`- ${s}`));
+    lines.push('');
+  }
+
+  // Implementation Approach
+  if (state.secImplementation) {
+    lines.push('## Implementation Approach');
+    lines.push('');
+    lines.push(S.implementationApproach);
+    lines.push('');
+  }
+
+  // Phases
+  for (let p = 0; p < state.phaseCount; p++) {
+    const phaseName = S.phaseNames[p] || `Phase ${p + 1}`;
+    lines.push(phaseHeading(p + 1, phaseName));
+    lines.push('');
+
+    // Changes
+    const phaseChanges = S.changes[p] || S.changes[0];
+    const count = Math.min(state.changesCount, phaseChanges.length);
+
+    if (state.changesFormat === 'heading') {
+      lines.push('### Changes');
+      lines.push('');
+      for (let c = 0; c < count; c++) {
+        const change = phaseChanges[c];
+        lines.push(`#### ${c + 1}. ${change.name}`);
+        lines.push('');
+        lines.push(`**File**: \`${change.file}\``);
+        lines.push('');
+        lines.push(change.desc);
+        lines.push('');
+
+        if (state.subItems && change.subs) {
+          const subCount = Math.min(state.subItemsCount, change.subs.length);
+          for (let s = 0; s < subCount; s++) {
+            lines.push(`- ${change.subs[s]}`);
+          }
+          lines.push('');
+        }
+      }
+    } else {
+      lines.push('### Changes');
+      lines.push('');
+      for (let c = 0; c < count; c++) {
+        const change = phaseChanges[c];
+        lines.push(`- **\`${change.file}\`**: ${change.desc}`);
+        if (state.subItems && change.subs) {
+          const subCount = Math.min(state.subItemsCount, change.subs.length);
+          for (let s = 0; s < subCount; s++) {
+            lines.push(`  - ${change.subs[s]}`);
+          }
+        }
+      }
+      lines.push('');
+    }
+
+    // Success Criteria
+    if (state.automatedCriteria || state.manualCriteria) {
+      lines.push('### Success Criteria');
+      lines.push('');
+
+      if (state.automatedCriteria) {
+        lines.push('**Automated**:');
+        const ac = Math.min(state.automatedCriteriaCount, S.automatedCriteria.length);
+        for (let i = 0; i < ac; i++) {
+          lines.push(`- ${S.automatedCriteria[i]}`);
+        }
+        lines.push('');
+      }
+
+      if (state.manualCriteria) {
+        lines.push('**Manual**:');
+        const mc = Math.min(state.manualCriteriaCount, S.manualCriteria.length);
+        for (let i = 0; i < mc; i++) {
+          lines.push(`- ${S.manualCriteria[i]}`);
+        }
+        lines.push('');
+      }
+    }
+  }
+
+  // Testing Strategy
+  if (state.secTesting) {
+    lines.push('## Testing Strategy');
+    lines.push('');
+    if (state.secTestUnit) {
+      lines.push('### Unit Tests');
+      lines.push('');
+      lines.push(S.testingUnit);
+      lines.push('');
+    }
+    if (state.secTestIntegration) {
+      lines.push('### Integration Tests');
+      lines.push('');
+      lines.push(S.testingIntegration);
+      lines.push('');
+    }
+    if (state.secTestManual) {
+      lines.push('### Manual Testing');
+      lines.push('');
+      lines.push(S.testingManual);
+      lines.push('');
+    }
+  }
+
+  // References
+  if (state.secReferences) {
+    lines.push('## References');
+    lines.push('');
+    S.references.forEach(r => lines.push(`- ${r}`));
+    lines.push('');
+  }
+
+  // Metadata comment
+  lines.push('<!-- Generated by Plan Assistant -->');
+
+  return lines.join('\n');
+}
+
+function phaseHeading(num, name) {
+  switch (state.phaseHeadingStyle) {
+    case 'phase-colon': return `## Phase ${num}: ${name}`;
+    case 'phase-dash':  return `## Phase ${num} - ${name}`;
+    case 'step-colon':  return `## Step ${num}: ${name}`;
+    case 'task-colon':  return `## Task ${num}: ${name}`;
+    case 'unnumbered':  return `## ${name}`;
+    default:            return `## Phase ${num}: ${name}`;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Syntax-Highlighted Preview
+// ═══════════════════════════════════════════════════════════════════
+
+function highlightMarkdown(md) {
+  const lines = md.split('\n');
+  const result = [];
+
+  for (const line of lines) {
+    if (line === '') {
+      result.push('<span class="md-blank"></span>');
+      continue;
+    }
+
+    // Comment
+    if (line.startsWith('<!--')) {
+      result.push(`<span class="md-comment">${esc(line)}</span>\n`);
+      continue;
+    }
+
+    // Headings
+    const hMatch = line.match(/^(#{1,6})\s+(.*)/);
+    if (hMatch) {
+      const level = hMatch[1].length;
+      const cls = `md-h${Math.min(level, 4)}`;
+      const content = highlightInline(hMatch[2]);
+      result.push(`<span class="${cls}">${esc(hMatch[1])} ${content}</span>\n`);
+      continue;
+    }
+
+    // Bullet lines
+    const bulletMatch = line.match(/^(\s*-\s)(.*)/);
+    if (bulletMatch) {
+      const indent = bulletMatch[1];
+      const content = highlightInline(bulletMatch[2]);
+      result.push(`<span class="md-bullet">${esc(indent)}</span><span class="md-text">${content}</span>\n`);
+      continue;
+    }
+
+    // Plain text
+    result.push(`<span class="md-text">${highlightInline(line)}</span>\n`);
+  }
+
+  return result.join('');
+}
+
+function highlightInline(text) {
+  // Order matters: process code first, then bold, to avoid conflicts
+  let result = '';
+  let i = 0;
+  const len = text.length;
+
+  while (i < len) {
+    // Backtick code spans
+    if (text[i] === '`') {
+      const end = text.indexOf('`', i + 1);
+      if (end !== -1) {
+        const code = text.substring(i, end + 1);
+        result += `<span class="md-code">${esc(code)}</span>`;
+        i = end + 1;
+        continue;
+      }
+    }
+
+    // Bold **text** or __text__
+    if (text[i] === '*' && text[i + 1] === '*') {
+      const end = text.indexOf('**', i + 2);
+      if (end !== -1) {
+        const inner = text.substring(i + 2, end);
+        result += `<span class="md-bold">**${esc(inner)}**</span>`;
+        i = end + 2;
+        continue;
+      }
+    }
+
+    // Link [text](url)
+    if (text[i] === '[') {
+      const closeBracket = text.indexOf(']', i + 1);
+      if (closeBracket !== -1 && text[closeBracket + 1] === '(') {
+        const closeParen = text.indexOf(')', closeBracket + 2);
+        if (closeParen !== -1) {
+          const linkText = text.substring(i + 1, closeBracket);
+          const linkUrl = text.substring(closeBracket + 2, closeParen);
+          result += `<span class="md-code">[${esc(linkText)}](${esc(linkUrl)})</span>`;
+          i = closeParen + 1;
+          continue;
+        }
+      }
+    }
+
+    result += esc(text[i]);
+    i++;
+  }
+
+  return result;
+}
+
+function esc(str) {
+  return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Prompt Generation
+// ═══════════════════════════════════════════════════════════════════
+
+function generatePrompt() {
+  const D = DEFAULTS;
+  const s = state;
+  const parts = [];
+  const diffs = [];
+
+  // Check if everything is default
+  const isDefault = Object.entries(D).every(([k, v]) => s[k] === v);
+  if (isDefault) {
+    return 'Generate a standard markdown implementation plan with 2 phases.\n\n[Playground: Markdown Plan Builder]';
+  }
+
+  // Phase count
+  if (s.phaseCount !== D.phaseCount) {
+    parts.push(`${s.phaseCount} phase${s.phaseCount > 1 ? 's' : ''}`);
+  } else {
+    parts.push(`${s.phaseCount} phase${s.phaseCount > 1 ? 's' : ''}`);
+  }
+
+  // Heading style
+  if (s.phaseHeadingStyle !== D.phaseHeadingStyle) {
+    const styleNames = {
+      'phase-colon': '`Phase N: Name`',
+      'phase-dash': '`Phase N - Name`',
+      'step-colon': '`Step N: Name`',
+      'task-colon': '`Task N: Name`',
+      'unnumbered': 'unnumbered H2',
+    };
+    diffs.push(`using ${styleNames[s.phaseHeadingStyle]} headings`);
+  }
+
+  // Changes format
+  const formatName = s.changesFormat === 'heading' ? 'heading-based' : 'list-based';
+  if (s.changesFormat !== D.changesFormat || s.changesCount !== D.changesCount) {
+    diffs.push(`${formatName} changes (${s.changesCount} per phase)`);
+  }
+
+  // Sub-items
+  if (s.subItems !== D.subItems && s.subItems) {
+    diffs.push(`sub-items for all phases (${s.subItemsCount} each)`);
+  }
+
+  // Success criteria
+  const critParts = [];
+  if (s.automatedCriteria) critParts.push('automated');
+  if (s.manualCriteria) critParts.push('manual');
+
+  const defaultCrit = D.automatedCriteria && D.manualCriteria;
+  const currentCrit = s.automatedCriteria && s.manualCriteria;
+
+  if (!s.automatedCriteria && !s.manualCriteria) {
+    diffs.push('no success criteria');
+  } else if (s.automatedCriteria !== D.automatedCriteria || s.manualCriteria !== D.manualCriteria ||
+             (s.automatedCriteria && s.automatedCriteriaCount !== D.automatedCriteriaCount) ||
+             (s.manualCriteria && s.manualCriteriaCount !== D.manualCriteriaCount)) {
+    let critDesc = critParts.join(' + ') + ' success criteria';
+    const countParts = [];
+    if (s.automatedCriteria && s.automatedCriteriaCount !== D.automatedCriteriaCount) {
+      countParts.push(`${s.automatedCriteriaCount} automated`);
+    }
+    if (s.manualCriteria && s.manualCriteriaCount !== D.manualCriteriaCount) {
+      countParts.push(`${s.manualCriteriaCount} manual`);
+    }
+    if (countParts.length) {
+      critDesc += ` (${countParts.join(', ')})`;
+    }
+    diffs.push(critDesc);
+  }
+
+  // Sections
+  const sectionDiffs = [];
+  const sectionMap = [
+    ['secOverview', 'Overview'],
+    ['secCurrentState', 'Current State'],
+    ['secScopeExclusions', 'Scope Exclusions'],
+    ['secImplementation', 'Implementation Approach'],
+    ['secTesting', 'Testing Strategy'],
+    ['secReferences', 'References'],
+  ];
+
+  const removedSections = sectionMap.filter(([k]) => !s[k] && D[k]).map(([, name]) => name);
+  const addedSections = sectionMap.filter(([k]) => s[k] && !D[k]).map(([, name]) => name);
+
+  // Sections included (build explicit list if any differ from default)
+  if (removedSections.length > 0) {
+    const included = sectionMap.filter(([k]) => s[k]).map(([, name]) => name);
+    // Add sub-section details
+    const sectionDetails = [];
+    included.forEach(name => {
+      if (name === 'Current State' && s.secCurrentState && s.secKeyDiscoveries) {
+        sectionDetails.push('Current State with Key Discoveries');
+      } else if (name === 'Current State' && s.secCurrentState && !s.secKeyDiscoveries) {
+        sectionDetails.push('Current State');
+      } else if (name === 'Testing Strategy' && s.secTesting) {
+        const testParts = [];
+        if (s.secTestUnit) testParts.push('Unit');
+        if (s.secTestIntegration) testParts.push('Integration');
+        if (s.secTestManual) testParts.push('Manual');
+        if (testParts.length < 3) {
+          sectionDetails.push(`Testing Strategy (${testParts.join(' + ')})`);
+        } else {
+          sectionDetails.push('Testing Strategy (Unit + Integration + Manual)');
+        }
+      } else {
+        sectionDetails.push(name);
+      }
+    });
+    diffs.push(`Include ${sectionDetails.join(', ')} sections`);
+  } else {
+    // Check sub-section differences
+    if (s.secCurrentState && !s.secKeyDiscoveries && D.secKeyDiscoveries) {
+      diffs.push('Current State without Key Discoveries');
+    }
+    if (s.secTesting) {
+      const testDiffs = [];
+      if (s.secTestUnit !== D.secTestUnit) testDiffs.push(`Unit Tests: ${s.secTestUnit ? 'on' : 'off'}`);
+      if (s.secTestIntegration !== D.secTestIntegration) testDiffs.push(`Integration Tests: ${s.secTestIntegration ? 'on' : 'off'}`);
+      if (s.secTestManual !== D.secTestManual) testDiffs.push(`Manual Testing: ${s.secTestManual ? 'on' : 'off'}`);
+      if (testDiffs.length > 0) {
+        const testParts = [];
+        if (s.secTestUnit) testParts.push('Unit');
+        if (s.secTestIntegration) testParts.push('Integration');
+        if (s.secTestManual) testParts.push('Manual');
+        diffs.push(`Testing Strategy (${testParts.join(' + ')} only)`);
+      }
+    }
+  }
+
+  let prompt = `Generate a markdown implementation plan with ${parts.join(', ')}`;
+  if (diffs.length > 0) {
+    prompt += `, ${diffs.join(', ')}`;
+  }
+  prompt += '.';
+
+  prompt += '\n\n[Playground: Markdown Plan Builder]';
+
+  return prompt;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Render
+// ═══════════════════════════════════════════════════════════════════
+
+function render() {
+  const md = generateMarkdown();
+  document.getElementById('markdownPreview').innerHTML = highlightMarkdown(md);
+  document.getElementById('promptOutput').textContent = generatePrompt();
+  updatePresetButtons();
+}
+
+function updatePresetButtons() {
+  document.querySelectorAll('.preset-btn[data-preset]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.preset === activePreset);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Copy
+// ═══════════════════════════════════════════════════════════════════
+
+function copyPrompt() {
+  const text = document.getElementById('promptOutput').textContent;
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.getElementById('copyBtn');
+    btn.textContent = 'Copied!';
+    btn.classList.add('copied');
+    setTimeout(() => {
+      btn.textContent = 'Copy';
+      btn.classList.remove('copied');
+    }, 1500);
+  });
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Initialize
+// ═══════════════════════════════════════════════════════════════════
+
+activePreset = 'standard';
+buildControls();
+render();
+
+</script>
+</body>
+</html>
