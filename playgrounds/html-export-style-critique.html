@@ -9,6 +9,7 @@
      Base / Reset
      ============================================================ */
   *, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+  .playground-question { font-size: 13px; color: var(--text-muted); font-weight: 400; margin: 4px 0 12px; }
 
   :root {
     --ui-bg: #0d1117;
@@ -16,7 +17,7 @@
     --ui-surface2: #1c2129;
     --ui-border: #30363d;
     --ui-text: #e6edf3;
-    --ui-text-dim: #8b949e;
+    --text-muted: #8b949e;
     --ui-accent: #58a6ff;
     --ui-amber: #d29922;
     --ui-green: #3fb950;
@@ -35,7 +36,7 @@
     line-height: 1.5;
     display: grid;
     grid-template-columns: 1fr 420px;
-    grid-template-rows: 1fr auto;
+    grid-template-rows: 1fr auto auto;
     height: 100vh;
   }
 
@@ -45,7 +46,7 @@
   ::-webkit-scrollbar { width:8px; height:8px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: var(--ui-border); border-radius:4px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--ui-text-dim); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
   /* ============================================================
      Document Panel (left)
@@ -77,7 +78,7 @@
   }
 
   #doc-header h1 span {
-    color: var(--ui-text-dim);
+    color: var(--text-muted);
     font-weight: 400;
     font-size: 13px;
     margin-left: 8px;
@@ -108,7 +109,7 @@
     min-width: 48px;
     text-align: right;
     padding-right: 12px;
-    color: var(--ui-text-dim);
+    color: var(--text-muted);
     opacity: 0.4;
     font-size: 12px;
     font-family: 'SF Mono', 'Fira Code', monospace;
@@ -346,7 +347,7 @@
 
   #suggestion-stats {
     font-size: 12px;
-    color: var(--ui-text-dim);
+    color: var(--text-muted);
     margin-bottom: 10px;
     display: flex;
     gap: 12px;
@@ -372,7 +373,7 @@
     font-size: 12px;
     font-weight: 600;
     cursor: pointer;
-    color: var(--ui-text-dim);
+    color: var(--text-muted);
     background: transparent;
     border: none;
     transition: all 0.15s;
@@ -489,7 +490,7 @@
 
   .suggestion-text {
     font-size: 12px;
-    color: var(--ui-text-dim);
+    color: var(--text-muted);
     line-height: 1.5;
     margin-bottom: 10px;
   }
@@ -508,7 +509,7 @@
     cursor: pointer;
     border: 1px solid var(--ui-border);
     background: transparent;
-    color: var(--ui-text-dim);
+    color: var(--text-muted);
     transition: all 0.15s;
   }
 
@@ -530,7 +531,7 @@
   }
 
   .btn-reset:hover {
-    border-color: var(--ui-text-dim) !important;
+    border-color: var(--text-muted) !important;
     color: var(--ui-text) !important;
   }
 
@@ -550,7 +551,7 @@
   }
 
   .suggestion-comment::placeholder {
-    color: var(--ui-text-dim);
+    color: var(--text-muted);
     opacity: 0.5;
   }
 
@@ -599,7 +600,7 @@
     cursor: pointer;
     border: 1px solid var(--ui-border);
     background: transparent;
-    color: var(--ui-text-dim);
+    color: var(--text-muted);
     transition: all 0.15s;
     margin-right: 8px;
   }
@@ -637,7 +638,7 @@
     padding: 14px 20px;
     font-size: 13px;
     line-height: 1.6;
-    color: var(--ui-text-dim);
+    color: var(--text-muted);
     white-space: pre-wrap;
     font-family: 'SF Mono', 'Fira Code', monospace;
     font-size: 12px;
@@ -649,7 +650,7 @@
   }
   .prompt-editable-hint {
     font-size: 11px;
-    color: #8b949e;
+    color: var(--text-muted);
     padding: 0 20px 8px;
     flex-shrink: 0;
   }
@@ -682,6 +683,80 @@
     min-height: auto;
     max-height: none;
   }
+
+  /* Findings */
+  .findings-panel {
+    grid-column: 1 / -1;
+    padding: 16px 24px; border-top: 1px solid var(--ui-border); background: var(--ui-surface);
+    max-height: 50vh; display: flex; flex-direction: column;
+    overflow-y: auto;
+  }
+  .findings-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+  }
+  .findings-header h3 {
+    font-size: 12px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .findings-actions { display: flex; gap: 6px; }
+  .findings-actions .findings-btn {
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    background: transparent;
+  }
+  .findings-actions .findings-btn:hover { opacity: 0.85; }
+  .add-finding-row {
+    display: flex; gap: 8px; align-items: flex-start; margin-bottom: 10px;
+  }
+  .add-finding-row textarea {
+    flex: 1; padding: 8px 10px;
+    border: 1px solid var(--ui-border); border-radius: 6px;
+    background: var(--ui-bg); color: var(--ui-text); font-family: inherit;
+    font-size: 13px; resize: none; min-height: 36px;
+  }
+  .add-finding-row textarea:focus { outline: none; border-color: var(--ui-accent); }
+  .add-finding-row textarea::placeholder { color: #484f58; }
+  .add-btn {
+    padding: 8px 16px; border: 1px solid var(--ui-accent); border-radius: 6px;
+    background: rgba(88, 166, 255, 0.1); color: var(--ui-accent); font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .add-btn:hover { background: var(--ui-accent); color: white; }
+  .add-btn:disabled { opacity: 0.3; cursor: default; }
+  .findings-list {
+    overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 6px;
+  }
+  .finding-item {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 8px 10px; background: var(--ui-bg); border-radius: 6px;
+    border: 1px solid rgba(48, 54, 61, 0.5); font-size: 12px;
+  }
+  .finding-summary {
+    flex: 1; color: var(--ui-text); font-family: monospace; font-size: 11px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 400px;
+  }
+  .finding-note { color: var(--text-muted); flex: 1; font-style: italic; font-size: 12px; }
+  .finding-remove {
+    background: none; border: none; color: var(--text-muted); cursor: pointer;
+    font-size: 14px; padding: 0 4px; line-height: 1;
+  }
+  .finding-remove:hover { color: var(--ui-red); }
+  .findings-prompt {
+    margin-top: 10px; padding: 10px;
+    background: var(--ui-bg); border-radius: 6px;
+    border: 1px solid rgba(48, 54, 61, 0.5);
+    font-family: monospace; font-size: 11px; line-height: 1.6;
+    color: var(--text-muted); white-space: pre-wrap;
+    max-height: 150px; overflow-y: auto;
+  }
+  .finding-count {
+    font-size: 11px; color: var(--text-muted); font-weight: 400;
+  }
 </style>
 </head>
 <body>
@@ -692,6 +767,7 @@
 <div id="doc-panel">
   <div id="doc-header">
     <h1>Export Preview <span>export-html.ts output</span></h1>
+    <p class="playground-question">I've identified potential style improvements for the HTML export. Review each suggestion — approve, reject, or add comments. I'll apply only the ones you approve to export-html.ts.</p>
   </div>
   <div id="doc-content"></div>
 </div>
@@ -726,6 +802,23 @@
   </div>
   <div id="prompt-content" contenteditable="true"></div>
   <div class="prompt-editable-hint">Click to edit before copying</div>
+</div>
+
+<!-- Findings -->
+<div class="findings-panel">
+  <div class="findings-header">
+    <h3>Findings <span class="finding-count" id="finding-count"></span></h3>
+    <div class="findings-actions">
+      <button class="findings-btn" onclick="clearFindings()" style="border: 1px solid var(--text-muted); color: var(--text-muted);">Clear all</button>
+      <button class="findings-btn" onclick="copyFindings()" style="border: 1px solid var(--ui-accent); color: var(--ui-accent); background: rgba(88,166,255,0.1);">Copy combined prompt</button>
+    </div>
+  </div>
+  <div class="add-finding-row">
+    <textarea id="finding-note" placeholder="Add a note about this configuration (optional)" rows="1"></textarea>
+    <button class="add-btn" id="add-finding-btn" onclick="addFinding()">+ Add finding</button>
+  </div>
+  <div class="findings-list" id="findings-list"></div>
+  <div class="findings-prompt" id="findings-prompt" contenteditable="true" style="display:none;"></div>
 </div>
 
 <script>
@@ -818,7 +911,7 @@ const docLines = [
   { lineNum: 1, html: '<span style="color:#6c7086;font-size:12px">&lt;!DOCTYPE html&gt; &middot; &lt;html lang="en"&gt;</span>' },
   { lineNum: 2, html: '<span style="color:#6c7086;font-size:12px">&lt;head&gt; charset=UTF-8, viewport, title</span>' },
   { lineNum: 3, blank: true },
-  { lineNum: 4, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ui-text-dim)">CSS Variables</span>' },
+  { lineNum: 4, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">CSS Variables</span>' },
   { lineNum: 5, html: '<span class="export-css-var-block"><span class="prop">--bg</span>: <span class="val">#1e1e2e</span> <span class="comment">/* Catppuccin Mocha base */</span></span>' },
   { lineNum: 6, html: '<span class="export-css-var-block"><span class="prop">--surface</span>: <span class="val">#181825</span></span>' },
   { lineNum: 7, html: '<span class="export-css-var-block"><span class="prop">--text</span>: <span class="val">#cdd6f4</span></span>' },
@@ -828,7 +921,7 @@ const docLines = [
   { lineNum: 11, html: '<span class="export-css-var-block"><span class="prop">--green</span>: <span class="val">#a6e3a1</span></span>' },
   { lineNum: 12, html: '<span class="export-css-var-block"><span class="prop">--red</span>: <span class="val">#f38ba8</span></span>' },
   { lineNum: 13, blank: true },
-  { lineNum: 14, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ui-text-dim)">Body Styles</span>' },
+  { lineNum: 14, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Body Styles</span>' },
   { lineNum: 15, html: '<span class="export-css-var-block"><span class="prop">font-family</span>: <span class="val">-apple-system, BlinkMacSystemFont, \'Segoe UI\', ...</span></span>' },
   { lineNum: 16, html: '<span class="export-css-var-block"><span class="prop">background</span>: <span class="val">#11111b</span>; <span class="prop">color</span>: <span class="val">var(--text)</span></span>' },
   { lineNum: 17, html: '<span class="export-css-var-block"><span class="prop">max-width</span>: <span class="val">900px</span>; <span class="prop">padding</span>: <span class="val">24px</span></span>' },
@@ -837,7 +930,7 @@ const docLines = [
   { lineNum: 20, blank: true },
   { lineNum: 21, html: '<div class="rendered-block"><div class="export-section-title">Overview</div><div class="export-paragraph">Refactor the authentication system to use JWT tokens with refresh token rotation. Migrate from session-based auth to stateless tokens while maintaining backward compatibility during the transition period.</div></div>' },
   { lineNum: 22, blank: true },
-  { lineNum: 23, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ui-text-dim)">Mermaid Diagram</span>' },
+  { lineNum: 23, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Mermaid Diagram</span>' },
   { lineNum: 24, blank: true },
   { lineNum: 25, html: '<div class="rendered-block"><div class="export-mermaid-box"><div style="font-size:12px;color:#666;margin-bottom:8px">class="mermaid" container (white background)</div><svg width="340" height="80" viewBox="0 0 340 80"><rect x="0" y="25" width="80" height="30" rx="4" fill="#e3e8f0" stroke="#666"/><text x="40" y="44" text-anchor="middle" font-size="11" fill="#333">Client</text><line x1="80" y1="40" x2="120" y2="40" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/><rect x="120" y="25" width="100" height="30" rx="4" fill="#e3e8f0" stroke="#666"/><text x="170" y="44" text-anchor="middle" font-size="11" fill="#333">Auth Controller</text><line x1="220" y1="40" x2="260" y2="40" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/><rect x="260" y="25" width="80" height="30" rx="4" fill="#e3e8f0" stroke="#666"/><text x="300" y="44" text-anchor="middle" font-size="11" fill="#333">JWT Service</text><defs><marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#666"/></marker></defs></svg></div></div>' },
   { lineNum: 26, blank: true },
@@ -851,7 +944,7 @@ const docLines = [
   { lineNum: 34, html: '<div class="rendered-block" style="padding-left:16px"><div class="export-change-block"><h4>SessionMigrator</h4><div class="filepath">src/services/session-migrator.ts</div><div class="desc">Background job that converts active sessions to JWT tokens, with rollback capability</div></div></div>' },
   { lineNum: 35, html: '<div class="rendered-block" style="padding-left:16px"><div style="margin-top:6px"><span style="font-size:12px;font-weight:600;color:#cdd6f4">Success Criteria</span><ul class="export-criteria-list"><li>Dual-mode auth passes integration tests <code>npm run test:integration</code></li><li>Session migration handles 10k+ active sessions</li><li>Zero downtime during migration</li></ul></div></div>' },
   { lineNum: 36, blank: true },
-  { lineNum: 37, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--ui-text-dim)">General Comments</span>' },
+  { lineNum: 37, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">General Comments</span>' },
   { lineNum: 38, html: '<div class="rendered-block"><div class="export-comment-item"><div class="quote">"migrate from session-based auth"</div><div class="body">Consider adding a feature flag to control the migration rollout per-tenant.</div><div class="meta">Overview &middot; 2/19/2026, 3:45:00 PM</div></div></div>' },
   { lineNum: 39, html: '<div class="rendered-block"><div class="export-comment-item"><div class="body">Rate limiting on the refresh endpoint needs to be more aggressive for production. Current config allows 100 req/min which is too high.</div><div class="meta">Phase 1 &middot; 2/20/2026, 10:12:00 AM</div></div></div>' },
   { lineNum: 40, blank: true },
@@ -1168,6 +1261,97 @@ suggestions[5].comment = '';
 renderDocument();
 renderSuggestions();
 renderPrompt();
+
+// --- Findings accumulator ---
+let findings = [];
+
+function escFinding(s) {
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
+function addFinding() {
+  const promptEl = document.getElementById('prompt-content');
+  const promptText = (promptEl.innerText || promptEl.textContent || '').trim();
+  if (!promptText) return;
+
+  const note = document.getElementById('finding-note').value.trim();
+
+  findings.push({
+    prompt: promptText,
+    note: note || null,
+    timestamp: new Date().toLocaleTimeString()
+  });
+
+  document.getElementById('finding-note').value = '';
+  renderFindings();
+}
+
+function removeFinding(i) {
+  findings.splice(i, 1);
+  renderFindings();
+}
+
+function clearFindings() {
+  if (findings.length > 0 && !confirm('Clear all findings?')) return;
+  findings = [];
+  renderFindings();
+}
+
+function renderFindings() {
+  const list = document.getElementById('findings-list');
+  const count = document.getElementById('finding-count');
+  const promptEl = document.getElementById('findings-prompt');
+
+  count.textContent = findings.length > 0 ? `(${findings.length})` : '';
+
+  if (findings.length === 0) {
+    list.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 8px 0;">No findings yet. Configure the playground and click "+ Add finding" to capture a prompt snapshot.</div>';
+    promptEl.style.display = 'none';
+    return;
+  }
+
+  list.innerHTML = findings.map((f, i) => {
+    const summary = f.prompt.substring(0, 80) + (f.prompt.length > 80 ? '...' : '');
+    const noteHtml = f.note
+      ? `<span class="finding-note">${escFinding(f.note)}</span>`
+      : '<span class="finding-note" style="opacity:0.4;">no note</span>';
+    return `<div class="finding-item">
+      <span class="finding-summary" title="${escFinding(f.prompt)}">${escFinding(summary)}</span>
+      ${noteHtml}
+      <button class="finding-remove" onclick="removeFinding(${i})" title="Remove">\u00d7</button>
+    </div>`;
+  }).join('');
+
+  const lines = findings.map((f, i) => {
+    let line = `${i + 1}. ${f.prompt}`;
+    if (f.note) line += `\n   Note: ${f.note}`;
+    return line;
+  });
+
+  promptEl.style.display = 'block';
+  promptEl.textContent = `I have ${findings.length} configuration(s) to apply:\n\n${lines.join('\n\n')}`;
+}
+
+function copyFindings() {
+  const promptEl = document.getElementById('findings-prompt');
+  const text = (promptEl.innerText || promptEl.textContent || '').trim() || 'Add findings first.';
+  navigator.clipboard.writeText(text).then(() => {
+    const btns = document.querySelectorAll('.findings-actions .findings-btn');
+    const btn = btns[btns.length - 1];
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
+}
+
+document.getElementById('finding-note').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    addFinding();
+  }
+});
+
+renderFindings();
 </script>
 </body>
 </html>

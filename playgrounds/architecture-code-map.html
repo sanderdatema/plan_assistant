@@ -6,6 +6,8 @@
 <title>Plan Assistant - Architecture Code Map</title>
 <style>
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --text-muted: #8b949e; }
+  .playground-question { font-size: 13px; color: var(--text-muted); font-weight: 400; margin: 4px 0 12px; }
 
   body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, sans-serif;
@@ -31,7 +33,7 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.05em;
-    color: #8b949e;
+    color: var(--text-muted);
     padding: 16px 16px 8px;
   }
   .sidebar section { padding: 0 16px 16px; border-bottom: 1px solid #21262d; }
@@ -113,7 +115,7 @@
     position: relative;
   }
   .comment-item .node-name { font-weight: 600; font-size: 13px; color: #58a6ff; }
-  .comment-item .file-path { font-size: 11px; color: #8b949e; margin-bottom: 4px; }
+  .comment-item .file-path { font-size: 11px; color: var(--text-muted); margin-bottom: 4px; }
   .comment-item .comment-text { font-size: 13px; color: #c9d1d9; white-space: pre-wrap; }
   .comment-delete {
     position: absolute;
@@ -205,7 +207,7 @@
   .prompt-header span {
     font-size: 13px;
     font-weight: 600;
-    color: #8b949e;
+    color: var(--text-muted);
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
@@ -239,7 +241,7 @@
   }
   .prompt-editable-hint {
     font-size: 11px;
-    color: #8b949e;
+    color: var(--text-muted);
     padding: 0 14px 8px;
   }
 
@@ -267,7 +269,7 @@
     border-bottom: 1px solid #21262d;
   }
   .modal-title h3 { font-size: 16px; font-weight: 600; color: #e6edf3; }
-  .modal-title p { font-size: 12px; color: #8b949e; margin-top: 2px; }
+  .modal-title p { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
   .modal-body { padding: 16px 20px; }
   .modal-body textarea {
     width: 100%;
@@ -328,12 +330,78 @@
   ::-webkit-scrollbar { width: 6px; }
   ::-webkit-scrollbar-track { background: transparent; }
   ::-webkit-scrollbar-thumb { background: #30363d; border-radius: 3px; }
+
+  /* ── Findings ── */
+  .findings-panel {
+    padding: 16px 24px; border-top: 1px solid #30363d; background: #161b22;
+    max-height: 50vh; display: flex; flex-direction: column; flex-shrink: 0;
+  }
+  .findings-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+  }
+  .findings-header h3 {
+    font-size: 12px; font-weight: 600; color: var(--text-muted);
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .findings-actions { display: flex; gap: 6px; }
+  .findings-actions .copy-btn { background: none; border: 1px solid var(--text-muted); color: var(--text-muted); }
+  .findings-actions .copy-btn:last-child { background: #238636; border-color: #238636; color: #fff; }
+  .findings-actions .copy-btn:last-child:hover { background: #2ea043; }
+  .add-finding-row {
+    display: flex; gap: 8px; align-items: flex-start; margin-bottom: 10px;
+  }
+  .add-finding-row textarea {
+    flex: 1; padding: 8px 10px;
+    border: 1px solid #30363d; border-radius: 6px;
+    background: #0d1117; color: #e6edf3; font-family: inherit;
+    font-size: 13px; resize: none; min-height: 36px;
+  }
+  .add-finding-row textarea:focus { outline: none; border-color: #58a6ff; }
+  .add-finding-row textarea::placeholder { color: #484f58; }
+  .add-btn {
+    padding: 8px 16px; border: 1px solid #58a6ff; border-radius: 6px;
+    background: rgba(88, 166, 255, 0.1); color: #58a6ff; font-size: 12px; font-weight: 600;
+    cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  }
+  .add-btn:hover { background: #58a6ff; color: white; }
+  .add-btn:disabled { opacity: 0.3; cursor: default; }
+  .findings-list {
+    overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 6px;
+  }
+  .finding-item {
+    display: flex; gap: 10px; align-items: flex-start;
+    padding: 8px 10px; background: #0d1117; border-radius: 6px;
+    border: 1px solid rgba(48, 54, 61, 0.5); font-size: 12px;
+  }
+  .finding-summary {
+    flex: 1; color: #e6edf3; font-family: monospace; font-size: 11px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    max-width: 400px;
+  }
+  .finding-note { color: var(--text-muted); flex: 1; font-style: italic; font-size: 12px; }
+  .finding-remove {
+    background: none; border: none; color: var(--text-muted); cursor: pointer;
+    font-size: 14px; padding: 0 4px; line-height: 1;
+  }
+  .finding-remove:hover { color: #f85149; }
+  .findings-prompt {
+    margin-top: 10px; padding: 10px;
+    background: #0d1117; border-radius: 6px;
+    border: 1px solid rgba(48, 54, 61, 0.5);
+    font-family: monospace; font-size: 11px; line-height: 1.6;
+    color: var(--text-muted); white-space: pre-wrap;
+    max-height: 150px; overflow-y: auto;
+  }
+  .finding-count {
+    font-size: 11px; color: var(--text-muted); font-weight: 400;
+  }
 </style>
 </head>
 <body>
 
 <!-- Sidebar -->
 <aside class="sidebar">
+  <p class="playground-question">Click any node to leave a comment — tell me what's confusing, what needs refactoring, or what you want to change. Filter layers and connections to focus on the part of the system we're discussing.</p>
   <section>
     <h2>View Presets</h2>
     <div id="presets"></div>
@@ -371,6 +439,22 @@
     </div>
     <div class="prompt-body" id="prompt-body" contenteditable="true"></div>
     <div class="prompt-editable-hint">Click to edit before copying</div>
+  </div>
+  <!-- Findings -->
+  <div class="findings-panel">
+    <div class="findings-header">
+      <h3>Findings <span class="finding-count" id="finding-count"></span></h3>
+      <div class="findings-actions">
+        <button class="copy-btn" onclick="clearFindings()">Clear all</button>
+        <button class="copy-btn" onclick="copyFindings()">Copy combined prompt</button>
+      </div>
+    </div>
+    <div class="add-finding-row">
+      <textarea id="finding-note" placeholder="Add a note about this configuration (optional)" rows="1"></textarea>
+      <button class="add-btn" id="add-finding-btn" onclick="addFinding()">+ Add finding</button>
+    </div>
+    <div class="findings-list" id="findings-list"></div>
+    <div class="findings-prompt" id="findings-prompt" contenteditable="true" style="display:none;"></div>
   </div>
 </div>
 
@@ -1093,6 +1177,94 @@ document.getElementById('zoom-reset').addEventListener('click', () => {
 fullRender();
 renderCommentsList();
 applyTransform();
+
+// ───────────────────────────── FINDINGS ACCUMULATOR ─────────────────────────────
+
+let findings = [];
+
+function addFinding() {
+  const promptEl = document.getElementById('prompt-body');
+  const promptText = (promptEl.innerText || promptEl.textContent || '').trim();
+  if (!promptText) return;
+
+  const note = document.getElementById('finding-note').value.trim();
+
+  findings.push({
+    prompt: promptText,
+    note: note || null,
+    timestamp: new Date().toLocaleTimeString()
+  });
+
+  document.getElementById('finding-note').value = '';
+  renderFindingsUI();
+}
+
+function removeFinding(i) {
+  findings.splice(i, 1);
+  renderFindingsUI();
+}
+
+function clearFindings() {
+  if (findings.length > 0 && !confirm('Clear all findings?')) return;
+  findings = [];
+  renderFindingsUI();
+}
+
+function renderFindingsUI() {
+  const list = document.getElementById('findings-list');
+  const count = document.getElementById('finding-count');
+  const promptEl = document.getElementById('findings-prompt');
+
+  count.textContent = findings.length > 0 ? `(${findings.length})` : '';
+
+  if (findings.length === 0) {
+    list.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 8px 0;">No findings yet. Configure the playground and click "+ Add finding" to capture a prompt snapshot.</div>';
+    promptEl.style.display = 'none';
+    return;
+  }
+
+  list.innerHTML = findings.map((f, i) => {
+    const summary = f.prompt.substring(0, 80) + (f.prompt.length > 80 ? '...' : '');
+    const noteHtml = f.note
+      ? `<span class="finding-note">${escHtml(f.note)}</span>`
+      : '<span class="finding-note" style="opacity:0.4;">no note</span>';
+    return `<div class="finding-item">
+      <span class="finding-summary" title="${f.prompt.replace(/"/g, '&quot;')}">${escHtml(summary)}</span>
+      ${noteHtml}
+      <button class="finding-remove" onclick="removeFinding(${i})" title="Remove">&times;</button>
+    </div>`;
+  }).join('');
+
+  const lines = findings.map((f, i) => {
+    let line = `${i + 1}. ${f.prompt}`;
+    if (f.note) line += `\n   Note: ${f.note}`;
+    return line;
+  });
+
+  promptEl.style.display = 'block';
+  promptEl.textContent = `I have ${findings.length} configuration(s) to apply:\n\n${lines.join('\n\n')}`;
+}
+
+function copyFindings() {
+  const promptEl = document.getElementById('findings-prompt');
+  const text = (promptEl.innerText || promptEl.textContent || '').trim() || 'Add findings first.';
+  navigator.clipboard.writeText(text).then(() => {
+    const btns = document.querySelectorAll('.findings-actions .copy-btn');
+    const btn = btns[btns.length - 1];
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
+}
+
+document.getElementById('finding-note').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    addFinding();
+  }
+});
+
+renderFindingsUI();
 
 // Fit canvas to viewport on load
 (function fitInitial() {
