@@ -12,7 +12,7 @@
   --surface2: #1c2129;
   --border:   #30363d;
   --text:     #e6edf3;
-  --text-dim: #8b949e;
+  --text-muted: #8b949e;
   --accent:   #58a6ff;
   --green:    #3fb950;
   --red:      #f85149;
@@ -25,6 +25,7 @@
 
 /* ── Reset & Base ─────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+.playground-question { font-size: 13px; color: var(--text-muted); font-weight: 400; margin: 4px 0 12px; }
 body {
   font-family: var(--font-sans);
   background: var(--bg);
@@ -38,11 +39,11 @@ body {
 .app {
   display: grid;
   grid-template-columns: 340px 1fr;
-  grid-template-rows: 1fr auto;
+  grid-template-rows: 1fr auto auto;
   height: 100vh;
 }
 .left-panel {
-  grid-row: 1 / 3;
+  grid-row: 1 / 4;
   border-right: 1px solid var(--border);
   background: var(--surface);
   overflow-y: auto;
@@ -77,7 +78,7 @@ body {
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--text-dim);
+  color: var(--text-muted);
   margin-bottom: 10px;
 }
 
@@ -96,11 +97,11 @@ body {
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
-  color: var(--text-dim);
+  color: var(--text-muted);
   transition: all 0.15s;
   text-align: left;
 }
-.comp-card:hover { color: var(--text); border-color: var(--text-dim); }
+.comp-card:hover { color: var(--text); border-color: var(--text-muted); }
 .comp-card.active {
   border-color: var(--accent);
   color: var(--accent);
@@ -119,12 +120,12 @@ body {
   margin-bottom: 6px;
   cursor: pointer;
   font-size: 12px;
-  color: var(--text-dim);
+  color: var(--text-muted);
   text-align: left;
   transition: all 0.15s;
   font-family: var(--font-sans);
 }
-.preset-btn:hover { color: var(--text); border-color: var(--text-dim); }
+.preset-btn:hover { color: var(--text); border-color: var(--text-muted); }
 .preset-btn.active { border-color: var(--purple); color: var(--purple); }
 
 /* ── Controls ─────────────────────────────────────────────────── */
@@ -132,7 +133,7 @@ body {
 .ctrl-group label {
   display: block;
   font-size: 12px;
-  color: var(--text-dim);
+  color: var(--text-muted);
   margin-bottom: 5px;
   font-weight: 500;
 }
@@ -145,7 +146,7 @@ body {
   border-radius: 20px;
   padding: 4px 12px;
   font-size: 12px;
-  color: var(--text-dim);
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s;
   font-family: var(--font-sans);
@@ -231,7 +232,7 @@ body {
   flex: 1;
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--text-dim);
+  color: var(--text-muted);
   line-height: 1.5;
   white-space: pre-wrap;
   overflow: hidden;
@@ -244,7 +245,7 @@ body {
 }
 .prompt-editable-hint {
   font-size: 11px;
-  color: #8b949e;
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 .copy-btn {
@@ -308,9 +309,9 @@ body {
 }
 .phase-title .arrow.expanded { transform: rotate(90deg); }
 .phase-body { margin-top: 16px; }
-.phase-body p { font-size: 14px; color: var(--text-dim); margin-bottom: 12px; }
+.phase-body p { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; }
 .phase-body h3 { font-size: 14px; font-weight: 600; margin-bottom: 8px; margin-top: 16px; }
-.phase-body h4 { font-size: 13px; font-weight: 500; color: var(--text-dim); margin-bottom: 4px; margin-top: 10px; }
+.phase-body h4 { font-size: 13px; font-weight: 500; color: var(--text-muted); margin-bottom: 4px; margin-top: 10px; }
 
 /* Sub-item card */
 .sub-item {
@@ -327,7 +328,7 @@ body {
   gap: 10px;
 }
 .sub-item-header h4 { font-size: 13px; font-weight: 600; }
-.sub-item p { font-size: 13px; color: var(--text-dim); margin-top: 8px; }
+.sub-item p { font-size: 13px; color: var(--text-muted); margin-top: 8px; }
 
 /* Success criteria */
 .criteria-list { padding-left: 2px; }
@@ -336,7 +337,7 @@ body {
   align-items: flex-start;
   gap: 8px;
   font-size: 13px;
-  color: var(--text-dim);
+  color: var(--text-muted);
   margin-bottom: 6px;
 }
 .criterion input[type="checkbox"] { margin-top: 2px; accent-color: var(--green); }
@@ -360,7 +361,7 @@ body {
   transition: all 0.15s;
   font-family: var(--font-sans);
   background: none;
-  color: var(--text-dim);
+  color: var(--text-muted);
 }
 .psc-btn:hover { background: var(--surface2); }
 .psc-btn.active-pending {
@@ -422,7 +423,7 @@ body {
   border-left: 3px solid var(--accent);
 }
 .fi-comment { font-size: 12px; color: rgba(203, 213, 225, 0.8); }
-.fi-meta { font-size: 10px; color: var(--text-dim); margin-top: 4px; }
+.fi-meta { font-size: 10px; color: var(--text-muted); margin-top: 4px; }
 .fi-actions { display: flex; gap: 6px; margin-top: 8px; }
 .fi-btn {
   border-radius: 6px;
@@ -464,7 +465,7 @@ body {
   align-items: center;
   justify-content: space-between;
 }
-.ab-left { font-size: 13px; color: var(--text-dim); }
+.ab-left { font-size: 13px; color: var(--text-muted); }
 .ab-right { display: flex; gap: 10px; }
 .ab-btn {
   border-radius: 8px;
@@ -501,7 +502,7 @@ body {
 .progress-wrap { width: 100%; }
 .progress-label {
   font-size: 13px;
-  color: var(--text-dim);
+  color: var(--text-muted);
   margin-bottom: 6px;
   font-weight: 500;
 }
@@ -521,7 +522,7 @@ body {
 
 /* ChangeBlock */
 .change-block { margin-bottom: 14px; }
-.cb-name { font-size: 13px; font-weight: 500; color: var(--text-dim); margin-bottom: 4px; }
+.cb-name { font-size: 13px; font-weight: 500; color: var(--text-muted); margin-bottom: 4px; }
 .cb-file {
   font-size: 13px;
   margin-bottom: 4px;
@@ -534,7 +535,7 @@ body {
   font-family: var(--font-mono);
   font-size: 12px;
 }
-.cb-desc { font-size: 13px; color: var(--text-dim); }
+.cb-desc { font-size: 13px; color: var(--text-muted); }
 .cb-code {
   margin-top: 8px;
   background: var(--surface);
@@ -551,9 +552,9 @@ body {
 .token-string   { color: #a5d6ff; }
 .token-type     { color: var(--orange); }
 .token-func     { color: var(--purple); }
-.token-comment  { color: var(--text-dim); font-style: italic; }
+.token-comment  { color: var(--text-muted); font-style: italic; }
 .token-prop     { color: #7ee787; }
-.token-punct    { color: var(--text-dim); }
+.token-punct    { color: var(--text-muted); }
 .token-number   { color: #79c0ff; }
 .token-selector { color: var(--green); }
 .token-value    { color: #a5d6ff; }
@@ -573,7 +574,7 @@ body {
   border-bottom: 1px solid var(--border);
 }
 .diff-header h3 { font-size: 13px; font-weight: 600; }
-.diff-header span { font-size: 12px; color: var(--text-dim); margin-left: 12px; }
+.diff-header span { font-size: 12px; color: var(--text-muted); margin-left: 12px; }
 .diff-entry {
   padding: 14px 16px;
   border-left: 3px solid transparent;
@@ -607,7 +608,7 @@ body {
   border-radius: 4px;
   padding: 8px;
   font-size: 12px;
-  color: var(--text-dim);
+  color: var(--text-muted);
   white-space: pre-wrap;
 }
 .diff-single-val {
@@ -615,7 +616,7 @@ body {
   border-radius: 4px;
   padding: 8px;
   font-size: 12px;
-  color: var(--text-dim);
+  color: var(--text-muted);
   white-space: pre-wrap;
 }
 .diff-single-val.strike { text-decoration: line-through; }
@@ -624,7 +625,83 @@ body {
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ── Findings ─────────────────────────────────────────────────── */
+.findings-panel {
+  grid-row: 3; grid-column: 2;
+  padding: 16px 24px; border-top: 1px solid var(--border); background: var(--surface);
+  max-height: 50vh; display: flex; flex-direction: column;
+  overflow-y: auto;
+}
+.findings-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+}
+.findings-header h3 {
+  font-size: 12px; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.findings-actions { display: flex; gap: 6px; }
+.findings-actions .copy-btn {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+.add-finding-row {
+  display: flex; gap: 8px; align-items: flex-start; margin-bottom: 10px;
+}
+.add-finding-row textarea {
+  flex: 1; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg); color: var(--text); font-family: inherit;
+  font-size: 13px; resize: none; min-height: 36px;
+}
+.add-finding-row textarea:focus { outline: none; border-color: var(--accent); }
+.add-finding-row textarea::placeholder { color: #484f58; }
+.add-btn {
+  padding: 8px 16px; border: 1px solid var(--accent); border-radius: 6px;
+  background: rgba(88, 166, 255, 0.1); color: var(--accent); font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  font-family: var(--font-sans);
+}
+.add-btn:hover { background: var(--accent); color: white; }
+.add-btn:disabled { opacity: 0.3; cursor: default; }
+.findings-list {
+  overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 6px;
+}
+.finding-item {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 8px 10px; background: var(--bg); border-radius: 6px;
+  border: 1px solid rgba(48, 54, 61, 0.5); font-size: 12px;
+}
+.finding-summary {
+  flex: 1; color: var(--text); font-family: monospace; font-size: 11px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 400px;
+}
+.finding-note { color: var(--text-muted); flex: 1; font-style: italic; font-size: 12px; }
+.finding-remove {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  font-size: 14px; padding: 0 4px; line-height: 1;
+}
+.finding-remove:hover { color: var(--red); }
+.findings-prompt {
+  margin-top: 10px; padding: 10px;
+  background: var(--bg); border-radius: 6px;
+  border: 1px solid rgba(48, 54, 61, 0.5);
+  font-family: monospace; font-size: 11px; line-height: 1.6;
+  color: var(--text-muted); white-space: pre-wrap;
+  max-height: 150px; overflow-y: auto;
+}
+.finding-count {
+  font-size: 11px; color: var(--text-muted); font-weight: 400;
+}
 </style>
 </head>
 <body>
@@ -632,6 +709,7 @@ body {
 <div class="app">
   <!-- ═══ LEFT PANEL ═══ -->
   <div class="left-panel">
+    <p class="playground-question">Toggle component states to see how they render — if something looks off or you want a visual change, capture it as a finding and I'll update the Svelte component.</p>
     <div class="section-title">Components</div>
     <div class="comp-grid" id="compGrid"></div>
 
@@ -652,6 +730,23 @@ body {
     <div class="prompt-text" id="promptText" contenteditable="true"></div>
     <div class="prompt-editable-hint">Click to edit before copying</div>
     <button class="copy-btn" id="copyBtn">Copy</button>
+  </div>
+
+  <!-- ═══ FINDINGS PANEL ═══ -->
+  <div class="findings-panel">
+    <div class="findings-header">
+      <h3>Findings <span class="finding-count" id="finding-count"></span></h3>
+      <div class="findings-actions">
+        <button class="copy-btn" onclick="clearFindings()" style="border-color: var(--text-muted); color: var(--text-muted); background: transparent;">Clear all</button>
+        <button class="copy-btn" onclick="copyFindings()">Copy combined prompt</button>
+      </div>
+    </div>
+    <div class="add-finding-row">
+      <textarea id="finding-note" placeholder="Add a note about this configuration (optional)" rows="1"></textarea>
+      <button class="add-btn" id="add-finding-btn" onclick="addFinding()">+ Add finding</button>
+    </div>
+    <div class="findings-list" id="findings-list"></div>
+    <div class="findings-prompt" id="findings-prompt" contenteditable="true" style="display:none;"></div>
   </div>
 </div>
 
@@ -1223,6 +1318,93 @@ function render() {
 }
 
 render();
+
+// --- Findings accumulator ---
+let findings = [];
+
+function addFinding() {
+  const promptEl = document.getElementById('promptText');
+  const promptText = (promptEl.innerText || promptEl.textContent || '').trim();
+  if (!promptText) return;
+
+  const note = document.getElementById('finding-note').value.trim();
+
+  findings.push({
+    prompt: promptText,
+    note: note || null,
+    timestamp: new Date().toLocaleTimeString()
+  });
+
+  document.getElementById('finding-note').value = '';
+  renderFindings();
+}
+
+function removeFinding(i) {
+  findings.splice(i, 1);
+  renderFindings();
+}
+
+function clearFindings() {
+  if (findings.length > 0 && !confirm('Clear all findings?')) return;
+  findings = [];
+  renderFindings();
+}
+
+function renderFindings() {
+  const list = document.getElementById('findings-list');
+  const count = document.getElementById('finding-count');
+  const promptEl = document.getElementById('findings-prompt');
+
+  count.textContent = findings.length > 0 ? `(${findings.length})` : '';
+
+  if (findings.length === 0) {
+    list.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 8px 0;">No findings yet. Configure the playground and click "+ Add finding" to capture a prompt snapshot.</div>';
+    promptEl.style.display = 'none';
+    return;
+  }
+
+  list.innerHTML = findings.map((f, i) => {
+    const summary = f.prompt.substring(0, 80) + (f.prompt.length > 80 ? '...' : '');
+    const noteHtml = f.note
+      ? `<span class="finding-note">${esc(f.note)}</span>`
+      : '<span class="finding-note" style="opacity:0.4;">no note</span>';
+    return `<div class="finding-item">
+      <span class="finding-summary" title="${esc(f.prompt)}">${esc(summary)}</span>
+      ${noteHtml}
+      <button class="finding-remove" onclick="removeFinding(${i})" title="Remove">\u00d7</button>
+    </div>`;
+  }).join('');
+
+  const lines = findings.map((f, i) => {
+    let line = `${i + 1}. ${f.prompt}`;
+    if (f.note) line += `\n   Note: ${f.note}`;
+    return line;
+  });
+
+  promptEl.style.display = 'block';
+  promptEl.textContent = `I have ${findings.length} configuration(s) to apply:\n\n${lines.join('\n\n')}`;
+}
+
+function copyFindings() {
+  const promptEl = document.getElementById('findings-prompt');
+  const text = (promptEl.innerText || promptEl.textContent || '').trim() || 'Add findings first.';
+  navigator.clipboard.writeText(text).then(() => {
+    const btns = document.querySelectorAll('.findings-actions .copy-btn');
+    const btn = btns[btns.length - 1];
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
+}
+
+document.getElementById('finding-note').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    addFinding();
+  }
+});
+
+renderFindings();
 </script>
 
 </body>

@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PlanJson Schema Explorer</title>
+<title>Plan Assistant - Plan JSON Schema Explorer</title>
 <style>
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+.playground-question { font-size: 13px; color: var(--text-muted); font-weight: 400; margin: 4px 0 12px; }
 
 :root {
   --bg: #0d1117;
@@ -13,7 +14,7 @@
   --surface2: #1c2129;
   --border: #30363d;
   --text: #e6edf3;
-  --text-dim: #8b949e;
+  --text-muted: #8b949e;
   --accent: #58a6ff;
   --green: #3fb950;
   --orange: #d29922;
@@ -89,7 +90,7 @@ header .badge {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  color: var(--text-dim);
+  color: var(--text-muted);
   margin-bottom: 10px;
   font-weight: 600;
 }
@@ -106,7 +107,7 @@ header .badge {
   background: var(--surface2);
   border: 1px solid var(--border);
   border-radius: 6px;
-  color: var(--text-dim);
+  color: var(--text-muted);
   font-size: 11px;
   font-weight: 500;
   cursor: pointer;
@@ -146,7 +147,7 @@ header .badge {
   margin-top: 8px;
 }
 .search-input:focus { border-color: var(--accent); }
-.search-input::placeholder { color: var(--text-dim); }
+.search-input::placeholder { color: var(--text-muted); }
 
 /* Toggle switches */
 .toggle-group { display: flex; flex-direction: column; gap: 8px; }
@@ -218,7 +219,7 @@ header .badge {
 }
 .preset-btn:hover { border-color: var(--accent); background: var(--surface2); }
 .preset-btn .preset-name { font-weight: 500; }
-.preset-btn .preset-desc { color: var(--text-dim); font-size: 11px; }
+.preset-btn .preset-desc { color: var(--text-muted); font-size: 11px; }
 
 /* Expand/Collapse */
 .action-btns { display: flex; gap: 6px; }
@@ -228,7 +229,7 @@ header .badge {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 6px;
-  color: var(--text-dim);
+  color: var(--text-muted);
   font-size: 12px;
   cursor: pointer;
   transition: all 0.15s;
@@ -271,7 +272,7 @@ header .badge {
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  color: var(--text-dim);
+  color: var(--text-muted);
   font-size: 12px;
   flex-shrink: 0;
   border-radius: 3px;
@@ -282,7 +283,7 @@ header .badge {
 .tree-toggle-placeholder { width: 18px; flex-shrink: 0; }
 
 .tree-field { color: var(--accent); font-weight: 500; }
-.tree-colon { color: var(--text-dim); margin: 0 2px; }
+.tree-colon { color: var(--text-muted); margin: 0 2px; }
 .tree-type { color: var(--green); font-size: 12px; }
 .tree-optional { color: var(--orange); font-size: 12px; font-weight: 600; }
 .tree-array-bracket { color: var(--purple); }
@@ -331,7 +332,7 @@ header .badge {
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.8px;
-  color: var(--text-dim);
+  color: var(--text-muted);
   font-weight: 600;
 }
 .copy-btn {
@@ -350,7 +351,7 @@ header .badge {
 .prompt-text {
   font-size: 12px;
   line-height: 1.6;
-  color: var(--text-dim);
+  color: var(--text-muted);
   max-height: 80px;
   overflow-y: auto;
   cursor: text;
@@ -361,7 +362,7 @@ header .badge {
 }
 .prompt-editable-hint {
   font-size: 11px;
-  color: #8b949e;
+  color: var(--text-muted);
   margin-top: 4px;
 }
 .prompt-text code {
@@ -376,16 +377,90 @@ header .badge {
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
 /* Count badge */
 .field-count {
   font-size: 10px;
   background: var(--border);
-  color: var(--text-dim);
+  color: var(--text-muted);
   padding: 0 6px;
   border-radius: 8px;
   margin-left: 4px;
+}
+
+/* Findings */
+.findings-panel {
+  padding: 16px 24px; border-top: 1px solid var(--border); background: var(--surface);
+  max-height: 50vh; display: flex; flex-direction: column;
+  flex-shrink: 0;
+}
+.findings-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+}
+.findings-header h3 {
+  font-size: 12px; font-weight: 600; color: var(--text-muted);
+  text-transform: uppercase; letter-spacing: 0.05em;
+}
+.findings-actions { display: flex; gap: 6px; }
+.findings-actions .copy-btn {
+  padding: 4px 12px;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+  background: transparent;
+}
+.findings-actions .copy-btn:hover { opacity: 0.85; }
+.add-finding-row {
+  display: flex; gap: 8px; align-items: flex-start; margin-bottom: 10px;
+}
+.add-finding-row textarea {
+  flex: 1; padding: 8px 10px;
+  border: 1px solid var(--border); border-radius: 6px;
+  background: var(--bg); color: var(--text); font-family: inherit;
+  font-size: 13px; resize: none; min-height: 36px;
+}
+.add-finding-row textarea:focus { outline: none; border-color: var(--accent); }
+.add-finding-row textarea::placeholder { color: #484f58; }
+.add-btn {
+  padding: 8px 16px; border: 1px solid var(--accent); border-radius: 6px;
+  background: rgba(88, 166, 255, 0.1); color: var(--accent); font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.add-btn:hover { background: var(--accent); color: white; }
+.add-btn:disabled { opacity: 0.3; cursor: default; }
+.findings-list {
+  overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 6px;
+}
+.finding-item {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 8px 10px; background: var(--bg); border-radius: 6px;
+  border: 1px solid rgba(48, 54, 61, 0.5); font-size: 12px;
+}
+.finding-summary {
+  flex: 1; color: var(--text); font-family: monospace; font-size: 11px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 400px;
+}
+.finding-note { color: var(--text-muted); flex: 1; font-style: italic; font-size: 12px; }
+.finding-remove {
+  background: none; border: none; color: var(--text-muted); cursor: pointer;
+  font-size: 14px; padding: 0 4px; line-height: 1;
+}
+.finding-remove:hover { color: var(--red); }
+.findings-prompt {
+  margin-top: 10px; padding: 10px;
+  background: var(--bg); border-radius: 6px;
+  border: 1px solid rgba(48, 54, 61, 0.5);
+  font-family: monospace; font-size: 11px; line-height: 1.6;
+  color: var(--text-muted); white-space: pre-wrap;
+  max-height: 150px; overflow-y: auto;
+}
+.finding-count {
+  font-size: 11px; color: var(--text-muted); font-weight: 400;
 }
 </style>
 </head>
@@ -393,6 +468,7 @@ header .badge {
 
 <header>
   <h1>PlanJson Schema Explorer</h1>
+  <p class="playground-question">The plan JSON has 5 levels of nesting. Expand fields to see their types and where they come from in the markdown. If something is unclear, add it as a finding and I'll explain.</p>
   <span class="badge">Interactive</span>
 </header>
 
@@ -505,6 +581,23 @@ header .badge {
       </div>
       <div class="prompt-text" id="promptOutput" contenteditable="true"></div>
       <div class="prompt-editable-hint">Click to edit before copying</div>
+    </div>
+
+    <!-- Findings -->
+    <div class="findings-panel">
+      <div class="findings-header">
+        <h3>Findings <span class="finding-count" id="finding-count"></span></h3>
+        <div class="findings-actions">
+          <button class="copy-btn" onclick="clearFindings()" style="border-color: var(--text-muted); color: var(--text-muted);">Clear all</button>
+          <button class="copy-btn" onclick="copyFindings()">Copy combined prompt</button>
+        </div>
+      </div>
+      <div class="add-finding-row">
+        <textarea id="finding-note" placeholder="Add a note about this configuration (optional)" rows="1"></textarea>
+        <button class="add-btn" id="add-finding-btn" onclick="addFinding()">+ Add finding</button>
+      </div>
+      <div class="findings-list" id="findings-list"></div>
+      <div class="findings-prompt" id="findings-prompt" contenteditable="true" style="display:none;"></div>
     </div>
   </div>
 </div>
@@ -837,7 +930,7 @@ function renderTree() {
   const container = document.getElementById('treeContainer');
   const rootSchema = SCHEMAS[state.rootType];
   if (!rootSchema) {
-    container.innerHTML = '<p style="color:var(--text-dim)">Unknown type</p>';
+    container.innerHTML = '<p style="color:var(--text-muted)">Unknown type</p>';
     return;
   }
 
@@ -1139,6 +1232,93 @@ function init() {
 }
 
 document.addEventListener('DOMContentLoaded', init);
+
+// --- Findings accumulator ---
+let findings = [];
+
+function addFinding() {
+  const promptEl = document.getElementById('promptOutput');
+  const promptText = (promptEl.innerText || promptEl.textContent || '').trim();
+  if (!promptText) return;
+
+  const note = document.getElementById('finding-note').value.trim();
+
+  findings.push({
+    prompt: promptText,
+    note: note || null,
+    timestamp: new Date().toLocaleTimeString()
+  });
+
+  document.getElementById('finding-note').value = '';
+  renderFindings();
+}
+
+function removeFinding(i) {
+  findings.splice(i, 1);
+  renderFindings();
+}
+
+function clearFindings() {
+  if (findings.length > 0 && !confirm('Clear all findings?')) return;
+  findings = [];
+  renderFindings();
+}
+
+function renderFindings() {
+  const list = document.getElementById('findings-list');
+  const count = document.getElementById('finding-count');
+  const promptEl = document.getElementById('findings-prompt');
+
+  count.textContent = findings.length > 0 ? `(${findings.length})` : '';
+
+  if (findings.length === 0) {
+    list.innerHTML = '<div style="color: var(--text-muted); font-size: 12px; padding: 8px 0;">No findings yet. Configure the playground and click "+ Add finding" to capture a prompt snapshot.</div>';
+    promptEl.style.display = 'none';
+    return;
+  }
+
+  list.innerHTML = findings.map((f, i) => {
+    const summary = f.prompt.substring(0, 80) + (f.prompt.length > 80 ? '...' : '');
+    const noteHtml = f.note
+      ? `<span class="finding-note">${escapeHtml(f.note)}</span>`
+      : '<span class="finding-note" style="opacity:0.4;">no note</span>';
+    return `<div class="finding-item">
+      <span class="finding-summary" title="${escapeHtml(f.prompt)}">${escapeHtml(summary)}</span>
+      ${noteHtml}
+      <button class="finding-remove" onclick="removeFinding(${i})" title="Remove">\u00d7</button>
+    </div>`;
+  }).join('');
+
+  const lines = findings.map((f, i) => {
+    let line = `${i + 1}. ${f.prompt}`;
+    if (f.note) line += `\n   Note: ${f.note}`;
+    return line;
+  });
+
+  promptEl.style.display = 'block';
+  promptEl.textContent = `I have ${findings.length} configuration(s) to apply:\n\n${lines.join('\n\n')}`;
+}
+
+function copyFindings() {
+  const promptEl = document.getElementById('findings-prompt');
+  const text = (promptEl.innerText || promptEl.textContent || '').trim() || 'Add findings first.';
+  navigator.clipboard.writeText(text).then(() => {
+    const btns = document.querySelectorAll('.findings-actions .copy-btn');
+    const btn = btns[btns.length - 1];
+    const orig = btn.textContent;
+    btn.textContent = 'Copied!';
+    setTimeout(() => { btn.textContent = orig; }, 1500);
+  });
+}
+
+document.getElementById('finding-note').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    addFinding();
+  }
+});
+
+renderFindings();
 </script>
 </body>
 </html>

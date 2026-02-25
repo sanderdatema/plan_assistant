@@ -270,13 +270,81 @@
         "priority": "medium",
         "subtasks": [],
         "updatedAt": "2026-02-23T17:44:26.937Z"
+      },
+      {
+        "id": "23",
+        "title": "Standardize playground <title> tags",
+        "description": "Three of 8 playgrounds use inconsistent title formats. Should all follow \"Plan Assistant - [Name]\" with a hyphen separator. Fix: plan-json-schema-explorer.html (\"PlanJson Schema Explorer\" → \"Plan Assistant - Plan JSON Schema Explorer\"), markdown-format-concept-map.html (em-dash → hyphen), cli-command-builder.html (no separator → add hyphen).",
+        "details": "Fix the <title> tag in these 3 files:\n1. playgrounds/plan-json-schema-explorer.html:6 — change \"PlanJson Schema Explorer\" to \"Plan Assistant - Plan JSON Schema Explorer\"\n2. playgrounds/markdown-format-concept-map.html:6 — change em-dash (—) to hyphen (-)\n3. playgrounds/cli-command-builder.html:6 — change \"Plan Assistant CLI Command Builder\" to \"Plan Assistant - CLI Command Builder\"",
+        "testStrategy": "Open each file in a browser and verify the tab title displays correctly with consistent \"Plan Assistant - [Name]\" format.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "low",
+        "subtasks": [],
+        "updatedAt": "2026-02-24T18:41:14.173Z"
+      },
+      {
+        "id": "24",
+        "title": "Unify dim text CSS variable across all playgrounds",
+        "description": "Four different CSS variable names are used for the same dim/muted text color across 8 playgrounds: --text-dim (2 files), --text-muted (3 files), --ui-text-dim (2 files), and hardcoded #8b949e (1 file). Pick one name and apply it everywhere, including: .finding-note color, \"Clear all\" button styles, \"No findings yet\" placeholder text color, and .playground-question color.",
+        "details": "1. Choose one variable name (recommend --text-muted for consistency with common conventions)\n2. Ensure each playground defines this variable in its :root or body CSS\n3. Replace all occurrences across all 8 playgrounds:\n   - plan-json-schema-explorer.html: --text-dim → --text-muted\n   - component-state-gallery.html: --text-dim → --text-muted\n   - theme-token-explorer.html: --ui-text-dim → --text-muted\n   - html-export-style-critique.html: --ui-text-dim → --text-muted\n   - architecture-code-map.html: hardcoded #8b949e → var(--text-muted)\n   - markdown-plan-builder.html, markdown-format-concept-map.html, cli-command-builder.html already use --text-muted",
+        "testStrategy": "Open each playground in a browser and verify dim text (findings notes, \"Clear all\" button, empty findings placeholder, playground question) renders with the same visual color. Check no broken CSS references.",
+        "status": "done",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": [],
+        "updatedAt": "2026-02-25T07:55:34.785Z"
+      },
+      {
+        "id": "25",
+        "title": "Standardize HTML escape utility function name across playgrounds",
+        "description": "Five different function names for the identical HTML escape utility across 8 playgrounds: escapeHtml (1 file), esc (2 files), escHtml (2 files), escFinding (3 files). Pick one name and use it everywhere.",
+        "details": "Pick one name (recommend escHtml as it's concise and descriptive) and rename in all 8 playgrounds:\n1. plan-json-schema-explorer.html: escapeHtml → escHtml\n2. markdown-plan-builder.html: esc → escHtml\n3. component-state-gallery.html: esc → escHtml\n4. architecture-code-map.html: already escHtml\n5. cli-command-builder.html: already escHtml\n6. markdown-format-concept-map.html: escFinding → escHtml\n7. theme-token-explorer.html: escFinding → escHtml\n8. html-export-style-critique.html: escFinding → escHtml\nSearch-replace each name at both the function definition and all call sites within the same file.",
+        "testStrategy": "For each playground, verify the findings system still works: add a finding with HTML special characters in the note (e.g., <script> or \"quotes\") and confirm they render escaped, not as HTML.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "subtasks": []
+      },
+      {
+        "id": "26",
+        "title": "Standardize prompt output element IDs across playgrounds",
+        "description": "Seven different element IDs for the prompt output div across 8 playgrounds: promptOutput (2), promptText (1), prompt-body (1), prompt-text (2), prompt-output (1), prompt-content (1). Pick one ID and update all HTML elements, CSS selectors, and JS references in each file.",
+        "details": "Pick one ID (recommend \"prompt-output\" as it's descriptive and uses kebab-case matching HTML conventions) and update in all 8 playgrounds:\n1. plan-json-schema-explorer.html: promptOutput → prompt-output (HTML id, CSS class .prompt-text, all getElementById calls)\n2. markdown-plan-builder.html: promptOutput → prompt-output (same)\n3. component-state-gallery.html: promptText → prompt-output (same)\n4. architecture-code-map.html: prompt-body → prompt-output (same)\n5. markdown-format-concept-map.html: prompt-text → prompt-output (same)\n6. cli-command-builder.html: prompt-text → prompt-output (same)\n7. theme-token-explorer.html: already prompt-output\n8. html-export-style-critique.html: prompt-content → prompt-output (same)\nAlso standardize the CSS class to .prompt-output or use ID selector #prompt-output consistently.",
+        "testStrategy": "For each playground: (1) verify the prompt output area renders correctly, (2) change a control and confirm the prompt text updates, (3) click \"Copy\" and paste — confirm it captured the prompt text, (4) verify contenteditable still works by clicking and typing in the prompt area.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "27",
+        "title": "Add presets to html-export-style-critique playground",
+        "description": "html-export-style-critique.html is the only playground of 8 without presets. All other 7 have a preset dropdown that loads predefined configurations. Add a preset system with at least 3 presets covering common export critique scenarios (e.g., \"Minimal dark\", \"Full catppuccin theme\", \"Accessibility focus\").",
+        "details": "1. Add a preset select dropdown in the controls area, matching the pattern used in other playgrounds (e.g., markdown-format-concept-map.html has a good reference)\n2. Create at least 3 presets that pre-configure the suggestion approvals/rejections for common scenarios\n3. Wire up preset change to applyPreset() function that updates state and calls updateAll()\n4. Include a \"Custom\" or \"Default\" option that resets to initial state",
+        "testStrategy": "Open html-export-style-critique.html in browser, select each preset and verify: (1) the preview updates correctly, (2) the prompt output reflects the preset changes, (3) switching between presets works without errors.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "medium",
+        "subtasks": []
+      },
+      {
+        "id": "28",
+        "title": "Standardize findings button CSS classes across playgrounds",
+        "description": "Three different CSS class patterns for the \"Clear all\" and \"Copy combined prompt\" buttons in the findings panel: (1) both use .copy-btn in 5 playgrounds, (2) separate .clear-btn/.copy-combined-btn in 2 playgrounds, (3) .findings-btn in 1 playground. Unify to one pattern.",
+        "details": "Pick one approach (recommend .findings-btn for both buttons since they're specific to the findings panel) and update:\n1. plan-json-schema-explorer.html: copy-btn → findings-btn\n2. markdown-plan-builder.html: copy-btn → findings-btn\n3. component-state-gallery.html: copy-btn → findings-btn\n4. architecture-code-map.html: copy-btn → findings-btn\n5. cli-command-builder.html: copy-btn → findings-btn\n6. markdown-format-concept-map.html: clear-btn/copy-combined-btn → findings-btn\n7. theme-token-explorer.html: clear-btn/copy-combined-btn → findings-btn\n8. html-export-style-critique.html: already findings-btn\nAlso ensure consistent inline styles vs. CSS class styling for the button variants (Clear = dim, Copy = accent).",
+        "testStrategy": "Open each playground, add a finding, then verify: (1) \"Clear all\" button is styled with dim color, (2) \"Copy combined prompt\" button is styled with accent color, (3) both buttons function correctly.",
+        "status": "pending",
+        "dependencies": [],
+        "priority": "low",
+        "subtasks": []
       }
     ],
     "metadata": {
       "version": "1.0.0",
-      "lastModified": "2026-02-23T17:44:26.937Z",
-      "taskCount": 22,
-      "completedCount": 22,
+      "lastModified": "2026-02-25T07:55:34.785Z",
+      "taskCount": 28,
+      "completedCount": 24,
       "tags": [
         "master"
       ]
