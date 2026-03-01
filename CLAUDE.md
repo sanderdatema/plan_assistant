@@ -1,20 +1,43 @@
-# Publishing
+# Plan Assistant
 
-We use alpha versioning during development. Check the current version in `package.json` and pick the next unreleased version with an `-alpha.N` suffix. Increment the alpha build number on each push (e.g. `alpha.1` -> `alpha.2`). Include the version bump in the same push.
+SvelteKit web UI + Node CLI for reviewing implementation plans in the browser with live reload.
 
-Follow semver strictly when choosing the version:
-- **Patch** (1.2.x): bug fixes only — no new features, no UI changes
-- **Minor** (1.x.0): new features, UI improvements, behavior changes
-- **Major** (x.0.0): breaking changes to the CLI interface or plan JSON schema
+## Plane Rules
+- Taakbeheer gaat via Plane. Gebruik altijd de `mcp__plane__*` MCP tools.
+- project_id: `5856874d-207a-44d6-a88e-88aa5169468d`
+- State UUIDs — Todo: `ca77a67d-3eee-4705-b3aa-4faae7b92a07` | In Progress: `d780fd29-153f-47a9-9412-636e7475d537` | Done: `306d06ab-c698-4c7b-8d1e-a1bca772df19`
+- Volgende taak: `mcp__plane__list_work_items` → filter op Todo/In Progress → sorteer op priority (urgent→high→medium→low).
+- Taak starten: `mcp__plane__update_work_item(issue_id=..., state="d780fd29-153f-47a9-9412-636e7475d537")`.
+- Taak afronden: `mcp__plane__update_work_item(issue_id=..., state="306d06ab-c698-4c7b-8d1e-a1bca772df19")`.
+- Nieuwe taak: `mcp__plane__create_work_item(project_id=..., name=..., priority=..., state="ca77a67d-3eee-4705-b3aa-4faae7b92a07")`.
+- Nooit `task-master` CLI aanroepen — dat is verwijderd.
 
-If the alpha series started as a patch but new features were added, bump to the next minor for the stable release. Semver ordering handles this fine (e.g. `1.0.1-alpha.5 < 1.1.0`).
+## Tech Stack
 
-**Do not push or publish unless the user explicitly asks.** Commit locally, but wait for the user to say "push", "release", or similar before running `git push`.
+- **Framework**: SvelteKit (Svelte 5 with runes), adapter-node
+- **Language**: TypeScript (strict)
+- **Styling**: Tailwind v4 with `@theme` block in `src/app.css`
+- **Parser**: `marked` library for markdown tokenization
+- **Tests**: Vitest (`npm test`)
+- **Package manager**: npm
 
-When the user asks for a stable release, drop the alpha suffix, commit, tag, and push.
+## Key Directories
 
-Publishing happens via GitHub Actions (`.github/workflows/publish.yml`):
-- **Alpha**: Every push to `main` automatically publishes with `--tag alpha` dist-tag. Can also be triggered manually via Actions > "Publish to npm" > "Run workflow".
-- **Stable**: Push a `v*` tag (e.g. `git tag v1.0.0 && git push origin v1.0.0`). Publishes with the default `latest` dist-tag.
+- `src/cli/` — CLI entry point, commands, markdown parser
+- `src/lib/components/` — Svelte components (plan/, feedback/)
+- `src/lib/stores/` — Svelte 5 rune-based stores
+- `src/lib/server/` — Session manager, file watcher, SSE
+- `src/routes/` — SvelteKit pages and API routes
+- `playgrounds/` — Standalone HTML files for design exploration
 
-Authentication uses npm Trusted Publishing (OIDC) — no secrets needed. Trusted publishing must be configured on npmjs.com for the `plan-assistant` package.
+## Commands
+
+- `npm run dev` — Dev server on port 5199
+- `npm run build` — Build CLI + server
+- `npm run build:cli` — CLI only (tsconfig.cli.json -> bin/)
+- `npm test` — Vitest run
+- `npm run check` — svelte-check + TypeScript
+
+## Publishing
+
+Use the `/publish` skill for versioning and releases.
