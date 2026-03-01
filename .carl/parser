@@ -1,0 +1,13 @@
+# PARSER Domain Rules
+# ===================
+# Markdown-to-JSON parser: flexible format acceptance, section patterns, phase parsing.
+
+PARSER_RULE_0=Parser lives in src/cli/markdown-parser.ts, orchestrator in src/cli/markdown-to-plan.ts
+PARSER_RULE_1=Uses the 'marked' library to tokenize markdown, then walks tokens by section
+PARSER_RULE_2=KNOWN_SECTION_PATTERNS defines recognized non-phase H2 sections: Overview, Current State, Scope Exclusions, Implementation Approach, Testing Strategy, References, etc.
+PARSER_RULE_3=Phase headings accept 4 formats via tryMatchPhaseHeading: "Phase N: Name", "Phase N - Name", "Step N: Name", "Task N: Name"
+PARSER_RULE_4=Unnumbered H2s that aren't in KNOWN_SECTION_PATTERNS are accepted as phases if they contain phase-like subsections (Changes, Criteria)
+PARSER_RULE_5=Changes can be heading-based (H4 with numbered prefix) OR list-based (bullet with file path) - parser tries both
+PARSER_RULE_6=Success criteria split into automated (with runnable command) and manual categories
+PARSER_RULE_7=Parser emits warnings via ParseContext.warn() for non-canonical formats it still accepts - never fails on valid markdown
+PARSER_RULE_8=Parsing order: title -> overview -> currentState -> keyDiscoveries -> scopeExclusions -> approach -> phases -> diagrams -> testingStrategy -> references -> additionalSections

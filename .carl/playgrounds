@@ -1,0 +1,11 @@
+# PLAYGROUNDS Domain Rules
+# ========================
+# Interactive HTML playground files in playgrounds/ directory.
+
+PLAYGROUNDS_RULE_0=Playgrounds are self-contained HTML files - inline all CSS and JS, no external dependencies
+PLAYGROUNDS_RULE_1=Eight playgrounds: markdown-plan-builder, architecture-code-map, theme-token-explorer, markdown-format-concept-map, cli-command-builder, plan-json-schema-explorer, component-state-gallery, html-export-style-critique
+PLAYGROUNDS_RULE_2=Every playground has: live preview (updates instantly on control change), prompt output (contenteditable), copy button, findings accumulator, presets, dark theme
+PLAYGROUNDS_RULE_3=Prompt output uses [Playground: Name] tag prefix for identification when pasted into Claude
+PLAYGROUNDS_RULE_4=Findings system: textarea + "Add finding" captures current prompt snapshot with optional note, findings list with remove, combined prompt with copy button
+PLAYGROUNDS_RULE_5=State management: single state object, every control writes to it, every render reads from it, updateAll() triggers both renderPreview() and updatePrompt()
+PLAYGROUNDS_RULE_6=Prompt output must be natural language (not a value dump), only mention non-default choices, include enough context to act on without the playground

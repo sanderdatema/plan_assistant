@@ -1,0 +1,10 @@
+# TESTING Domain Rules
+# ====================
+# Testing patterns for plan-assistant.
+
+TESTING_RULE_0=Vitest is the test framework - run with npm test or vitest run
+TESTING_RULE_1=Parser tests should cover all 4 phase heading formats and both change description formats (heading-based and list-based)
+TESTING_RULE_2=Test markdown input -> PlanJson output for parser changes - verify the JSON structure matches expected types
+TESTING_RULE_3=Playground HTML files must work standalone with no server - open directly in browser to verify
+TESTING_RULE_4=After changing theme tokens, verify both web UI and HTML export render correctly
+TESTING_RULE_5=CLI command changes must be tested with the built binary (npm run build:cli && node bin/cli.js)

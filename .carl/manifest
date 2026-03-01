@@ -1,0 +1,67 @@
+# CARL Manifest - plan-assistant
+# ================================
+# Project-level domains. Global domains (GLOBAL, CONTEXT, COMMANDS) are inherited.
+#
+# Format:
+#   {DOMAIN}_STATE=active|inactive
+#   {DOMAIN}_ALWAYS_ON=true|false
+#   {DOMAIN}_RECALL=keyword1,keyword2
+#   {DOMAIN}_EXCLUDE=
+
+DEVMODE=false
+
+# ============================================================================
+# PUBLISHING - Version management and npm release workflow
+# ============================================================================
+PUBLISHING_STATE=active
+PUBLISHING_RECALL=push,publish,release,version,bump,tag,alpha,stable,npm
+PUBLISHING_ALWAYS_ON=false
+
+# ============================================================================
+# CLI - Command-line interface, arg parsing, command dispatch
+# ============================================================================
+CLI_STATE=active
+CLI_RECALL=cli,command,flag,arg,review,status,feedback,list,init,clean,export,bin,parseArgs
+CLI_ALWAYS_ON=false
+
+# ============================================================================
+# PARSER - Markdown-to-JSON parser, section patterns, format flexibility
+# ============================================================================
+PARSER_STATE=active
+PARSER_RECALL=parser,parse,markdown,section,phase,heading,change,criteria,marked,token
+PARSER_ALWAYS_ON=false
+
+# ============================================================================
+# SERVER - SvelteKit server, SSE, sessions, file watching
+# ============================================================================
+SERVER_STATE=active
+SERVER_RECALL=server,sse,session,watcher,chokidar,hooks,api,route,endpoint
+SERVER_ALWAYS_ON=false
+
+# ============================================================================
+# COMPONENTS - Svelte 5 components, stores, UI patterns
+# ============================================================================
+COMPONENTS_STATE=active
+COMPONENTS_RECALL=component,svelte,store,rune,phase,card,table,feedback,approval,diff,mermaid,progress
+COMPONENTS_ALWAYS_ON=false
+
+# ============================================================================
+# THEMES - Color themes (GitHub Dark web UI + Catppuccin Mocha export)
+# ============================================================================
+THEMES_STATE=active
+THEMES_RECALL=theme,color,token,css,tailwind,catppuccin,dark,accent,badge,style
+THEMES_ALWAYS_ON=false
+
+# ============================================================================
+# PLAYGROUNDS - Interactive HTML playground files
+# ============================================================================
+PLAYGROUNDS_STATE=active
+PLAYGROUNDS_RECALL=playground,explorer,builder,gallery,interactive,html,findings
+PLAYGROUNDS_ALWAYS_ON=false
+
+# ============================================================================
+# TESTING - Test patterns and verification
+# ============================================================================
+TESTING_STATE=active
+TESTING_RECALL=test,spec,vitest,coverage,assert
+TESTING_ALWAYS_ON=false

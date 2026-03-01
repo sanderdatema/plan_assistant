@@ -1,0 +1,12 @@
+# SERVER Domain Rules
+# ===================
+# SvelteKit server: SSE streaming, session management, file watching.
+
+SERVER_RULE_0=Server code lives in src/lib/server/ - session-manager.ts, file-watcher.ts, sse-manager.ts
+SERVER_RULE_1=Sessions are stored as JSON files in a .plan-sessions/ directory alongside the source markdown
+SERVER_RULE_2=File watcher (chokidar) monitors the markdown source and re-parses on change, pushing updates via SSE
+SERVER_RULE_3=SSE manager maintains per-session client connections at GET /api/sse/[id]
+SERVER_RULE_4=API routes: GET /api/sessions (list), GET /api/sse/[id] (stream), PUT /api/sessions/[id]/feedback, POST /api/sessions/[id]/approve, GET /api/sessions/[id]/versions
+SERVER_RULE_5=hooks.server.ts initializes the file watcher and session manager on first request
+SERVER_RULE_6=SvelteKit uses adapter-node for production builds, output in build/ directory
+SERVER_RULE_7=Dev server runs on port 5199 (vite dev --port 5199)

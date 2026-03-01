@@ -1,0 +1,12 @@
+# COMPONENTS Domain Rules
+# =======================
+# Svelte 5 components, runes-based stores, and UI patterns.
+
+COMPONENTS_RULE_0=Svelte 5 with runes ($state, $derived, $effect) - no legacy stores or reactive declarations
+COMPONENTS_RULE_1=Plan components in src/lib/components/plan/: PlanHeader, PhaseTable, PhaseCard, ChangeBlock, MarkdownBlock, MermaidDiagram, VersionSelector, DiffView, ProgressBar
+COMPONENTS_RULE_2=Feedback components in src/lib/components/feedback/: FeedbackPanel, FeedbackItem, HoverToolbar, ApprovalBar, PhaseStatusControl
+COMPONENTS_RULE_3=Stores in src/lib/stores/: plan.svelte.ts (plan data + SSE connection), feedback.svelte.ts (feedback state)
+COMPONENTS_RULE_4=Types in src/lib/types/: plan.ts (PlanJson, Phase, Change, Criterion, SubItem, Diagram), feedback.ts (FeedbackPayload, FeedbackComment), session.ts (SessionMeta)
+COMPONENTS_RULE_5=PlanJson has 5 levels of nesting: PlanJson -> phases[] -> changes[]/successCriteria/subItems[] -> individual items
+COMPONENTS_RULE_6=MermaidDiagram renders via the mermaid library with dark theme; code highlighting uses highlight.js
+COMPONENTS_RULE_7=Tailwind v4 with @theme block in src/app.css - use CSS variables not hardcoded colors in components

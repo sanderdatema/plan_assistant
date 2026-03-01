@@ -1,0 +1,12 @@
+# CLI Domain Rules
+# ================
+# Command-line interface: 7 commands, arg parsing, and command dispatch.
+
+CLI_RULE_0=Entry point is src/cli/index.ts - parseArgs() handles all flag/positional parsing
+CLI_RULE_1=Seven commands: review, status, feedback, list, init, clean, export - each in src/cli/commands/{name}.ts
+CLI_RULE_2=Session identifiers accept both file paths and 8-char short IDs - resolved in each command
+CLI_RULE_3=The --pretty flag outputs formatted JSON for status, feedback, and list commands
+CLI_RULE_4=status --wait blocks until feedback is submitted, with optional --wait-timeout duration
+CLI_RULE_5=clean --dry-run shows what would be deleted without deleting; --force skips confirmation
+CLI_RULE_6=CLI builds separately from web UI: npm run build:cli uses tsconfig.cli.json targeting bin/
+CLI_RULE_7=Binary is bin/cli.js registered as "plan-assistant" in package.json bin field
