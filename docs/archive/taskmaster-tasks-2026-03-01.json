@@ -324,7 +324,7 @@
         "details": "1. Add a preset select dropdown in the controls area, matching the pattern used in other playgrounds (e.g., markdown-format-concept-map.html has a good reference)\n2. Create at least 3 presets that pre-configure the suggestion approvals/rejections for common scenarios\n3. Wire up preset change to applyPreset() function that updates state and calls updateAll()\n4. Include a \"Custom\" or \"Default\" option that resets to initial state",
         "testStrategy": "Open html-export-style-critique.html in browser, select each preset and verify: (1) the preview updates correctly, (2) the prompt output reflects the preset changes, (3) switching between presets works without errors.",
         "status": "pending",
-        "dependencies": [],
+        "dependencies": ["26"],
         "priority": "medium",
         "subtasks": []
       },
