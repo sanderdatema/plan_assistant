@@ -6,9 +6,12 @@ import { createServer } from "node:net";
 import { watch } from "chokidar";
 import { parseMarkdownToPlan, sessionIdFromPath } from "../markdown-to-plan.js";
 import { outputJson } from "../output.js";
-import type { SessionMeta } from "../../lib/types/index.js";
+import type { SessionMeta, FeedbackPayload } from "../../lib/types/index.js";
 import { ensureDir } from "../utils.js";
 import type { ParsedArgs } from "../index.js";
+
+const EXIT_APPROVED = 0;
+const EXIT_NEEDS_WORK = 3;
 
 const DEFAULT_BASE_PORT = 5181;
 const MAX_PORT = 5199;
@@ -195,6 +198,28 @@ export async function review(args: ParsedArgs) {
     console.error(`Warning: ${warning}`);
   }
 
+  if (plan.phases.length === 0) {
+    console.error(`
+⚠ No phases found — plan will appear empty in the browser.
+
+Use the correct format for phases:
+
+  ## Phase 1: Phase Name
+
+  ### Changes Required:
+
+  #### 1. Component Name
+  **File**: \`path/to/file.ext\`
+  Description of what to change.
+
+  ### Success Criteria:
+  - [ ] \`npm test\`
+
+Accepted phase keywords: "Phase N:", "Step N:", "Task N:" (H2 headings)
+Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatted template.
+`);
+  }
+
   // Write session files
   ensureDir(sessionPath);
   ensureDir(join(sessionPath, "versions"));
@@ -263,18 +288,26 @@ export async function review(args: ParsedArgs) {
 
   openBrowser(url);
 
+  const noWait = args.flags["no-wait"] === true;
+
   console.error(`\nPlan Assistant`);
   console.error(`  Review:   ${url}`);
   console.error(`  Session:  ${sessionPath}`);
   console.error(`  Feedback: ${feedbackPath}`);
-  console.error(`\nWatching ${absolutePath} for changes...`);
+  if (noWait) {
+    console.error(`\nWatching ${absolutePath} for changes...`);
+    console.error(`Run \`plan-assistant status --wait ${markdownFile}\` to wait for feedback.`);
+  } else {
+    console.error(`\nWatching for changes and waiting for your feedback (Approve / Request Changes)...`);
+    console.error(`Press Ctrl+C to stop without waiting.`);
+  }
 
   // Watch markdown file for changes
-  const watcher = watch(absolutePath, {
+  const mdWatcher = watch(absolutePath, {
     awaitWriteFinish: { stabilityThreshold: 300, pollInterval: 100 },
   });
 
-  watcher.on("change", () => {
+  mdWatcher.on("change", () => {
     try {
       const updated = readFileSync(absolutePath, "utf-8");
       const existingPlan = JSON.parse(readFileSync(existingPlanPath, "utf-8"));
@@ -288,6 +321,10 @@ export async function review(args: ParsedArgs) {
 
       for (const warning of newWarnings) {
         console.error(`Warning: ${warning}`);
+      }
+
+      if (newPlan.phases.length === 0) {
+        console.error(`⚠ No phases found after reload — check format. Run \`npx plan-assistant init\` for a template.`);
       }
 
       writeFileSync(
@@ -306,10 +343,81 @@ export async function review(args: ParsedArgs) {
     }
   });
 
-  // Keep process alive
+  // Wait for feedback unless --no-wait
+  if (!noWait) {
+    await waitForFeedback(feedbackPath, sessionId, plan.meta.title, mdWatcher);
+    return;
+  }
+
+  // Keep process alive (--no-wait mode)
   process.on("SIGINT", () => {
-    watcher.close();
+    mdWatcher.close();
     console.error("\nStopped watching.");
     process.exit(0);
   });
+}
+
+async function waitForFeedback(
+  feedbackPath: string,
+  sessionId: string,
+  planTitle: string,
+  mdWatcher: ReturnType<typeof watch>,
+): Promise<void> {
+  // Check if feedback already submitted
+  if (existsSync(feedbackPath)) {
+    try {
+      const existing = JSON.parse(readFileSync(feedbackPath, "utf-8")) as FeedbackPayload;
+      if (existing.status === "approved" || existing.status === "needs-work") {
+        mdWatcher.close();
+        outputFeedbackResult(existing, sessionId, planTitle);
+        return;
+      }
+    } catch { /* ignore */ }
+  }
+
+  return new Promise((resolve) => {
+    const fbWatcher = watch(feedbackPath, {
+      awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 100 },
+    });
+
+    const check = () => {
+      try {
+        if (!existsSync(feedbackPath)) return;
+        const data = JSON.parse(readFileSync(feedbackPath, "utf-8")) as FeedbackPayload;
+        if (data.status === "approved" || data.status === "needs-work") {
+          fbWatcher.close();
+          mdWatcher.close();
+          outputFeedbackResult(data, sessionId, planTitle);
+          resolve();
+        }
+      } catch { /* ignore parse errors during writes */ }
+    };
+
+    fbWatcher.on("change", check);
+    fbWatcher.on("add", check);
+
+    process.on("SIGINT", () => {
+      fbWatcher.close();
+      mdWatcher.close();
+      console.error("\nStopped watching.");
+      process.exit(0);
+    });
+  });
+}
+
+function outputFeedbackResult(
+  feedback: FeedbackPayload,
+  sessionId: string,
+  planTitle: string,
+): void {
+  const unresolvedComments = feedback.comments.filter((c) => !c.resolved);
+  outputJson({
+    event: "feedback",
+    sessionId,
+    planTitle,
+    status: feedback.status,
+    comments: unresolvedComments,
+    commentCount: unresolvedComments.length,
+  });
+  process.exit(feedback.status === "approved" ? EXIT_APPROVED : EXIT_NEEDS_WORK);
 }
