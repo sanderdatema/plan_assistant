@@ -4,8 +4,11 @@ import { join } from "node:path";
 import {
   parseMarkdownToPlan,
   sessionIdFromPath,
-  _internal,
 } from "../src/cli/markdown-to-plan.js";
+import {
+  tryMatchPhaseHeading,
+  extractFilePath,
+} from "../src/cli/markdown-parser.js";
 
 const FIXTURES_DIR = join(import.meta.dirname, "fixtures");
 
@@ -204,8 +207,6 @@ describe("kitchen-sink plan", () => {
 // --- Internal helpers ---
 
 describe("tryMatchPhaseHeading", () => {
-  const { tryMatchPhaseHeading } = _internal;
-
   it("matches canonical format", () => {
     const result = tryMatchPhaseHeading("Phase 1: Setup", 1);
     expect(result).toEqual({ number: 1, name: "Setup", variant: "canonical" });
@@ -237,8 +238,6 @@ describe("tryMatchPhaseHeading", () => {
 });
 
 describe("extractFilePath", () => {
-  const { extractFilePath } = _internal;
-
   it("extracts bold file path", () => {
     const result = extractFilePath("**File**: `src/foo.ts`");
     expect(result?.filePath).toBe("src/foo.ts");

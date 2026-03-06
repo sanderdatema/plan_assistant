@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn, execSync } from "node:child_process";
@@ -7,7 +7,6 @@ import { watch } from "chokidar";
 import { parseMarkdownToPlan, sessionIdFromPath } from "../markdown-to-plan.js";
 import { outputJson } from "../output.js";
 import type { SessionMeta, FeedbackPayload } from "../../lib/types/index.js";
-import { ensureDir } from "../utils.js";
 import type { ParsedArgs } from "../index.js";
 
 const EXIT_APPROVED = 0;
@@ -119,6 +118,17 @@ function startServer(sessionDir: string, port: number): Promise<void> {
   });
 }
 
+async function launchServer(sessionDir: string, port: number): Promise<void> {
+  process.stdout.write(`Starting Plan Assistant server on port ${port}...`);
+  try {
+    await startServer(sessionDir, port);
+    console.log(" ready.");
+  } catch (err) {
+    console.error(` failed: ${err}`);
+    process.exit(1);
+  }
+}
+
 function openBrowser(url: string) {
   try {
     const cmd =
@@ -221,8 +231,8 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
   }
 
   // Write session files
-  ensureDir(sessionPath);
-  ensureDir(join(sessionPath, "versions"));
+  mkdirSync(sessionPath, { recursive: true });
+  mkdirSync(join(sessionPath, "versions"), { recursive: true });
 
   const meta: SessionMeta = {
     id: sessionId,
@@ -246,33 +256,17 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
   const basePort = requestedPort ?? DEFAULT_BASE_PORT;
   let port = await findExistingServer(sessionDir, basePort);
 
-  if (port) {
-    // Server already running for this session dir
-  } else if (requestedPort) {
-    // Specific port requested
-    if (!(await isPortFree(requestedPort))) {
-      console.error(`Error: Port ${requestedPort} is already in use`);
-      process.exit(1);
+  if (!port) {
+    if (requestedPort) {
+      if (!(await isPortFree(requestedPort))) {
+        console.error(`Error: Port ${requestedPort} is already in use`);
+        process.exit(1);
+      }
+      port = requestedPort;
+    } else {
+      port = await findFreePort(basePort);
     }
-    port = requestedPort;
-    process.stdout.write(`Starting Plan Assistant server on port ${port}...`);
-    try {
-      await startServer(sessionDir, port);
-      console.log(" ready.");
-    } catch (err) {
-      console.error(` failed: ${err}`);
-      process.exit(1);
-    }
-  } else {
-    port = await findFreePort(basePort);
-    process.stdout.write(`Starting Plan Assistant server on port ${port}...`);
-    try {
-      await startServer(sessionDir, port);
-      console.log(" ready.");
-    } catch (err) {
-      console.error(` failed: ${err}`);
-      process.exit(1);
-    }
+    await launchServer(sessionDir, port);
   }
 
   const url = `http://localhost:${port}/plan/${sessionId}`;
@@ -296,9 +290,13 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
   console.error(`  Feedback: ${feedbackPath}`);
   if (noWait) {
     console.error(`\nWatching ${absolutePath} for changes...`);
-    console.error(`Run \`plan-assistant status --wait ${markdownFile}\` to wait for feedback.`);
+    console.error(
+      `Run \`plan-assistant status --wait ${markdownFile}\` to wait for feedback.`,
+    );
   } else {
-    console.error(`\nWatching for changes and waiting for your feedback (Approve / Request Changes)...`);
+    console.error(
+      `\nWatching for changes and waiting for your feedback (Approve / Request Changes)...`,
+    );
     console.error(`Press Ctrl+C to stop without waiting.`);
   }
 
@@ -324,7 +322,9 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
       }
 
       if (newPlan.phases.length === 0) {
-        console.error(`⚠ No phases found after reload — check format. Run \`npx plan-assistant init\` for a template.`);
+        console.error(
+          `⚠ No phases found after reload — check format. Run \`npx plan-assistant init\` for a template.`,
+        );
       }
 
       writeFileSync(
@@ -366,13 +366,17 @@ async function waitForFeedback(
   // Check if feedback already submitted
   if (existsSync(feedbackPath)) {
     try {
-      const existing = JSON.parse(readFileSync(feedbackPath, "utf-8")) as FeedbackPayload;
+      const existing = JSON.parse(
+        readFileSync(feedbackPath, "utf-8"),
+      ) as FeedbackPayload;
       if (existing.status === "approved" || existing.status === "needs-work") {
         mdWatcher.close();
         outputFeedbackResult(existing, sessionId, planTitle);
         return;
       }
-    } catch { /* ignore */ }
+    } catch {
+      /* ignore */
+    }
   }
 
   return new Promise((resolve) => {
@@ -383,14 +387,18 @@ async function waitForFeedback(
     const check = () => {
       try {
         if (!existsSync(feedbackPath)) return;
-        const data = JSON.parse(readFileSync(feedbackPath, "utf-8")) as FeedbackPayload;
+        const data = JSON.parse(
+          readFileSync(feedbackPath, "utf-8"),
+        ) as FeedbackPayload;
         if (data.status === "approved" || data.status === "needs-work") {
           fbWatcher.close();
           mdWatcher.close();
           outputFeedbackResult(data, sessionId, planTitle);
           resolve();
         }
-      } catch { /* ignore parse errors during writes */ }
+      } catch {
+        /* ignore parse errors during writes */
+      }
     };
 
     fbWatcher.on("change", check);
@@ -419,5 +427,7 @@ function outputFeedbackResult(
     comments: unresolvedComments,
     commentCount: unresolvedComments.length,
   });
-  process.exit(feedback.status === "approved" ? EXIT_APPROVED : EXIT_NEEDS_WORK);
+  process.exit(
+    feedback.status === "approved" ? EXIT_APPROVED : EXIT_NEEDS_WORK,
+  );
 }

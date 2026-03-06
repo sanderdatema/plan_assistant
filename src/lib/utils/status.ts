@@ -1,3 +1,15 @@
+export type PhaseStatus = 'pending' | 'approved' | 'needs-work';
+
+export const STATUS_LABELS: Record<PhaseStatus, string> = {
+  'pending': 'Pending',
+  'approved': 'Approved',
+  'needs-work': 'Needs Work',
+};
+
+export function statusLabel(status: string): string {
+  return STATUS_LABELS[status as PhaseStatus] ?? 'Pending';
+}
+
 export function statusBadgeClass(status: string): string {
   switch (status) {
     case "approved":

@@ -1,16 +1,24 @@
 <script lang="ts">
+	import { STATUS_LABELS, type PhaseStatus } from '$lib/utils/status.js';
+
 	interface Props {
 		status: string;
-		onSetStatus: (status: 'pending' | 'approved' | 'needs-work', note?: string) => void;
+		onSetStatus: (status: PhaseStatus, note?: string) => void;
 	}
 
 	let { status, onSetStatus }: Props = $props();
 
-	const states: { value: 'pending' | 'approved' | 'needs-work'; label: string; color: string }[] = [
-		{ value: 'pending', label: 'Pending', color: 'bg-accent/15 text-accent border-accent/30' },
-		{ value: 'approved', label: 'Approved', color: 'bg-green/15 text-green border-green/30' },
-		{ value: 'needs-work', label: 'Needs Work', color: 'bg-orange/15 text-orange border-orange/30' }
-	];
+	const STATE_COLORS: Record<PhaseStatus, string> = {
+		'pending': 'bg-accent/15 text-accent border-accent/30',
+		'approved': 'bg-green/15 text-green border-green/30',
+		'needs-work': 'bg-orange/15 text-orange border-orange/30',
+	};
+
+	const states = (Object.keys(STATUS_LABELS) as PhaseStatus[]).map((value) => ({
+		value,
+		label: STATUS_LABELS[value],
+		color: STATE_COLORS[value],
+	}));
 </script>
 
 <div class="flex gap-1" role="radiogroup" aria-label="Phase status">

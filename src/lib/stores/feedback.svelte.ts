@@ -1,34 +1,36 @@
 import type { FeedbackPayload, FeedbackComment } from "$lib/types/feedback.js";
 
-let currentFeedback = $state<FeedbackPayload | null>(null);
-let saveTimer: ReturnType<typeof setTimeout> | null = null;
-let sessionId = $state<string>("");
-
 function genId() {
   return (
     "fb-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)
   );
 }
 
-async function persistFeedback() {
-  if (!currentFeedback || !sessionId) return;
-  try {
-    await fetch(`/api/sessions/${sessionId}/feedback`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(currentFeedback),
-    });
-  } catch {
-    // retry on next save
+let instance: ReturnType<typeof createFeedbackStore> | null = null;
+
+function createFeedbackStore() {
+  let currentFeedback = $state<FeedbackPayload | null>(null);
+  let saveTimer: ReturnType<typeof setTimeout> | null = null;
+  let sessionId = $state<string>("");
+
+  async function persistFeedback() {
+    if (!currentFeedback || !sessionId) return;
+    try {
+      await fetch(`/api/sessions/${sessionId}/feedback`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(currentFeedback),
+      });
+    } catch {
+      // retry on next save
+    }
   }
-}
 
-function debouncedSave() {
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(persistFeedback, 500);
-}
+  function debouncedSave() {
+    if (saveTimer) clearTimeout(saveTimer);
+    saveTimer = setTimeout(persistFeedback, 500);
+  }
 
-export function getFeedbackStore() {
   return {
     get feedback() {
       return currentFeedback;
@@ -166,26 +168,8 @@ export function getFeedbackStore() {
       debouncedSave();
     },
 
-    computeStatus(): "approved" | "needs-work" {
-      if (!currentFeedback) return "approved";
-      const hasUnresolvedComments = currentFeedback.comments.some((c) => !c.resolved);
-      const hasNeedsWork = Object.values(currentFeedback.phaseStatuses).some(
-        (ps) => ps.status === "needs-work",
-      );
-      return hasUnresolvedComments || hasNeedsWork ? "needs-work" : "approved";
-    },
-
-    async submitFeedback() {
+    async submitFeedback(status: "approved" | "needs-work") {
       if (!currentFeedback) return;
-      const status: "approved" | "needs-work" =
-        (() => {
-          const hasUnresolvedComments = currentFeedback.comments.some((c) => !c.resolved);
-          const hasNeedsWork = Object.values(currentFeedback.phaseStatuses).some(
-            (ps) => ps.status === "needs-work",
-          );
-          return hasUnresolvedComments || hasNeedsWork ? "needs-work" : "approved";
-        })();
-
       currentFeedback.status = status;
       currentFeedback.submittedAt = new Date().toISOString();
       currentFeedback.updatedAt = new Date().toISOString();
@@ -199,4 +183,9 @@ export function getFeedbackStore() {
       }
     },
   };
+}
+
+export function getFeedbackStore() {
+  if (!instance) instance = createFeedbackStore();
+  return instance;
 }

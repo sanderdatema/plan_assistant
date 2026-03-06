@@ -2,7 +2,7 @@ import { type Token, type Tokens } from "marked";
 import { basename } from "node:path";
 import type { Phase, Change, Criterion, SubItem } from "../lib/types/index.js";
 
-export interface ParseContext {
+interface ParseContext {
   warnings: string[];
   warn(message: string): void;
 }
@@ -17,7 +17,7 @@ export function createParseContext(): ParseContext {
   };
 }
 
-export interface Section {
+interface Section {
   heading: string;
   level: number;
   tokens: Token[];
@@ -223,7 +223,10 @@ export function parseChangesFromHeadings(
  * Parse changes from bullet list items with file paths.
  * Accepts: - **path/to/file**: description
  */
-export function parseChangesFromList(tokens: Token[], ctx: ParseContext): Change[] {
+export function parseChangesFromList(
+  tokens: Token[],
+  ctx: ParseContext,
+): Change[] {
   const changes: Change[] = [];
 
   for (const token of tokens) {
@@ -296,7 +299,7 @@ export function parseCriteria(
 
 // --- Flexible Phase Heading Matching ---
 
-export interface PhaseHeadingMatch {
+interface PhaseHeadingMatch {
   number: number;
   name: string;
   variant: "canonical" | "dash" | "step" | "task" | "unnumbered";
@@ -338,7 +341,7 @@ export function tryMatchPhaseHeading(
 }
 
 /** Known top-level section patterns that should NOT be treated as phases */
-export const KNOWN_SECTION_PATTERNS = [
+const KNOWN_SECTION_PATTERNS = [
   /^Overview$/i,
   /^Current\s+State/i,
   /What\s+We.*NOT\s+Doing/i,
@@ -351,13 +354,16 @@ export const KNOWN_SECTION_PATTERNS = [
   /^Summary$/i,
 ];
 
-export const CHANGES_HEADING_PATTERN =
+const CHANGES_HEADING_PATTERN =
   /^(?:Changes\s+Required|Changes|File\s+Changes|Modifications):?$/i;
 
-export const SUCCESS_CRITERIA_HEADING_PATTERN =
+const SUCCESS_CRITERIA_HEADING_PATTERN =
   /^(?:Success\s+Criteria|Criteria|Verification):?$/i;
 
-export function parsePhases(allSections: Section[], ctx: ParseContext): Phase[] {
+export function parsePhases(
+  allSections: Section[],
+  ctx: ParseContext,
+): Phase[] {
   const phases: Phase[] = [];
   let autoNumber = 1;
 

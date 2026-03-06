@@ -28,8 +28,6 @@ import {
   parseCriteria,
 } from "./markdown-parser.js";
 
-export type { PlanJson, Phase, Change, Criterion, Diagram, SubItem };
-
 export interface ParseResult {
   plan: PlanJson;
   warnings: string[];
@@ -221,22 +219,3 @@ export function parseMarkdownToPlan(
 
   return { plan, warnings: ctx.warnings };
 }
-
-// Export internals for testing
-export const _internal = {
-  splitIntoSections,
-  tokensToMarkdown,
-  findSection,
-  collectSectionsUntilLevel,
-  parseKeyDiscoveries,
-  parseScopeExclusions,
-  parseChangesFromHeadings,
-  parseChangesFromList,
-  parseCriteria,
-  parsePhases,
-  parseTestingStrategy,
-  parseReferences,
-  tryMatchPhaseHeading,
-  extractFilePath,
-  createParseContext,
-};

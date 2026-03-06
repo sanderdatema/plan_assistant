@@ -1,22 +1,15 @@
 <script lang="ts">
 	import type { Phase } from '$lib/types/plan.js';
-	import { statusBadgeClass } from '$lib/utils/status.js';
+	import { statusBadgeClass, statusLabel } from '$lib/utils/status.js';
+	import type { PhaseStatus } from '$lib/utils/status.js';
 
 	interface Props {
 		phases: Phase[];
 		phaseStatuses: Record<string, { phaseId: string; status: string; note?: string }>;
-		onSetStatus: (phaseId: string, status: 'pending' | 'approved' | 'needs-work') => void;
+		onSetStatus: (phaseId: string, status: PhaseStatus) => void;
 	}
 
 	let { phases, phaseStatuses, onSetStatus }: Props = $props();
-
-	function badgeLabel(status: string) {
-		switch (status) {
-			case 'approved': return 'Approved';
-			case 'needs-work': return 'Needs Work';
-			default: return 'Pending';
-		}
-	}
 </script>
 
 <div class="overflow-x-auto">
@@ -46,7 +39,7 @@
 								onSetStatus(phase.id, next);
 							}}
 						>
-							{badgeLabel(status)}
+							{statusLabel(status)}
 						</button>
 					</td>
 				</tr>
