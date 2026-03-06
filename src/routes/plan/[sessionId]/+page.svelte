@@ -385,11 +385,13 @@
 	/>
 
 	<!-- Approval Bar -->
+	{@const unresolvedCount = feedbackStore.comments.filter(c => !c.resolved).length}
+	{@const computedStatus = unresolvedCount > 0 ? 'needs-work' as const : 'approved' as const}
 	<ApprovalBar
 		status={feedbackStore.status}
-		commentCount={feedbackStore.comments.filter(c => !c.resolved).length}
-		computedStatus={feedbackStore.computeStatus()}
-		onSubmit={() => feedbackStore.submitFeedback()}
+		commentCount={unresolvedCount}
+		computedStatus={computedStatus}
+		onSubmit={() => feedbackStore.submitFeedback(computedStatus)}
 	/>
 
 	<!-- Live region for screen reader announcements -->
