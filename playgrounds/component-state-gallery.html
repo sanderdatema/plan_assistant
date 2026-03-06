@@ -642,7 +642,7 @@ body {
   text-transform: uppercase; letter-spacing: 0.05em;
 }
 .findings-actions { display: flex; gap: 6px; }
-.findings-actions .copy-btn {
+.findings-actions .findings-btn {
   padding: 4px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -727,7 +727,7 @@ body {
 
   <!-- ═══ BOTTOM PANEL (Prompt) ═══ -->
   <div class="bottom-panel">
-    <div class="prompt-text" id="promptText" contenteditable="true"></div>
+    <div class="prompt-text" id="prompt-output" contenteditable="true"></div>
     <div class="prompt-editable-hint">Click to edit before copying</div>
     <button class="copy-btn" id="copyBtn">Copy</button>
   </div>
@@ -737,8 +737,8 @@ body {
     <div class="findings-header">
       <h3>Findings <span class="finding-count" id="finding-count"></span></h3>
       <div class="findings-actions">
-        <button class="copy-btn" onclick="clearFindings()" style="border-color: var(--text-muted); color: var(--text-muted); background: transparent;">Clear all</button>
-        <button class="copy-btn" onclick="copyFindings()">Copy combined prompt</button>
+        <button class="findings-btn" onclick="clearFindings()" style="border-color: var(--text-muted); color: var(--text-muted); background: transparent;">Clear all</button>
+        <button class="findings-btn" onclick="copyFindings()">Copy combined prompt</button>
       </div>
     </div>
     <div class="add-finding-row">
@@ -1002,9 +1002,9 @@ function renderPSC(status) {
 }
 
 function simpleHighlight(code, lang) {
-  if (lang === 'none' || !lang) return esc(code);
+  if (lang === 'none' || !lang) return escapeHtml(code);
   // Very simple token highlighting
-  let text = esc(code);
+  let text = escapeHtml(code);
   // Keywords
   const kwMap = {
     typescript: /\b(import|export|from|const|let|var|function|return|if|else|interface|type|class|extends|implements|new|async|await|default)\b/g,
@@ -1024,7 +1024,7 @@ function simpleHighlight(code, lang) {
   return text;
 }
 
-function esc(s) {
+function escapeHtml(s) {
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
@@ -1242,13 +1242,13 @@ function renderPreview() {
           </div>`;
         if (type === 'changed') {
           html += `<div class="diff-values">
-            <div><div class="diff-val-label old">v1</div><div class="diff-val">${esc(d.oldValue)}</div></div>
-            <div><div class="diff-val-label new">v2</div><div class="diff-val">${esc(d.newValue)}</div></div>
+            <div><div class="diff-val-label old">v1</div><div class="diff-val">${escapeHtml(d.oldValue)}</div></div>
+            <div><div class="diff-val-label new">v2</div><div class="diff-val">${escapeHtml(d.newValue)}</div></div>
           </div>`;
         } else if (type === 'added') {
-          html += `<div class="diff-single-val">${esc(d.newValue)}</div>`;
+          html += `<div class="diff-single-val">${escapeHtml(d.newValue)}</div>`;
         } else {
-          html += `<div class="diff-single-val strike">${esc(d.oldValue)}</div>`;
+          html += `<div class="diff-single-val strike">${escapeHtml(d.oldValue)}</div>`;
         }
         html += `</div>`;
       });
@@ -1290,14 +1290,14 @@ function renderPrompt() {
 
   const prompt = `Update ${activeComp} to ${stateDesc}. The component should ${visuals[activeComp]}. Apply using the project's theme tokens (bg: #0d1117, surface: #161b22, accent: #58a6ff, etc.).\n\n[Playground: Component State Gallery]`;
 
-  document.getElementById('promptText').textContent = prompt;
+  document.getElementById('prompt-output').textContent = prompt;
 }
 
 // ────────────────────────────────────────────────────────────────
 // Copy Button
 // ────────────────────────────────────────────────────────────────
 document.getElementById('copyBtn').addEventListener('click', function() {
-  const text = document.getElementById('promptText').textContent;
+  const text = document.getElementById('prompt-output').textContent;
   navigator.clipboard.writeText(text).then(() => {
     const btn = document.getElementById('copyBtn');
     btn.textContent = 'Copied!';
@@ -1323,14 +1323,14 @@ render();
 let findings = [];
 
 function addFinding() {
-  const promptEl = document.getElementById('promptText');
-  const promptText = (promptEl.innerText || promptEl.textContent || '').trim();
-  if (!promptText) return;
+  const promptEl = document.getElementById('prompt-output');
+  const prompt-output = (promptEl.innerText || promptEl.textContent || '').trim();
+  if (!prompt-output) return;
 
   const note = document.getElementById('finding-note').value.trim();
 
   findings.push({
-    prompt: promptText,
+    prompt: prompt-output,
     note: note || null,
     timestamp: new Date().toLocaleTimeString()
   });
@@ -1366,10 +1366,10 @@ function renderFindings() {
   list.innerHTML = findings.map((f, i) => {
     const summary = f.prompt.substring(0, 80) + (f.prompt.length > 80 ? '...' : '');
     const noteHtml = f.note
-      ? `<span class="finding-note">${esc(f.note)}</span>`
+      ? `<span class="finding-note">${escapeHtml(f.note)}</span>`
       : '<span class="finding-note" style="opacity:0.4;">no note</span>';
     return `<div class="finding-item">
-      <span class="finding-summary" title="${esc(f.prompt)}">${esc(summary)}</span>
+      <span class="finding-summary" title="${escapeHtml(f.prompt)}">${escapeHtml(summary)}</span>
       ${noteHtml}
       <button class="finding-remove" onclick="removeFinding(${i})" title="Remove">\u00d7</button>
     </div>`;
@@ -1389,7 +1389,7 @@ function copyFindings() {
   const promptEl = document.getElementById('findings-prompt');
   const text = (promptEl.innerText || promptEl.textContent || '').trim() || 'Add findings first.';
   navigator.clipboard.writeText(text).then(() => {
-    const btns = document.querySelectorAll('.findings-actions .copy-btn');
+    const btns = document.querySelectorAll('.findings-actions .findings-btn');
     const btn = btns[btns.length - 1];
     const orig = btn.textContent;
     btn.textContent = 'Copied!';
