@@ -11,25 +11,26 @@ import type { SessionMeta } from "$lib/types/session.js";
 import type { PlanJson } from "$lib/types/plan.js";
 import type { FeedbackPayload } from "$lib/types/feedback.js";
 
+/**
+ * Session storage root directory.
+ *
+ * The CLI creates sessions in `.plan-sessions/` adjacent to the markdown file,
+ * then passes that path to the server via the `SESSION_DIR` env var when spawning it.
+ * The fallback (`~/.plan-assistant/sessions`) is only used when the server runs standalone.
+ */
 export function getBaseDir(): string {
   return (
     process.env.SESSION_DIR || join(homedir(), ".plan-assistant", "sessions")
   );
 }
 
-function ensureDir(dir: string) {
-  if (!existsSync(dir)) {
-    mkdirSync(dir, { recursive: true });
-  }
-}
-
-export function getSessionDir(sessionId: string): string {
+function getSessionDir(sessionId: string): string {
   return join(getBaseDir(), sessionId);
 }
 
 export function listSessions(): SessionMeta[] {
   const baseDir = getBaseDir();
-  ensureDir(baseDir);
+  mkdirSync(baseDir, { recursive: true });
   const entries = readdirSync(baseDir, { withFileTypes: true });
   const sessions: SessionMeta[] = [];
 
@@ -62,8 +63,8 @@ export function getSession(sessionId: string): SessionMeta | null {
 
 export function createSession(sessionId: string, meta: SessionMeta): void {
   const dir = getSessionDir(sessionId);
-  ensureDir(dir);
-  ensureDir(join(dir, "versions"));
+  mkdirSync(dir, { recursive: true });
+  mkdirSync(join(dir, "versions"), { recursive: true });
   writeFileSync(join(dir, "meta.json"), JSON.stringify(meta, null, 2));
 }
 
@@ -92,13 +93,13 @@ export function saveFeedback(
   feedback: FeedbackPayload,
 ): void {
   const dir = getSessionDir(sessionId);
-  ensureDir(dir);
+  mkdirSync(dir, { recursive: true });
   writeFileSync(join(dir, "feedback.json"), JSON.stringify(feedback, null, 2));
 }
 
 export function snapshotVersion(sessionId: string, plan: PlanJson): void {
   const dir = join(getSessionDir(sessionId), "versions");
-  ensureDir(dir);
+  mkdirSync(dir, { recursive: true });
   const versionFile = join(dir, `v${plan.meta.version}.json`);
   writeFileSync(versionFile, JSON.stringify(plan, null, 2));
 }

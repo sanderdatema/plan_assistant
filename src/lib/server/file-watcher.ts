@@ -24,8 +24,6 @@ export function startWatcher() {
       if (planIdx < 1) return;
       const sessionId = parts[planIdx - 1];
 
-      console.log(`[file-watcher] plan.json changed for session: ${sessionId}`);
-
       try {
         const content = readFileSync(filePath, "utf-8");
         const plan = JSON.parse(content);
@@ -36,7 +34,6 @@ export function startWatcher() {
         console.error("[file-watcher] Error processing plan change:", err);
       }
     } else if (filePath.endsWith("/meta.json")) {
-      console.log(`[file-watcher] meta.json changed`);
       broadcast("*", "sessions-updated", {});
     }
   }
