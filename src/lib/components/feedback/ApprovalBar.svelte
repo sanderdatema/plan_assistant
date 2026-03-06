@@ -2,24 +2,23 @@
 	interface Props {
 		status: string;
 		commentCount: number;
-		onApprove: () => void;
-		onRequestChanges: () => void;
+		computedStatus: 'approved' | 'needs-work';
+		onSubmit: () => void;
 	}
 
-	let { status, commentCount, onApprove, onRequestChanges }: Props = $props();
+	let { status, commentCount, computedStatus, onSubmit }: Props = $props();
 
 	let flashMessage = $state<string | null>(null);
-	let flashColor = $state('text-orange');
+	let flashColor = $state('text-green');
 	let flashTimer: ReturnType<typeof setTimeout> | null = null;
 
-	function handleApprove() {
-		onApprove();
-		flash('Feedback submitted — plan approved', 'text-green');
-	}
-
-	function handleRequestChanges() {
-		onRequestChanges();
-		flash('Feedback submitted — changes requested', 'text-orange');
+	function handleSubmit() {
+		onSubmit();
+		if (computedStatus === 'approved') {
+			flash('Feedback submitted — plan approved ✓', 'text-green');
+		} else {
+			flash('Feedback submitted — changes requested', 'text-orange');
+		}
 	}
 
 	function flash(message: string, color: string) {
@@ -35,25 +34,29 @@
 		<div class="text-text-dim text-sm">
 			{#if flashMessage}
 				<span class="font-semibold {flashColor}">{flashMessage}</span>
+			{:else if commentCount > 0}
+				<span class="text-orange">{commentCount} unresolved comment{commentCount !== 1 ? 's' : ''}</span>
+				<span class="ml-2">— will submit as <span class="font-semibold text-orange">needs-work</span></span>
 			{:else}
-				{commentCount} unresolved comment{commentCount !== 1 ? 's' : ''}
+				<span class="text-text-dim">No unresolved comments — will submit as <span class="font-semibold text-green">approved</span></span>
 			{/if}
 		</div>
 		<div class="flex gap-3">
-			<button
-				class="cursor-pointer rounded-lg bg-orange/15 px-4 py-2 text-sm font-semibold text-orange hover:bg-orange/25 transition-colors"
-				aria-label="Request changes to the plan"
-				onclick={handleRequestChanges}
-			>
-				Request Changes
-			</button>
-			<button
-				class="cursor-pointer rounded-lg bg-green px-4 py-2 text-sm font-semibold text-white hover:brightness-110 transition-colors"
-				aria-label="Approve the plan"
-				onclick={handleApprove}
-			>
-				Approve Plan
-			</button>
+			{#if status !== 'approved' && status !== 'needs-work'}
+				<button
+					class="cursor-pointer rounded-lg px-5 py-2 text-sm font-semibold transition-colors {computedStatus === 'approved'
+						? 'bg-green text-white hover:brightness-110'
+						: 'bg-orange/15 text-orange hover:bg-orange/25'}"
+					aria-label="Submit feedback"
+					onclick={handleSubmit}
+				>
+					Submit Feedback
+				</button>
+			{:else}
+				<span class="rounded-lg px-5 py-2 text-sm font-semibold {status === 'approved' ? 'bg-green/15 text-green' : 'bg-orange/15 text-orange'}">
+					{status === 'approved' ? 'Approved ✓' : 'Changes requested'}
+				</span>
+			{/if}
 		</div>
 	</div>
 </div>

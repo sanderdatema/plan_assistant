@@ -388,8 +388,8 @@
 	<ApprovalBar
 		status={feedbackStore.status}
 		commentCount={feedbackStore.comments.filter(c => !c.resolved).length}
-		onApprove={() => feedbackStore.submitFeedback('approved')}
-		onRequestChanges={() => feedbackStore.submitFeedback('needs-work')}
+		computedStatus={feedbackStore.computeStatus()}
+		onSubmit={() => feedbackStore.submitFeedback()}
 	/>
 
 	<!-- Live region for screen reader announcements -->
