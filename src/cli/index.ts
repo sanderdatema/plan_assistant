@@ -46,26 +46,91 @@ export function parseArgs(argv: string[]): ParsedArgs {
 function usage() {
   console.log(`plan-assistant - Review implementation plans in the browser
 
-Usage:
+Workflow:
+  1. plan-assistant init --output plan.md              Create correctly-formatted template
+  2. # Edit plan.md with your plan content
+  3. plan-assistant review plan.md                     Open in browser, wait for Approve/Request Changes
+  4. # review exits with the feedback result automatically
+
+Commands:
+  plan-assistant init [--output <file>]                Generate plan template (stdout if no --output)
   plan-assistant review <markdown-file>                Parse and review a plan
   plan-assistant status <session-id-or-file>           Check review status
   plan-assistant feedback <session-id-or-file>         Read feedback JSON
   plan-assistant list [--dir <path>]                   List all sessions
-  plan-assistant init [--output <file>]                Generate plan template
   plan-assistant clean [--all] [--older-than <dur>]    Remove old sessions
   plan-assistant export <session-id-or-file>           Export as HTML
+  plan-assistant help format                           Show the required plan format
   plan-assistant help                                  Show this help
 
 Flags:
   --pretty        Human-readable output (default: JSON)
-  --port <N>      Port for review server
+  --port <N>      Port for review server (review command)
+  --no-wait       Don't wait for feedback, just start server (review command)
   --wait          Block until feedback is submitted (status command)
 
-Examples:
-  plan-assistant review thoughts/shared/plans/my-plan.md
-  npx plan-assistant review ./plan.md
-  plan-assistant status plan.md
-  plan-assistant feedback plan.md --unresolved`);
+TIP: Always start with \`plan-assistant init\` to get a correctly-formatted template.
+     Run \`plan-assistant help format\` to see the expected markdown structure.`);
+}
+
+function usageFormat() {
+  console.log(`plan-assistant - Expected plan markdown format
+
+Always start with: npx plan-assistant init --output <file>
+
+Required structure:
+─────────────────────────────────────────────────────────────────
+# Plan Title
+
+## Overview
+Brief description of what this plan accomplishes.
+
+## Phase 1: Phase Name
+
+### Changes Required:
+
+#### 1. Component Name
+**File**: \`path/to/file.ext\`
+Description of what to change.
+
+#### 2. Another Component
+**File**: \`path/to/other.ts\`
+Description of changes.
+
+### Success Criteria:
+
+#### Automated Verification:
+- [ ] \`npm test\`
+
+#### Manual Verification:
+- [ ] Manually verify the feature works
+
+## Phase 2: Phase Name
+(same structure as Phase 1)
+─────────────────────────────────────────────────────────────────
+
+Phase heading formats (all accepted):
+  ## Phase N: Name    (canonical)
+  ## Phase N - Name
+  ## Step N: Name
+  ## Task N: Name
+
+Changes section heading alternatives:
+  ### Changes Required:   (canonical)
+  ### Changes:
+  ### Modifications:
+
+Success Criteria heading alternatives:
+  ### Success Criteria:   (canonical)
+  ### Criteria:
+  ### Verification:
+
+Optional top-level sections (all H2):
+  ## Current State
+  ## What We're NOT Doing
+  ## Implementation Approach
+  ## Testing Strategy
+  ## References`);
 }
 
 export async function main(args: string[]) {
@@ -103,7 +168,11 @@ export async function main(args: string[]) {
     case "help":
     case "--help":
     case "-h":
-      usage();
+      if (parsed.positional[0] === "format") {
+        usageFormat();
+      } else {
+        usage();
+      }
       return;
     default:
       console.error(`Unknown command: ${parsed.command}`);

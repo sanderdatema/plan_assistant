@@ -166,8 +166,26 @@ export function getFeedbackStore() {
       debouncedSave();
     },
 
-    async submitFeedback(status: "approved" | "needs-work") {
+    computeStatus(): "approved" | "needs-work" {
+      if (!currentFeedback) return "approved";
+      const hasUnresolvedComments = currentFeedback.comments.some((c) => !c.resolved);
+      const hasNeedsWork = Object.values(currentFeedback.phaseStatuses).some(
+        (ps) => ps.status === "needs-work",
+      );
+      return hasUnresolvedComments || hasNeedsWork ? "needs-work" : "approved";
+    },
+
+    async submitFeedback() {
       if (!currentFeedback) return;
+      const status: "approved" | "needs-work" =
+        (() => {
+          const hasUnresolvedComments = currentFeedback.comments.some((c) => !c.resolved);
+          const hasNeedsWork = Object.values(currentFeedback.phaseStatuses).some(
+            (ps) => ps.status === "needs-work",
+          );
+          return hasUnresolvedComments || hasNeedsWork ? "needs-work" : "approved";
+        })();
+
       currentFeedback.status = status;
       currentFeedback.submittedAt = new Date().toISOString();
       currentFeedback.updatedAt = new Date().toISOString();
