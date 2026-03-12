@@ -64,11 +64,14 @@
 	$effect(() => {
 		if (data.plan) {
 			planStore.set(data.plan);
+			// Only restore feedback if it belongs to this plan version; otherwise start fresh
+			const existingFeedback =
+				data.feedback?.planVersion === data.plan.meta.version ? data.feedback : null;
 			feedbackStore.init(
 				data.sessionId,
 				data.plan.meta.title,
 				data.plan.meta.version,
-				data.feedback
+				existingFeedback
 			);
 			lastFeedbackVersion = data.plan.meta.version;
 		}
