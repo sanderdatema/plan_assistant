@@ -1,4 +1,4 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn, execSync } from "node:child_process";
@@ -38,10 +38,65 @@ async function checkHealth(
   }
 }
 
+interface ServerLock {
+  port: number;
+  pid: number;
+}
+
+function lockFilePath(sessionDir: string): string {
+  return join(sessionDir, ".server-lock.json");
+}
+
+function readLock(sessionDir: string): ServerLock | null {
+  const lockPath = lockFilePath(sessionDir);
+  if (!existsSync(lockPath)) return null;
+  try {
+    return JSON.parse(readFileSync(lockPath, "utf-8")) as ServerLock;
+  } catch {
+    return null;
+  }
+}
+
+function writeLock(sessionDir: string, port: number, pid: number): void {
+  mkdirSync(sessionDir, { recursive: true });
+  writeFileSync(lockFilePath(sessionDir), JSON.stringify({ port, pid }));
+}
+
+function clearLock(sessionDir: string): void {
+  try {
+    unlinkSync(lockFilePath(sessionDir));
+  } catch {
+    // ignore
+  }
+}
+
+function isPidAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function findExistingServer(
   sessionDir: string,
   basePort: number,
 ): Promise<number | null> {
+  // Check lock file first (fast path, avoids port scan race)
+  const lock = readLock(sessionDir);
+  if (lock) {
+    if (isPidAlive(lock.pid)) {
+      const health = await checkHealth(lock.port);
+      if (health && health.sessionDir === sessionDir) {
+        return lock.port;
+      }
+    }
+    // Stale lock — remove it
+    clearLock(sessionDir);
+  }
+
+  // Fallback: scan ports (handles lock-less legacy servers)
   for (let port = basePort; port <= MAX_PORT; port++) {
     const health = await checkHealth(port);
     if (health && health.sessionDir === sessionDir) {
@@ -69,7 +124,7 @@ async function findFreePort(basePort: number): Promise<number> {
   throw new Error(`No free port found in range ${basePort}-${MAX_PORT}`);
 }
 
-function startServer(sessionDir: string, port: number): Promise<void> {
+function startServer(sessionDir: string, port: number): Promise<number> {
   const packageDir = getPackageDir();
   const buildEntry = join(packageDir, "build", "index.js");
 
@@ -93,6 +148,7 @@ function startServer(sessionDir: string, port: number): Promise<void> {
 
     child.unref();
 
+    const pid = child.pid!;
     let attempts = 0;
     const maxAttempts = 30;
     const interval = setInterval(async () => {
@@ -106,7 +162,7 @@ function startServer(sessionDir: string, port: number): Promise<void> {
         clearTimeout(timeout);
         if (res.ok) {
           clearInterval(interval);
-          resolvePromise();
+          resolvePromise(pid);
         }
       } catch {
         if (attempts >= maxAttempts) {
@@ -121,7 +177,8 @@ function startServer(sessionDir: string, port: number): Promise<void> {
 async function launchServer(sessionDir: string, port: number): Promise<void> {
   process.stdout.write(`Starting Plan Assistant server on port ${port}...`);
   try {
-    await startServer(sessionDir, port);
+    const pid = await startServer(sessionDir, port);
+    writeLock(sessionDir, port, pid);
     console.log(" ready.");
   } catch (err) {
     console.error(` failed: ${err}`);
@@ -233,6 +290,16 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
   // Write session files
   mkdirSync(sessionPath, { recursive: true });
   mkdirSync(join(sessionPath, "versions"), { recursive: true });
+
+  // Clear stale feedback from previous review cycle
+  const oldFeedbackPath = join(sessionPath, "feedback.json");
+  if (existsSync(oldFeedbackPath)) {
+    try {
+      unlinkSync(oldFeedbackPath);
+    } catch {
+      // ignore
+    }
+  }
 
   const meta: SessionMeta = {
     id: sessionId,
