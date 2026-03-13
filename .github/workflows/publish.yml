@@ -40,8 +40,27 @@ jobs:
 
       - name: Publish
         run: |
+          PKG_NAME=$(node -p "require('./package.json').name")
+          PKG_VERSION=$(node -p "require('./package.json').version")
+
           if [ "${{ github.ref_type }}" = "tag" ]; then
-            npm publish --provenance
+            # Stable release: publish with latest tag, or just move the tag if already published
+            npm publish --provenance 2>&1 || {
+              if npm view "${PKG_NAME}@${PKG_VERSION}" version >/dev/null 2>&1; then
+                echo "Version ${PKG_VERSION} already published, updating latest dist-tag"
+                npm dist-tag add "${PKG_NAME}@${PKG_VERSION}" latest
+              else
+                exit 1
+              fi
+            }
           else
-            npm publish --provenance --tag alpha
+            # Alpha publish from main branch
+            npm publish --provenance --tag alpha 2>&1 || {
+              if npm view "${PKG_NAME}@${PKG_VERSION}" version >/dev/null 2>&1; then
+                echo "Version ${PKG_VERSION} already published, updating alpha dist-tag"
+                npm dist-tag add "${PKG_NAME}@${PKG_VERSION}" alpha
+              else
+                exit 1
+              fi
+            }
           fi
