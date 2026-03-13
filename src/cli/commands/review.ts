@@ -343,6 +343,8 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
   outputJson({
     event: "ready",
     sessionId,
+    planVersion: version,
+    freshCycle: true,
     url,
     feedbackPath,
   });

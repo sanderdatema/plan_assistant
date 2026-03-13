@@ -91,7 +91,12 @@ export async function status(args: ParsedArgs) {
     return;
   }
 
-  const feedback = readFeedback(resolved.sessionDir);
+  const rawFeedback = readFeedback(resolved.sessionDir);
+  // Discard feedback from a previous plan version (stale cycle)
+  const feedback =
+    rawFeedback && meta.planVersion && rawFeedback.planVersion < meta.planVersion
+      ? null
+      : rawFeedback;
   const { feedbackStatus, exitCode } = computeStatus(feedback);
   const { phaseSummary, commentSummary } = computeSummary(feedback);
 
@@ -99,6 +104,7 @@ export async function status(args: ParsedArgs) {
     {
       sessionId: resolved.sessionId,
       planTitle: meta.planTitle,
+      planVersion: meta.planVersion,
       status: meta.status,
       feedbackStatus,
       phaseSummary,
@@ -116,9 +122,13 @@ async function waitForFeedback(
   meta: ReturnType<typeof readMeta> & {},
   timeoutMs: number,
 ): Promise<void> {
-  // Check current state first
+  // Check current state first (ignore stale feedback from older plan versions)
   const current = readFeedback(sessionDir);
-  if (current && current.status !== "reviewing") {
+  if (
+    current &&
+    current.status !== "reviewing" &&
+    !(meta.planVersion && current.planVersion < meta.planVersion)
+  ) {
     const { feedbackStatus, exitCode } = computeStatus(current);
     const { phaseSummary, commentSummary } = computeSummary(current);
     outputJson({
@@ -147,7 +157,10 @@ async function waitForFeedback(
         const data = JSON.parse(
           readFileSync(feedbackPath, "utf-8"),
         ) as FeedbackPayload;
-        if (data.status !== "reviewing") {
+        if (
+          data.status !== "reviewing" &&
+          !(meta.planVersion && data.planVersion < meta.planVersion)
+        ) {
           clearTimeout(timer);
           watcher.close();
           const { feedbackStatus, exitCode } = computeStatus(data);
