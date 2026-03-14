@@ -1,10 +1,12 @@
 /**
- * Pure filesystem functions for reading session data from disk.
+ * Session data reading and feedback watching.
  * CLI-side equivalent of the server's session-manager.
  */
 
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
+import { watch } from "chokidar";
+import { outputJson } from "./output.js";
 import type {
   SessionMeta,
   FeedbackPayload,
@@ -93,4 +95,84 @@ export function findSessionDirs(startDir: string): SessionEntry[] {
   );
 
   return entries;
+}
+
+// ── Feedback watching ──────────────────────────────────────────────
+
+const EXIT_APPROVED = 0;
+const EXIT_NEEDS_WORK = 3;
+
+function outputFeedbackResult(
+  feedback: FeedbackPayload,
+  sessionId: string,
+  planTitle: string,
+): void {
+  const unresolvedComments = feedback.comments.filter((c) => !c.resolved);
+  outputJson({
+    event: "feedback",
+    sessionId,
+    planTitle,
+    status: feedback.status,
+    comments: unresolvedComments,
+    commentCount: unresolvedComments.length,
+  });
+  process.exit(
+    feedback.status === "approved" ? EXIT_APPROVED : EXIT_NEEDS_WORK,
+  );
+}
+
+export async function waitForFeedback(
+  feedbackPath: string,
+  sessionId: string,
+  planTitle: string,
+  mdWatcher: ReturnType<typeof watch>,
+): Promise<void> {
+  // Check if feedback already submitted
+  if (existsSync(feedbackPath)) {
+    try {
+      const existing = JSON.parse(
+        readFileSync(feedbackPath, "utf-8"),
+      ) as FeedbackPayload;
+      if (existing.status === "approved" || existing.status === "needs-work") {
+        mdWatcher.close();
+        outputFeedbackResult(existing, sessionId, planTitle);
+        return;
+      }
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return new Promise((resolve) => {
+    const fbWatcher = watch(feedbackPath, {
+      awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 100 },
+    });
+
+    const check = () => {
+      try {
+        if (!existsSync(feedbackPath)) return;
+        const data = JSON.parse(
+          readFileSync(feedbackPath, "utf-8"),
+        ) as FeedbackPayload;
+        if (data.status === "approved" || data.status === "needs-work") {
+          fbWatcher.close();
+          mdWatcher.close();
+          outputFeedbackResult(data, sessionId, planTitle);
+          resolve();
+        }
+      } catch {
+        /* ignore parse errors during writes */
+      }
+    };
+
+    fbWatcher.on("change", check);
+    fbWatcher.on("add", check);
+
+    process.on("SIGINT", () => {
+      fbWatcher.close();
+      mdWatcher.close();
+      console.error("\nStopped watching.");
+      process.exit(0);
+    });
+  });
 }
