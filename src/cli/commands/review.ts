@@ -1,204 +1,19 @@
 import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
-import { fileURLToPath } from "node:url";
-import { spawn, execSync } from "node:child_process";
-import { createServer } from "node:net";
 import { watch } from "chokidar";
 import { parseMarkdownToPlan, sessionIdFromPath } from "../markdown-to-plan.js";
 import { outputJson } from "../output.js";
-import type { SessionMeta, FeedbackPayload } from "../../lib/types/index.js";
+import { waitForFeedback } from "../session-reader.js";
+import {
+  DEFAULT_BASE_PORT,
+  findExistingServer,
+  isPortFree,
+  findFreePort,
+  launchServer,
+  openBrowser,
+} from "../server-client.js";
+import type { SessionMeta } from "../../lib/types/index.js";
 import type { ParsedArgs } from "../index.js";
-
-const EXIT_APPROVED = 0;
-const EXIT_NEEDS_WORK = 3;
-
-const DEFAULT_BASE_PORT = 5181;
-const MAX_PORT = 5199;
-
-function getPackageDir(): string {
-  const thisFile = fileURLToPath(import.meta.url);
-  // dist/cli/commands/review.js -> package root
-  return resolve(dirname(thisFile), "../../..");
-}
-
-async function checkHealth(
-  port: number,
-): Promise<{ sessionDir: string; pid: number } | null> {
-  try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 500);
-    const res = await fetch(`http://localhost:${port}/api/health`, {
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
-    if (!res.ok) return null;
-    return (await res.json()) as { sessionDir: string; pid: number };
-  } catch {
-    return null;
-  }
-}
-
-interface ServerLock {
-  port: number;
-  pid: number;
-}
-
-function lockFilePath(sessionDir: string): string {
-  return join(sessionDir, ".server-lock.json");
-}
-
-function readLock(sessionDir: string): ServerLock | null {
-  const lockPath = lockFilePath(sessionDir);
-  if (!existsSync(lockPath)) return null;
-  try {
-    return JSON.parse(readFileSync(lockPath, "utf-8")) as ServerLock;
-  } catch {
-    return null;
-  }
-}
-
-function writeLock(sessionDir: string, port: number, pid: number): void {
-  mkdirSync(sessionDir, { recursive: true });
-  writeFileSync(lockFilePath(sessionDir), JSON.stringify({ port, pid }));
-}
-
-function clearLock(sessionDir: string): void {
-  try {
-    unlinkSync(lockFilePath(sessionDir));
-  } catch {
-    // ignore
-  }
-}
-
-function isPidAlive(pid: number): boolean {
-  try {
-    process.kill(pid, 0);
-    return true;
-  } catch {
-    return false;
-  }
-}
-
-async function findExistingServer(
-  sessionDir: string,
-  basePort: number,
-): Promise<number | null> {
-  // Check lock file first (fast path, avoids port scan race)
-  const lock = readLock(sessionDir);
-  if (lock) {
-    if (isPidAlive(lock.pid)) {
-      const health = await checkHealth(lock.port);
-      if (health && health.sessionDir === sessionDir) {
-        return lock.port;
-      }
-    }
-    // Stale lock — remove it
-    clearLock(sessionDir);
-  }
-
-  // Fallback: scan ports (handles lock-less legacy servers)
-  for (let port = basePort; port <= MAX_PORT; port++) {
-    const health = await checkHealth(port);
-    if (health && health.sessionDir === sessionDir) {
-      return port;
-    }
-  }
-  return null;
-}
-
-function isPortFree(port: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const server = createServer();
-    server.once("error", () => resolve(false));
-    server.once("listening", () => {
-      server.close(() => resolve(true));
-    });
-    server.listen(port, "127.0.0.1");
-  });
-}
-
-async function findFreePort(basePort: number): Promise<number> {
-  for (let port = basePort; port <= MAX_PORT; port++) {
-    if (await isPortFree(port)) return port;
-  }
-  throw new Error(`No free port found in range ${basePort}-${MAX_PORT}`);
-}
-
-function startServer(sessionDir: string, port: number): Promise<number> {
-  const packageDir = getPackageDir();
-  const buildEntry = join(packageDir, "build", "index.js");
-
-  if (!existsSync(buildEntry)) {
-    console.error(
-      `Error: Server build not found at ${buildEntry}\nRun 'npm run build:server' in the plan-assistant package first.`,
-    );
-    process.exit(1);
-  }
-
-  return new Promise((resolvePromise, reject) => {
-    const child = spawn("node", [buildEntry], {
-      env: {
-        ...process.env,
-        SESSION_DIR: sessionDir,
-        PORT: String(port),
-      },
-      stdio: "ignore",
-      detached: true,
-    });
-
-    child.unref();
-
-    const pid = child.pid!;
-    let attempts = 0;
-    const maxAttempts = 30;
-    const interval = setInterval(async () => {
-      attempts++;
-      try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 1000);
-        const res = await fetch(`http://localhost:${port}/api/health`, {
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
-        if (res.ok) {
-          clearInterval(interval);
-          resolvePromise(pid);
-        }
-      } catch {
-        if (attempts >= maxAttempts) {
-          clearInterval(interval);
-          reject(new Error("Server failed to start within 15 seconds"));
-        }
-      }
-    }, 500);
-  });
-}
-
-async function launchServer(sessionDir: string, port: number): Promise<void> {
-  process.stdout.write(`Starting Plan Assistant server on port ${port}...`);
-  try {
-    const pid = await startServer(sessionDir, port);
-    writeLock(sessionDir, port, pid);
-    console.log(" ready.");
-  } catch (err) {
-    console.error(` failed: ${err}`);
-    process.exit(1);
-  }
-}
-
-function openBrowser(url: string) {
-  try {
-    const cmd =
-      process.platform === "darwin"
-        ? "open"
-        : process.platform === "win32"
-          ? "start"
-          : "xdg-open";
-    execSync(`${cmd} "${url}"`, { stdio: "ignore" });
-  } catch {
-    console.log(`Open in browser: ${url}`);
-  }
-}
 
 export async function review(args: ParsedArgs) {
   const markdownFile = args.positional[0];
@@ -207,6 +22,13 @@ export async function review(args: ParsedArgs) {
     console.error("Usage: plan-assistant review <markdown-file>");
     process.exit(1);
   }
+
+  // Parse host configuration (for Docker/remote sandbox environments)
+  const hostFlag = args.flags.host;
+  const displayHost =
+    (typeof hostFlag === "string" ? hostFlag : null) ??
+    process.env.PLAN_ASSISTANT_HOST ??
+    "localhost";
 
   // Parse port configuration
   const portFlag = args.flags.port;
@@ -336,7 +158,7 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
     await launchServer(sessionDir, port);
   }
 
-  const url = `http://localhost:${port}/plan/${sessionId}`;
+  const url = `http://${displayHost}:${port}/plan/${sessionId}`;
   const feedbackPath = join(sessionPath, "feedback.json");
 
   // Machine-readable ready event on first line
@@ -349,7 +171,9 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
     feedbackPath,
   });
 
-  openBrowser(url);
+  if (displayHost === "localhost") {
+    openBrowser(url);
+  }
 
   const noWait = args.flags["no-wait"] === true;
 
@@ -424,79 +248,4 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
     console.error("\nStopped watching.");
     process.exit(0);
   });
-}
-
-async function waitForFeedback(
-  feedbackPath: string,
-  sessionId: string,
-  planTitle: string,
-  mdWatcher: ReturnType<typeof watch>,
-): Promise<void> {
-  // Check if feedback already submitted
-  if (existsSync(feedbackPath)) {
-    try {
-      const existing = JSON.parse(
-        readFileSync(feedbackPath, "utf-8"),
-      ) as FeedbackPayload;
-      if (existing.status === "approved" || existing.status === "needs-work") {
-        mdWatcher.close();
-        outputFeedbackResult(existing, sessionId, planTitle);
-        return;
-      }
-    } catch {
-      /* ignore */
-    }
-  }
-
-  return new Promise((resolve) => {
-    const fbWatcher = watch(feedbackPath, {
-      awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 100 },
-    });
-
-    const check = () => {
-      try {
-        if (!existsSync(feedbackPath)) return;
-        const data = JSON.parse(
-          readFileSync(feedbackPath, "utf-8"),
-        ) as FeedbackPayload;
-        if (data.status === "approved" || data.status === "needs-work") {
-          fbWatcher.close();
-          mdWatcher.close();
-          outputFeedbackResult(data, sessionId, planTitle);
-          resolve();
-        }
-      } catch {
-        /* ignore parse errors during writes */
-      }
-    };
-
-    fbWatcher.on("change", check);
-    fbWatcher.on("add", check);
-
-    process.on("SIGINT", () => {
-      fbWatcher.close();
-      mdWatcher.close();
-      console.error("\nStopped watching.");
-      process.exit(0);
-    });
-  });
-}
-
-function outputFeedbackResult(
-  feedback: FeedbackPayload,
-  sessionId: string,
-  planTitle: string,
-): void {
-  const unresolvedComments = feedback.comments.filter((c) => !c.resolved);
-  outputJson({
-    event: "feedback",
-    sessionId,
-    planTitle,
-    status: feedback.status,
-    comments: unresolvedComments,
-    commentCount: unresolvedComments.length,
-  });
-  process.exit(
-    feedback.status === "approved" ? EXIT_APPROVED : EXIT_NEEDS_WORK,
-  );
 }
