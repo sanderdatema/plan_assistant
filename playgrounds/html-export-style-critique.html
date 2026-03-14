@@ -746,6 +746,58 @@
     font-size: 14px; padding: 0 4px; line-height: 1;
   }
   .finding-remove:hover { color: var(--ui-red); }
+
+  /* ============================================================
+     Presets Bar
+     ============================================================ */
+  .presets-bar {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    padding: 10px 20px;
+    background: var(--ui-surface);
+    border-bottom: 1px solid var(--ui-border);
+    position: sticky;
+    top: 61px; /* height of #doc-header */
+    z-index: 9;
+    flex-shrink: 0;
+  }
+
+  .presets-label {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    align-self: center;
+    margin-right: 4px;
+    white-space: nowrap;
+  }
+
+  .preset-btn {
+    background: var(--ui-bg);
+    color: var(--text-muted);
+    border: 1px solid var(--ui-border);
+    border-radius: 6px;
+    padding: 5px 12px;
+    font-size: 12px;
+    font-family: inherit;
+    cursor: pointer;
+    transition: all 0.1s;
+    white-space: nowrap;
+  }
+
+  .preset-btn:hover {
+    border-color: var(--ui-accent);
+    color: var(--ui-accent);
+  }
+
+  .preset-btn.active {
+    background: rgba(88, 166, 255, 0.12);
+    border-color: var(--ui-accent);
+    color: var(--ui-accent);
+  }
+
   .findings-prompt {
     margin-top: 10px; padding: 10px;
     background: var(--ui-bg); border-radius: 6px;
@@ -768,6 +820,13 @@
   <div id="doc-header">
     <h1>Export Preview <span>export-html.ts output</span></h1>
     <p class="playground-question">I've identified potential style improvements for the HTML export. Review each suggestion — approve, reject, or add comments. I'll apply only the ones you approve to export-html.ts.</p>
+  </div>
+  <div class="presets-bar">
+    <span class="presets-label">Preset:</span>
+    <button class="preset-btn" data-preset="darkTheme">Dark Theme Export</button>
+    <button class="preset-btn" data-preset="corporateReport">Corporate Report</button>
+    <button class="preset-btn" data-preset="marketingPage">Marketing Page</button>
+    <button class="preset-btn" data-preset="technicalDocs">Technical Docs</button>
   </div>
   <div id="doc-content"></div>
 </div>
@@ -822,6 +881,324 @@
 </div>
 
 <script>
+// ================================================================
+// Presets — each defines a full critique scenario
+// ================================================================
+
+const PRESETS = {
+  darkTheme: {
+    label: 'Dark Theme Export',
+    subtitle: 'export-html.ts output',
+    question: "I've identified potential style improvements for the HTML export. Review each suggestion — approve, reject, or add comments. I'll apply only the ones you approve to export-html.ts.",
+    suggestions: [
+      {
+        id: 1, title: 'Color Consistency', lines: [5, 12], category: 'consistency',
+        text: "The HTML export uses Catppuccin Mocha (#1e1e2e surface, #89b4fa accent) while the web UI uses GitHub Dark (#161b22 surface, #58a6ff accent). Consider aligning the palettes or documenting the intentional difference.",
+        status: 'approved', comment: 'Keep Catppuccin for the export but match the accent color.'
+      },
+      {
+        id: 2, title: 'Mermaid Theme Mismatch', lines: [28, 28], category: 'consistency',
+        text: "The web UI uses Mermaid 'dark' theme but the export uses 'default' theme with white background. This causes diagrams to look different between the app and export. Suggest using the same dark theme.",
+        status: 'pending', comment: 'Consider rendering to SVG at build time instead.'
+      },
+      {
+        id: 3, title: 'Missing Responsive Styles', lines: [14, 17], category: 'accessibility',
+        text: "The export has `max-width: 900px` but no responsive breakpoints. On mobile devices, content may overflow. Add `@media` queries or use relative units.",
+        status: 'pending', comment: ''
+      },
+      {
+        id: 4, title: 'CDN Dependency for Syntax Highlighting', lines: [30, 30], category: 'performance',
+        text: "The export loads highlight.js from CDN. If the user is offline, code blocks lose all styling. Consider inlining a minimal highlight.js theme directly in the HTML.",
+        status: 'rejected', comment: "We're okay with CDN for now."
+      },
+      {
+        id: 5, title: 'CDN Dependency for Mermaid', lines: [31, 31], category: 'performance',
+        text: "Mermaid is loaded from CDN via ES module import. If offline, diagrams won't render at all. Consider rendering Mermaid to SVG at export time instead.",
+        status: 'pending', comment: ''
+      },
+      {
+        id: 6, title: 'Missing Print Styles', lines: null, category: 'completeness',
+        text: "No @media print styles. When users print the export, it uses dark background which wastes ink. Add print styles that switch to light theme.",
+        status: 'approved', comment: ''
+      },
+      {
+        id: 7, title: 'Accessibility: Contrast Ratios', lines: [8, 9], category: 'accessibility',
+        text: "The text-dim color (#a6adc8) on surface (#181825) has a contrast ratio of ~4.8:1, which barely meets WCAG AA for large text but fails for small text. Consider lightening text-dim.",
+        status: 'pending', comment: ''
+      },
+      {
+        id: 8, title: 'Missing ARIA Labels', lines: null, category: 'accessibility',
+        text: "Status badges use only color to convey meaning (green=approved, red=needs-work). Add text or aria-label for screen reader users.",
+        status: 'pending', comment: ''
+      }
+    ],
+    docLines: [
+      { lineNum: 1, html: '<span style="color:#6c7086;font-size:12px">&lt;!DOCTYPE html&gt; &middot; &lt;html lang="en"&gt;</span>' },
+      { lineNum: 2, html: '<span style="color:#6c7086;font-size:12px">&lt;head&gt; charset=UTF-8, viewport, title</span>' },
+      { lineNum: 3, blank: true },
+      { lineNum: 4, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">CSS Variables</span>' },
+      { lineNum: 5, html: '<span class="export-css-var-block"><span class="prop">--bg</span>: <span class="val">#1e1e2e</span> <span class="comment">/* Catppuccin Mocha base */</span></span>' },
+      { lineNum: 6, html: '<span class="export-css-var-block"><span class="prop">--surface</span>: <span class="val">#181825</span></span>' },
+      { lineNum: 7, html: '<span class="export-css-var-block"><span class="prop">--text</span>: <span class="val">#cdd6f4</span></span>' },
+      { lineNum: 8, html: '<span class="export-css-var-block"><span class="prop">--text-dim</span>: <span class="val">#a6adc8</span></span>' },
+      { lineNum: 9, html: '<span class="export-css-var-block"><span class="prop">--border</span>: <span class="val">#313244</span></span>' },
+      { lineNum: 10, html: '<span class="export-css-var-block"><span class="prop">--blue</span>: <span class="val">#89b4fa</span> <span class="comment">/* accent */</span></span>' },
+      { lineNum: 11, html: '<span class="export-css-var-block"><span class="prop">--green</span>: <span class="val">#a6e3a1</span></span>' },
+      { lineNum: 12, html: '<span class="export-css-var-block"><span class="prop">--red</span>: <span class="val">#f38ba8</span></span>' },
+      { lineNum: 13, blank: true },
+      { lineNum: 14, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Body Styles</span>' },
+      { lineNum: 15, html: '<span class="export-css-var-block"><span class="prop">font-family</span>: <span class="val">-apple-system, BlinkMacSystemFont, \'Segoe UI\', ...</span></span>' },
+      { lineNum: 16, html: '<span class="export-css-var-block"><span class="prop">background</span>: <span class="val">#11111b</span>; <span class="prop">color</span>: <span class="val">var(--text)</span></span>' },
+      { lineNum: 17, html: '<span class="export-css-var-block"><span class="prop">max-width</span>: <span class="val">900px</span>; <span class="prop">padding</span>: <span class="val">24px</span></span>' },
+      { lineNum: 18, blank: true },
+      { lineNum: 19, html: '<div class="rendered-block"><div class="export-header">Authentication Refactor Plan <span class="export-status-badge" style="background:#3b82f6">pending</span></div><div class="export-subtitle">Version 3 &middot; 2026-02-20</div></div>' },
+      { lineNum: 20, blank: true },
+      { lineNum: 21, html: '<div class="rendered-block"><div class="export-section-title">Overview</div><div class="export-paragraph">Refactor the authentication system to use JWT tokens with refresh token rotation. Migrate from session-based auth to stateless tokens while maintaining backward compatibility during the transition period.</div></div>' },
+      { lineNum: 22, blank: true },
+      { lineNum: 23, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Mermaid Diagram</span>' },
+      { lineNum: 24, blank: true },
+      { lineNum: 25, html: '<div class="rendered-block"><div class="export-mermaid-box"><div style="font-size:12px;color:#666;margin-bottom:8px">class="mermaid" container (white background)</div><svg width="340" height="80" viewBox="0 0 340 80"><rect x="0" y="25" width="80" height="30" rx="4" fill="#e3e8f0" stroke="#666"/><text x="40" y="44" text-anchor="middle" font-size="11" fill="#333">Client</text><line x1="80" y1="40" x2="120" y2="40" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/><rect x="120" y="25" width="100" height="30" rx="4" fill="#e3e8f0" stroke="#666"/><text x="170" y="44" text-anchor="middle" font-size="11" fill="#333">Auth Controller</text><line x1="220" y1="40" x2="260" y2="40" stroke="#666" stroke-width="1.5" marker-end="url(#arrow)"/><rect x="260" y="25" width="80" height="30" rx="4" fill="#e3e8f0" stroke="#666"/><text x="300" y="44" text-anchor="middle" font-size="11" fill="#333">JWT Service</text><defs><marker id="arrow" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#666"/></marker></defs></svg></div></div>' },
+      { lineNum: 26, blank: true },
+      { lineNum: 27, html: '<div class="rendered-block"><div class="export-phase-card"><div class="export-phase-heading"><h3>Phase 1: Token Infrastructure</h3><span class="export-status-badge" style="background:#22c55e">approved</span></div><div class="export-paragraph" style="margin-bottom:8px">Set up JWT token generation, validation, and refresh token rotation. Create the core token service and update the user model.</div></div></div>' },
+      { lineNum: 28, html: '<div class="rendered-block" style="padding-left:16px"><div class="export-change-block"><h4>UserModel</h4><div class="filepath">src/models/user.ts</div><div class="desc">Add refreshToken and tokenVersion fields to the user schema</div></div></div>' },
+      { lineNum: 29, html: '<div class="rendered-block" style="padding-left:16px"><div class="export-change-block"><h4>AuthController</h4><div class="filepath">src/controllers/auth.ts</div><div class="desc">Implement login, logout, and token refresh endpoints</div></div></div>' },
+      { lineNum: 30, html: '<div class="rendered-block" style="padding-left:16px"><div style="margin-top:6px;font-size:12px;color:#6c7086">highlight.js loaded from CDN &lt;script src="https://cdnjs.cloudflare.com/..."&gt;</div></div>' },
+      { lineNum: 31, html: '<div class="rendered-block" style="padding-left:16px"><div style="margin-top:2px;font-size:12px;color:#6c7086">mermaid loaded via import("https://cdn.jsdelivr.net/npm/mermaid@10/...")</div></div>' },
+      { lineNum: 32, blank: true },
+      { lineNum: 33, html: '<div class="rendered-block"><div class="export-footer">Generated by Plan Assistant &middot; 2026-02-23</div></div>' }
+    ]
+  },
+
+  corporateReport: {
+    label: 'Corporate Report',
+    subtitle: 'Q1 Strategic Report Export',
+    question: "This export targets a formal corporate audience. The current styling uses developer-focused conventions that may feel too casual. Review these style suggestions for the corporate report export template.",
+    suggestions: [
+      {
+        id: 1, title: 'Font Stack Too Casual', lines: [5, 6], category: 'consistency',
+        text: "The export uses `-apple-system, BlinkMacSystemFont` which renders inconsistently across Windows environments. A corporate report should specify explicit cross-platform fonts like `'Segoe UI', Arial, sans-serif` as the primary stack.",
+        status: 'pending', comment: ''
+      },
+      {
+        id: 2, title: 'Dark Background Inappropriate', lines: [8, 10], category: 'consistency',
+        text: "Corporate reports are typically read in print or formal PDF contexts. A dark #1e1e2e background wastes toner when printed and looks unprofessional in boardroom projections. Add a light variant or print stylesheet.",
+        status: 'pending', comment: ''
+      },
+      {
+        id: 3, title: 'Missing Page Break Hints', lines: null, category: 'completeness',
+        text: "Phase cards and section breaks have no `page-break-before: avoid` or `page-break-inside: avoid` rules. Multi-page PDFs generated via headless Chrome will split cards mid-content.",
+        status: 'pending', comment: ''
+      },
+      {
+        id: 4, title: 'No Company Logo Slot', lines: [14, 15], category: 'completeness',
+        text: "Corporate exports typically include a header with company logo and report metadata (period, author, classification). The current template has no designated logo area or header metadata section.",
+        status: 'pending', comment: ''
+      },
+      {
+        id: 5, title: 'Status Badge Colors Too Saturated', lines: [16, 17], category: 'accessibility',
+        text: "The status badges use raw CSS color keywords (`#22c55e`, `#ef4444`). In printed form, these saturated RGB colors reproduce poorly on standard office printers. Use muted CMYK-friendly equivalents.",
+        status: 'pending', comment: ''
+      },
+      {
+        id: 6, title: 'Missing Table of Contents', lines: null, category: 'completeness',
+        text: "Reports longer than 3 phases benefit from an auto-generated table of contents. Currently no TOC is generated, forcing readers to scroll to find specific phases.",
+        status: 'approved', comment: 'High priority — executive reviewers always ask for this.'
+      },
+      {
+        id: 7, title: 'Footer Lacks Legal Disclaimer Slot', lines: [28, 28], category: 'completeness',
+        text: "The footer only shows 'Generated by Plan Assistant'. Corporate documents need a slot for confidentiality notices, version numbers, and legal disclaimers.",
+        status: 'pending', comment: ''
+      }
+    ],
+    docLines: [
+      { lineNum: 1, html: '<span style="color:#6c7086;font-size:12px">&lt;!DOCTYPE html&gt; &middot; lang="en"</span>' },
+      { lineNum: 2, blank: true },
+      { lineNum: 3, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Font & Typography</span>' },
+      { lineNum: 4, blank: true },
+      { lineNum: 5, html: '<span class="export-css-var-block"><span class="prop">font-family</span>: <span class="val">-apple-system, BlinkMacSystemFont, \'Segoe UI\'</span> <span class="comment">/* macOS-biased stack */</span></span>' },
+      { lineNum: 6, html: '<span class="export-css-var-block"><span class="prop">font-size</span>: <span class="val">14px</span>; <span class="prop">line-height</span>: <span class="val">1.6</span></span>' },
+      { lineNum: 7, blank: true },
+      { lineNum: 8, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Color Scheme</span>' },
+      { lineNum: 9, blank: true },
+      { lineNum: 10, html: '<span class="export-css-var-block"><span class="prop">background</span>: <span class="val">#1e1e2e</span> <span class="comment">/* dark — poor for print */</span></span>' },
+      { lineNum: 11, html: '<span class="export-css-var-block"><span class="prop">color</span>: <span class="val">#cdd6f4</span></span>' },
+      { lineNum: 12, blank: true },
+      { lineNum: 13, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Report Header</span>' },
+      { lineNum: 14, blank: true },
+      { lineNum: 15, html: '<div class="rendered-block"><div style="display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid #313244"><div style="width:40px;height:40px;background:#313244;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#6c7086">LOGO</div><div><div class="export-header" style="font-size:18px">Q1 2026 Strategic Initiative Report</div><div class="export-subtitle">Prepared by Engineering &middot; March 2026 &middot; CONFIDENTIAL</div></div></div></div>' },
+      { lineNum: 16, blank: true },
+      { lineNum: 17, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Status Badges</span>' },
+      { lineNum: 18, html: '<div class="rendered-block" style="display:flex;gap:8px"><span class="export-status-badge" style="background:#22c55e">on-track</span><span class="export-status-badge" style="background:#ef4444">at-risk</span><span class="export-status-badge" style="background:#f59e0b">delayed</span></div>' },
+      { lineNum: 19, blank: true },
+      { lineNum: 20, html: '<div class="rendered-block"><div class="export-phase-card"><div class="export-phase-heading"><h3>Initiative 1: Platform Modernization</h3><span class="export-status-badge" style="background:#22c55e">on-track</span></div><div class="export-paragraph">Migrating legacy monolith to microservices architecture. Current completion: 68%. On schedule for Q2 cutover.</div></div></div>' },
+      { lineNum: 21, html: '<div class="rendered-block"><div class="export-phase-card"><div class="export-phase-heading"><h3>Initiative 2: Data Warehouse Migration</h3><span class="export-status-badge" style="background:#f59e0b">delayed</span></div><div class="export-paragraph">BigQuery migration delayed due to schema complexity. New target date: April 15. Risk: impacts Q2 analytics reporting.</div></div></div>' },
+      { lineNum: 22, html: '<div class="rendered-block"><div class="export-phase-card"><div class="export-phase-heading"><h3>Initiative 3: Security Compliance (SOC 2)</h3><span class="export-status-badge" style="background:#ef4444">at-risk</span></div><div class="export-paragraph">Audit preparation behind schedule. Three critical controls not yet implemented. Escalation required.</div></div></div>' },
+      { lineNum: 23, blank: true },
+      { lineNum: 24, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Print Media Rules</span>' },
+      { lineNum: 25, html: '<span class="export-css-var-block"><span class="comment">/* No @media print rules present */</span></span>' },
+      { lineNum: 26, html: '<span class="export-css-var-block"><span class="comment">/* No page-break-inside: avoid on cards */</span></span>' },
+      { lineNum: 27, blank: true },
+      { lineNum: 28, html: '<div class="rendered-block"><div class="export-footer">Generated by Plan Assistant &middot; 2026-03-14</div></div>' }
+    ]
+  },
+
+  marketingPage: {
+    label: 'Marketing Page',
+    subtitle: 'Landing Page Export',
+    question: "This plan describes a new product landing page. The export styling needs to match brand guidelines and look polished for stakeholder demos. Review these visual consistency and brand alignment issues.",
+    suggestions: [
+      {
+        id: 1, title: 'Brand Font Not Loaded', lines: [4, 6], category: 'completeness',
+        text: "The export falls back to system fonts. The brand specifies `Inter` (Google Fonts) as the primary typeface. Add a `<link>` to Google Fonts or embed the Inter font subset to match the design system.",
+        status: 'approved', comment: 'Use `font-display: swap` to avoid FOUT.'
+      },
+      {
+        id: 2, title: 'Brand Colors Not Used', lines: [8, 14], category: 'consistency',
+        text: "The export uses GitHub Dark palette (#58a6ff accent) rather than brand colors (#6366f1 indigo, #f43f5e rose). The marketing team will reject exports that don't match the design system.",
+        status: 'pending', comment: ''
+      },
+      {
+        id: 3, title: 'Hero Section Layout Too Narrow', lines: [18, 20], category: 'consistency',
+        text: "The 900px max-width is appropriate for documentation but too narrow for a marketing page. Hero sections typically use full-width backgrounds with constrained content (1200px). The export should respect this.",
+        status: 'pending', comment: ''
+      },
+      {
+        id: 4, title: 'No Open Graph Meta Tags', lines: null, category: 'completeness',
+        text: "When stakeholders share the export URL, social previews show no thumbnail or description. Add OG tags (`og:title`, `og:description`, `og:image`) populated from the plan title and overview.",
+        status: 'pending', comment: ''
+      },
+      {
+        id: 5, title: 'CTAs Missing Visual Hierarchy', lines: [22, 25], category: 'accessibility',
+        text: "Phase completion badges and action items all look the same weight. Marketing pages need strong visual hierarchy: primary CTA (filled button), secondary (outline), tertiary (text link). Currently everything uses the same card style.",
+        status: 'approved', comment: ''
+      },
+      {
+        id: 6, title: 'Animation/Motion Missing', lines: null, category: 'completeness',
+        text: "The design spec includes fade-in animations on scroll for feature sections. The static export has no CSS animations or intersection observer hooks. A demo page without motion feels unfinished to stakeholders.",
+        status: 'pending', comment: 'Defer — animations can be phase 2.'
+      },
+      {
+        id: 7, title: 'Dark Mode Toggle Absent', lines: null, category: 'accessibility',
+        text: "The marketing page spec supports `prefers-color-scheme: dark` but the export hardcodes a dark theme. Add a `@media (prefers-color-scheme: light)` override so the page adapts to user preferences.",
+        status: 'pending', comment: ''
+      }
+    ],
+    docLines: [
+      { lineNum: 1, html: '<span style="color:#6c7086;font-size:12px">&lt;!DOCTYPE html&gt; &middot; lang="en"</span>' },
+      { lineNum: 2, blank: true },
+      { lineNum: 3, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Font Loading</span>' },
+      { lineNum: 4, html: '<span class="export-css-var-block"><span class="comment">/* No Google Fonts link — falls back to system fonts */</span></span>' },
+      { lineNum: 5, html: '<span class="export-css-var-block"><span class="prop">font-family</span>: <span class="val">-apple-system, BlinkMacSystemFont, \'Segoe UI\'</span></span>' },
+      { lineNum: 6, html: '<span class="export-css-var-block"><span class="comment">/* Expected: font-family: \'Inter\', sans-serif */</span></span>' },
+      { lineNum: 7, blank: true },
+      { lineNum: 8, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Brand Color Tokens</span>' },
+      { lineNum: 9, html: '<span class="export-css-var-block"><span class="prop">--accent</span>: <span class="val">#58a6ff</span> <span class="comment">/* GitHub Blue — not brand */</span></span>' },
+      { lineNum: 10, html: '<span class="export-css-var-block"><span class="comment">/* Brand: --accent: #6366f1 (Indigo), --accent-alt: #f43f5e (Rose) */</span></span>' },
+      { lineNum: 11, html: '<span class="export-css-var-block"><span class="prop">--bg</span>: <span class="val">#0d1117</span>; <span class="prop">--surface</span>: <span class="val">#161b22</span></span>' },
+      { lineNum: 12, blank: true },
+      { lineNum: 13, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Layout</span>' },
+      { lineNum: 14, html: '<span class="export-css-var-block"><span class="prop">max-width</span>: <span class="val">900px</span> <span class="comment">/* docs width — too narrow for marketing */</span></span>' },
+      { lineNum: 15, blank: true },
+      { lineNum: 16, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Meta Tags</span>' },
+      { lineNum: 17, html: '<span class="export-css-var-block"><span class="comment">/* og:title, og:description, og:image — not present */</span></span>' },
+      { lineNum: 18, blank: true },
+      { lineNum: 19, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Hero Section</span>' },
+      { lineNum: 20, html: '<div class="rendered-block"><div class="export-header" style="font-size:26px;background:linear-gradient(135deg,#58a6ff,#6366f1);-webkit-background-clip:text;-webkit-text-fill-color:transparent">New Product Launch Plan</div><div class="export-subtitle">Bringing Momentum Analytics to Market — Q2 2026</div></div>' },
+      { lineNum: 21, blank: true },
+      { lineNum: 22, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Feature Sections</span>' },
+      { lineNum: 23, html: '<div class="rendered-block"><div class="export-phase-card"><div class="export-phase-heading"><h3>Phase 1: Beta Launch</h3><span class="export-status-badge" style="background:#6366f1">planned</span></div><div class="export-paragraph">Invite-only beta with 50 design partners. Focus on core dashboard experience and onboarding flow.</div></div></div>' },
+      { lineNum: 24, html: '<div class="rendered-block"><div class="export-phase-card"><div class="export-phase-heading"><h3>Phase 2: Public Launch</h3><span class="export-status-badge" style="background:#3b82f6">upcoming</span></div><div class="export-paragraph">Public launch with Product Hunt, content marketing campaign, and partner integrations.</div></div></div>' },
+      { lineNum: 25, html: '<div class="rendered-block"><div class="export-phase-card"><div class="export-phase-heading"><h3>Phase 3: Growth</h3><span class="export-status-badge" style="background:#6b7280">future</span></div><div class="export-paragraph">Paid acquisition, SEO content engine, and enterprise tier rollout.</div></div></div>' },
+      { lineNum: 26, blank: true },
+      { lineNum: 27, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Animations</span>' },
+      { lineNum: 28, html: '<span class="export-css-var-block"><span class="comment">/* No CSS animations or @keyframes defined */</span></span>' },
+      { lineNum: 29, html: '<span class="export-css-var-block"><span class="comment">/* No IntersectionObserver for scroll-triggered reveals */</span></span>' },
+      { lineNum: 30, blank: true },
+      { lineNum: 31, html: '<div class="rendered-block"><div class="export-footer">Generated by Plan Assistant &middot; 2026-03-14</div></div>' }
+    ]
+  },
+
+  technicalDocs: {
+    label: 'Technical Docs',
+    subtitle: 'API Documentation Export',
+    question: "This plan covers an API redesign. The export will serve as living technical documentation shared with developers. Review these issues — developers have high standards for code rendering and navigability.",
+    suggestions: [
+      {
+        id: 1, title: 'Code Blocks Lack Language Labels', lines: [20, 24], category: 'completeness',
+        text: "Code fences in the export have no visible language badge. Developers rely on syntax highlighting AND a language label (`TypeScript`, `bash`, `JSON`) to quickly parse code blocks. Add a `data-lang` label to each `<pre>` element.",
+        status: 'approved', comment: ''
+      },
+      {
+        id: 2, title: 'No Anchor Links on Headings', lines: [14, 16], category: 'completeness',
+        text: "Section headings have no `id` attributes and no anchor link icons. Developers need to deep-link to specific API sections when referencing documentation in issues or PRs. Add `id` attrs and hover-reveal anchor links.",
+        status: 'approved', comment: 'Critical for team workflow.'
+      },
+      {
+        id: 3, title: 'Inline Code Contrast Too Low', lines: [22, 23], category: 'accessibility',
+        text: "Inline `<code>` elements use a subtle background (#1e1e2e on #181825) with only 1.1:1 contrast. Technical docs require inline code to stand out clearly. Increase background contrast or add a visible border.",
+        status: 'pending', comment: ''
+      },
+      {
+        id: 4, title: 'No Search / Jump Navigation', lines: null, category: 'completeness',
+        text: "Long technical docs need a sidebar or in-page search. The export has no navigation sidebar, no sticky TOC, and no keyboard shortcut for search. Developers will struggle with docs longer than 5 phases.",
+        status: 'pending', comment: 'Consider a collapsible sidebar TOC.'
+      },
+      {
+        id: 5, title: 'Diff Blocks Not Distinguished', lines: [25, 27], category: 'consistency',
+        text: "Code change blocks look identical regardless of whether they add, modify, or remove code. Standard technical docs use green/red diff highlighting and `+`/`-` prefixes to communicate intent at a glance.",
+        status: 'pending', comment: ''
+      },
+      {
+        id: 6, title: 'Missing Copy-to-Clipboard on Code', lines: [20, 24], category: 'completeness',
+        text: "Every code block should have a copy button. Developers frequently copy commands and snippets. A missing copy button increases friction and looks outdated compared to modern documentation sites.",
+        status: 'approved', comment: 'Quick win — highly requested.'
+      },
+      {
+        id: 7, title: 'No Version Badge on Exports', lines: [12, 13], category: 'completeness',
+        text: "The export title shows the plan name but not the version or last-modified date prominently. Technical docs must clearly show which version they describe to prevent developers from referencing stale information.",
+        status: 'pending', comment: ''
+      }
+    ],
+    docLines: [
+      { lineNum: 1, html: '<span style="color:#6c7086;font-size:12px">&lt;!DOCTYPE html&gt; &middot; API Documentation Export</span>' },
+      { lineNum: 2, blank: true },
+      { lineNum: 3, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Document Metadata</span>' },
+      { lineNum: 4, html: '<span class="export-css-var-block"><span class="prop">&lt;title&gt;</span>: <span class="val">Payments API v3 Redesign Plan</span></span>' },
+      { lineNum: 5, html: '<span class="export-css-var-block"><span class="prop">&lt;meta name="description"&gt;</span>: <span class="val">API breaking changes and migration guide</span></span>' },
+      { lineNum: 6, blank: true },
+      { lineNum: 7, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Navigation</span>' },
+      { lineNum: 8, html: '<span class="export-css-var-block"><span class="comment">/* No sidebar TOC */</span></span>' },
+      { lineNum: 9, html: '<span class="export-css-var-block"><span class="comment">/* No anchor IDs on headings */</span></span>' },
+      { lineNum: 10, html: '<span class="export-css-var-block"><span class="comment">/* No keyboard navigation shortcut */</span></span>' },
+      { lineNum: 11, blank: true },
+      { lineNum: 12, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Header</span>' },
+      { lineNum: 13, blank: true },
+      { lineNum: 14, html: '<div class="rendered-block"><div class="export-header">Payments API v3 Redesign</div><div class="export-subtitle">Version 2 &middot; Last modified 2026-03-01</div></div>' },
+      { lineNum: 15, blank: true },
+      { lineNum: 16, html: '<div class="rendered-block"><div class="export-section-title">Overview</div><div class="export-paragraph">Breaking API redesign introducing resource-based routing, JSON:API compliance, and cursor-based pagination. All v2 endpoints deprecated March 2026, sunset September 2026.</div></div>' },
+      { lineNum: 17, blank: true },
+      { lineNum: 18, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Code Rendering</span>' },
+      { lineNum: 19, blank: true },
+      { lineNum: 20, html: '<div class="rendered-block"><div class="export-code-pre"><span style="color:#cba6f7">GET</span> /v3/payments/:id\n\n<span style="color:#a6e3a1">200 OK</span>\n{\n  "data": {\n    "id": "pay_01HN...",\n    "type": "payment",\n    "attributes": { "amount": 4999, "currency": "USD" }\n  }\n}</div></div>' },
+      { lineNum: 21, html: '<div class="rendered-block" style="padding-left:16px"><div style="font-size:11px;color:#6c7086;margin-top:4px">No language badge &middot; No copy button</div></div>' },
+      { lineNum: 22, blank: true },
+      { lineNum: 23, html: '<div class="rendered-block"><div class="export-change-block"><h4>Inline code example</h4><div class="desc">Use <code style="background:#1e1e2e;padding:1px 4px;border-radius:3px;font-family:monospace">pagination.cursor</code> instead of <code style="background:#1e1e2e;padding:1px 4px;border-radius:3px;font-family:monospace">page</code> parameter.</div></div></div>' },
+      { lineNum: 24, html: '<div class="rendered-block" style="padding-left:16px"><div style="font-size:11px;color:#6c7086;margin-top:4px">Inline code: background contrast ~1.1:1 on dark surface</div></div>' },
+      { lineNum: 25, blank: true },
+      { lineNum: 26, html: '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:var(--text-muted)">Change Blocks (no diff highlighting)</span>' },
+      { lineNum: 27, html: '<div class="rendered-block"><div class="export-change-block"><h4>PaymentController</h4><div class="filepath">src/api/payments.ts</div><div class="desc">Replace offset pagination with cursor-based. Remove page/per_page params.</div></div></div>' },
+      { lineNum: 28, html: '<div class="rendered-block"><div class="export-change-block"><h4>PaymentSerializer</h4><div class="filepath">src/serializers/payment.ts</div><div class="desc">Add JSON:API envelope with data/attributes structure.</div></div></div>' },
+      { lineNum: 29, blank: true },
+      { lineNum: 30, html: '<div class="rendered-block"><div class="export-footer">Generated by Plan Assistant &middot; 2026-03-14</div></div>' }
+    ]
+  }
+};
+
+// ================================================================
+// Active preset state
+// ================================================================
+let activePreset = null;
+
 // ================================================================
 // Data
 // ================================================================
@@ -1241,26 +1618,60 @@ document.getElementById('prompt-toggle').addEventListener('click', () => {
 });
 
 // ================================================================
-// Apply some initial states for demo purposes
+// Preset System
 // ================================================================
 
-// Set some initial states to make the demo more interesting
-suggestions[0].status = 'approved';
-suggestions[0].comment = 'Keep Catppuccin for the export but match the accent color.';
-suggestions[1].status = 'pending';
-suggestions[1].comment = 'Consider rendering to SVG at build time instead.';
-suggestions[3].status = 'rejected';
-suggestions[3].comment = "We're okay with CDN for now.";
-suggestions[5].status = 'approved';
-suggestions[5].comment = '';
+function applyPreset(key) {
+  const preset = PRESETS[key];
+  if (!preset) return;
+
+  activePreset = key;
+
+  // Deep-clone the preset's suggestions so edits don't mutate PRESETS
+  suggestions.length = 0;
+  for (const s of preset.suggestions) {
+    suggestions.push({ ...s });
+  }
+
+  // Replace docLines
+  docLines.length = 0;
+  for (const l of preset.docLines) {
+    docLines.push({ ...l });
+  }
+
+  // Update header text
+  document.querySelector('#doc-header h1').innerHTML =
+    `Export Preview <span>${preset.subtitle}</span>`;
+  document.querySelector('#doc-header .playground-question').textContent =
+    preset.question;
+
+  // Re-render everything
+  activeFilter = 'all';
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.toggle('active', t.dataset.filter === 'all'));
+  renderDocument();
+  renderSuggestions();
+  renderPrompt();
+
+  // Update preset button active state
+  updatePresetButtons();
+}
+
+function updatePresetButtons() {
+  document.querySelectorAll('.preset-btn[data-preset]').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.preset === activePreset);
+  });
+}
+
+// Bind preset buttons
+document.querySelectorAll('.preset-btn[data-preset]').forEach(btn => {
+  btn.addEventListener('click', () => applyPreset(btn.dataset.preset));
+});
 
 // ================================================================
-// Initialize
+// Initialize with default preset
 // ================================================================
 
-renderDocument();
-renderSuggestions();
-renderPrompt();
+applyPreset('darkTheme');
 
 // --- Findings accumulator ---
 let findings = [];
