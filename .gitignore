@@ -10,3 +10,4 @@ dist/
 .pid
 .playwright-cli/
 .plan-sessions/
+host_folders/

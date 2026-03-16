@@ -190,7 +190,31 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
     await launchServer(sessionDir, port);
   }
 
-  const url = `http://${displayHost}:${port}/plan/${sessionId}`;
+  // At this point port is always assigned (server found or started above)
+  const serverPort = port!;
+
+  // Helper: check server health and restart if it died (e.g. idle timeout)
+  async function ensureServer(): Promise<void> {
+    const health = await checkHealth(serverPort);
+    if (!health) {
+      console.error(
+        `[${new Date().toLocaleTimeString()}] Server on port ${serverPort} is gone, restarting...`,
+      );
+      await launchServer(sessionDir, serverPort);
+    }
+  }
+
+  // Keepalive: ping server every 2 minutes to prevent idle timeout shutdown
+  const KEEPALIVE_MS = 2 * 60 * 1000;
+  const keepaliveInterval = setInterval(async () => {
+    try {
+      await ensureServer();
+    } catch {
+      // restart failed — will retry next interval
+    }
+  }, KEEPALIVE_MS);
+
+  const url = `http://${displayHost}:${serverPort}/plan/${sessionId}`;
   const feedbackPath = join(sessionPath, "feedback.json");
 
   // Machine-readable ready event on first line
@@ -230,8 +254,10 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
     awaitWriteFinish: { stabilityThreshold: 300, pollInterval: 100 },
   });
 
-  mdWatcher.on("change", () => {
+  mdWatcher.on("change", async () => {
     try {
+      // Ensure server is alive before writing updated plan
+      await ensureServer();
       const updated = readFileSync(absolutePath, "utf-8");
       const existingPlan = JSON.parse(readFileSync(existingPlanPath, "utf-8"));
       const newVersion = (existingPlan.meta?.version ?? 0) + 1;
@@ -277,11 +303,13 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
       mdWatcher,
       sessionPath,
     );
+    clearInterval(keepaliveInterval);
     return;
   }
 
   // Keep process alive (--no-wait mode)
   process.on("SIGINT", () => {
+    clearInterval(keepaliveInterval);
     mdWatcher.close();
     console.error("\nStopped watching.");
     process.exit(0);
