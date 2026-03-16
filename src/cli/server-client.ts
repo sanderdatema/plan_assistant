@@ -3,7 +3,13 @@
  * lock files, and process spawning for the Plan Assistant dev server.
  */
 
-import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "node:fs";
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  mkdirSync,
+  unlinkSync,
+} from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawn, execSync } from "node:child_process";
@@ -171,7 +177,10 @@ function startServer(sessionDir: string, port: number): Promise<number> {
   });
 }
 
-export async function launchServer(sessionDir: string, port: number): Promise<void> {
+export async function launchServer(
+  sessionDir: string,
+  port: number,
+): Promise<void> {
   process.stdout.write(`Starting Plan Assistant server on port ${port}...`);
   try {
     const pid = await startServer(sessionDir, port);
@@ -181,6 +190,42 @@ export async function launchServer(sessionDir: string, port: number): Promise<vo
     console.error(` failed: ${err}`);
     process.exit(1);
   }
+}
+
+export async function stopServer(sessionDir: string): Promise<boolean> {
+  // Try lock file first
+  const lock = readLock(sessionDir);
+  const port = lock?.port;
+
+  if (port) {
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 2000);
+      await fetch(`http://localhost:${port}/api/shutdown`, {
+        method: "POST",
+        signal: controller.signal,
+      });
+      clearTimeout(timeout);
+      clearLock(sessionDir);
+      return true;
+    } catch {
+      // HTTP shutdown failed, try SIGTERM
+    }
+  }
+
+  // Fallback: kill by PID
+  if (lock && isPidAlive(lock.pid)) {
+    try {
+      process.kill(lock.pid, "SIGTERM");
+      clearLock(sessionDir);
+      return true;
+    } catch {
+      // ignore
+    }
+  }
+
+  clearLock(sessionDir);
+  return false;
 }
 
 export function openBrowser(url: string): void {

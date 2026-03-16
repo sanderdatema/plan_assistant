@@ -1,4 +1,10 @@
-import { readFileSync, writeFileSync, existsSync, mkdirSync, unlinkSync } from "node:fs";
+import {
+  readFileSync,
+  writeFileSync,
+  existsSync,
+  mkdirSync,
+  unlinkSync,
+} from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { watch } from "chokidar";
 import { parseMarkdownToPlan, sessionIdFromPath } from "../markdown-to-plan.js";
@@ -6,7 +12,9 @@ import { outputJson } from "../output.js";
 import { waitForFeedback } from "../session-reader.js";
 import {
   DEFAULT_BASE_PORT,
+  MAX_PORT,
   findExistingServer,
+  checkHealth,
   isPortFree,
   findFreePort,
   launchServer,
@@ -142,13 +150,37 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
   );
 
   // Find existing server for this session dir or start a new one
+  const reuse = args.flags.reuse === true;
   const basePort = requestedPort ?? DEFAULT_BASE_PORT;
   let port = await findExistingServer(sessionDir, basePort);
+
+  if (!port && reuse) {
+    // --reuse: find any running plan-assistant server and reuse it
+    for (let p = basePort; p <= MAX_PORT; p++) {
+      const health = await checkHealth(p);
+      if (health) {
+        port = p;
+        console.error(`Reusing existing server on port ${p}.`);
+        break;
+      }
+    }
+  }
 
   if (!port) {
     if (requestedPort) {
       if (!(await isPortFree(requestedPort))) {
-        console.error(`Error: Port ${requestedPort} is already in use`);
+        // Check if it's a plan-assistant server for a better error message
+        const health = await checkHealth(requestedPort);
+        if (health) {
+          console.error(
+            `Error: Port ${requestedPort} is already used by Plan Assistant (session dir: ${health.sessionDir}).` +
+              `\nUse \`plan-assistant stop\` to stop it, or add --reuse to share the server.`,
+          );
+        } else {
+          console.error(
+            `Error: Port ${requestedPort} is already in use by another process.`,
+          );
+        }
         process.exit(1);
       }
       port = requestedPort;
@@ -238,7 +270,13 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
 
   // Wait for feedback unless --no-wait
   if (!noWait) {
-    await waitForFeedback(feedbackPath, sessionId, plan.meta.title, mdWatcher);
+    await waitForFeedback(
+      feedbackPath,
+      sessionId,
+      plan.meta.title,
+      mdWatcher,
+      sessionPath,
+    );
     return;
   }
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { statusBadgeClass } from '$lib/utils/status.js';
+	import IdleTimer from './IdleTimer.svelte';
 
 	interface Props {
 		meta: {
@@ -27,6 +28,7 @@
 			</p>
 		</div>
 		<div class="flex items-center gap-2">
+			<IdleTimer />
 			<span class="bg-surface2 rounded-full px-3 py-1 text-xs font-semibold text-text-dim">
 				v{meta.version}
 			</span>
