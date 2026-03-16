@@ -4,6 +4,8 @@ import {
   existsSync,
   mkdirSync,
   unlinkSync,
+  symlinkSync,
+  lstatSync,
 } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { watch } from "chokidar";
@@ -160,6 +162,18 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
       const health = await checkHealth(p);
       if (health) {
         port = p;
+        // Cross-project reuse: the server only knows its own SESSION_DIR.
+        // Symlink our session into the server's directory so it can find it.
+        if (health.sessionDir !== sessionDir) {
+          const linkPath = join(health.sessionDir, sessionId);
+          if (!existsSync(linkPath)) {
+            mkdirSync(health.sessionDir, { recursive: true });
+            symlinkSync(sessionPath, linkPath);
+            console.error(
+              `Linked session into server at ${health.sessionDir}.`,
+            );
+          }
+        }
         console.error(`Reusing existing server on port ${p}.`);
         break;
       }
