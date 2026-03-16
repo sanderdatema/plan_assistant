@@ -239,6 +239,7 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
     freshCycle: true,
     url,
     feedbackPath,
+    nextStep: `IMPORTANT: Now run \`npx plan-assistant status --wait ${markdownFile}\` in the FOREGROUND and wait for it to exit. Do NOT proceed until the user submits feedback. Exit codes: 0=approved, 3=needs-work.`,
   });
 
   if (displayHost === "localhost") {
@@ -254,7 +255,7 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
   if (noWait) {
     console.error(`\nWatching ${absolutePath} for changes...`);
     console.error(
-      `Run \`plan-assistant status --wait ${markdownFile}\` to wait for feedback.`,
+      `\nIMPORTANT: Run \`npx plan-assistant status --wait ${markdownFile}\` in the foreground to block until user submits feedback. Do NOT proceed without it.`,
     );
   } else {
     console.error(
