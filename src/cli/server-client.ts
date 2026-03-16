@@ -94,6 +94,12 @@ export async function findExistingServer(
       if (health && health.sessionDir === sessionDir) {
         return lock.port;
       }
+      // PID alive but not serving this session dir — kill the zombie
+      try {
+        process.kill(lock.pid, "SIGTERM");
+      } catch {
+        /* already gone */
+      }
     }
     // Stale lock — remove it
     clearLock(sessionDir);
