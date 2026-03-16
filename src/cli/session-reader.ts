@@ -7,6 +7,7 @@ import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { watch } from "chokidar";
 import { outputJson } from "./output.js";
+import { stopServer } from "./server-client.js";
 import type {
   SessionMeta,
   FeedbackPayload,
@@ -102,11 +103,19 @@ export function findSessionDirs(startDir: string): SessionEntry[] {
 const EXIT_APPROVED = 0;
 const EXIT_NEEDS_WORK = 3;
 
-function outputFeedbackResult(
+async function outputFeedbackResult(
   feedback: FeedbackPayload,
   sessionId: string,
   planTitle: string,
-): void {
+  sessionDir: string,
+): Promise<void> {
+  // Stop the server — review cycle is complete
+  const parentDir = dirname(sessionDir);
+  const stopped = await stopServer(parentDir);
+  if (stopped) {
+    console.error("Server stopped.");
+  }
+
   const unresolvedComments = feedback.comments.filter((c) => !c.resolved);
   outputJson({
     event: "feedback",
@@ -126,6 +135,7 @@ export async function waitForFeedback(
   sessionId: string,
   planTitle: string,
   mdWatcher: ReturnType<typeof watch>,
+  sessionDir: string,
 ): Promise<void> {
   // Check if feedback already submitted
   if (existsSync(feedbackPath)) {
@@ -135,7 +145,7 @@ export async function waitForFeedback(
       ) as FeedbackPayload;
       if (existing.status === "approved" || existing.status === "needs-work") {
         mdWatcher.close();
-        outputFeedbackResult(existing, sessionId, planTitle);
+        await outputFeedbackResult(existing, sessionId, planTitle, sessionDir);
         return;
       }
     } catch {
@@ -148,7 +158,7 @@ export async function waitForFeedback(
       awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 100 },
     });
 
-    const check = () => {
+    const check = async () => {
       try {
         if (!existsSync(feedbackPath)) return;
         const data = JSON.parse(
@@ -157,7 +167,7 @@ export async function waitForFeedback(
         if (data.status === "approved" || data.status === "needs-work") {
           fbWatcher.close();
           mdWatcher.close();
-          outputFeedbackResult(data, sessionId, planTitle);
+          await outputFeedbackResult(data, sessionId, planTitle, sessionDir);
           resolve();
         }
       } catch {

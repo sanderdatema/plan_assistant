@@ -4,12 +4,20 @@ let instance: ReturnType<typeof createPlanStore> | null = null;
 
 function createPlanStore() {
   let currentPlan = $state<PlanJson | null>(null);
+  let idleRemainingMs = $state<number | null>(null);
+  let serverShutdown = $state(false);
   let eventSource: EventSource | null = null;
   let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 
   return {
     get plan() {
       return currentPlan;
+    },
+    get idleRemainingMs() {
+      return idleRemainingMs;
+    },
+    get serverShutdown() {
+      return serverShutdown;
     },
     set(plan: PlanJson | null) {
       currentPlan = plan;
@@ -29,10 +37,26 @@ function createPlanStore() {
           }
         });
 
+        eventSource.addEventListener("idle-timer", (event) => {
+          try {
+            const data = JSON.parse(event.data) as { remainingMs: number };
+            idleRemainingMs = data.remainingMs;
+          } catch {
+            // ignore
+          }
+        });
+
+        eventSource.addEventListener("server-shutdown", () => {
+          serverShutdown = true;
+          eventSource?.close();
+        });
+
         eventSource.onerror = () => {
           eventSource?.close();
-          // Reconnect after 3 seconds
-          reconnectTimer = setTimeout(connect, 3000);
+          if (!serverShutdown) {
+            // Reconnect after 3 seconds (but not if server is shutting down)
+            reconnectTimer = setTimeout(connect, 3000);
+          }
         };
       };
 

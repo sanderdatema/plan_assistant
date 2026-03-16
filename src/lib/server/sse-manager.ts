@@ -55,3 +55,14 @@ export function broadcast(sessionId: string, event: string, data: unknown) {
     sendToClients(clients.get("*"), encoded);
   }
 }
+
+/** Send an event to every connected client regardless of session. */
+export function broadcastAll(event: string, data: unknown) {
+  const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  const encoder = new TextEncoder();
+  const encoded = encoder.encode(message);
+
+  for (const clientSet of clients.values()) {
+    sendToClients(clientSet, encoded);
+  }
+}

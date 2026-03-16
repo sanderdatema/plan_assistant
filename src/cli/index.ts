@@ -58,6 +58,7 @@ Commands:
   plan-assistant status <session-id-or-file>           Check review status
   plan-assistant feedback <session-id-or-file>         Read feedback JSON
   plan-assistant list [--dir <path>]                   List all sessions
+  plan-assistant stop [<session-id-or-file>]            Stop running server(s)
   plan-assistant clean [--all] [--older-than <dur>]    Remove old sessions
   plan-assistant export <session-id-or-file>           Export as HTML
   plan-assistant help format                           Show the required plan format
@@ -66,7 +67,9 @@ Commands:
 Flags:
   --pretty        Human-readable output (default: JSON)
   --port <N>      Port for review server (review command)
+  --host <H>      Hostname for browser URL, e.g. host IP when running in Docker (review command)
   --no-wait       Don't wait for feedback, just start server (review command)
+  --reuse         Reuse an already-running server on another session (review command)
   --wait          Block until feedback is submitted (status command)
 
 TIP: Always start with \`plan-assistant init\` to get a correctly-formatted template.
@@ -156,6 +159,10 @@ export async function main(args: string[]) {
     case "init": {
       const { init } = await import("./commands/init.js");
       return init(parsed);
+    }
+    case "stop": {
+      const { stop } = await import("./commands/stop.js");
+      return stop(parsed);
     }
     case "clean": {
       const { clean } = await import("./commands/clean.js");
