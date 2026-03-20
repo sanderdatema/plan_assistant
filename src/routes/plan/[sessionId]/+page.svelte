@@ -12,7 +12,6 @@
 	import VersionSelector from '$lib/components/plan/VersionSelector.svelte';
 	import DiffView from '$lib/components/plan/DiffView.svelte';
 	import FeedbackPanel from '$lib/components/feedback/FeedbackPanel.svelte';
-	import HoverToolbar from '$lib/components/feedback/HoverToolbar.svelte';
 	import ApprovalBar from '$lib/components/feedback/ApprovalBar.svelte';
 	import { diffPlans, type SectionDiff } from '$lib/utils/diff.js';
 	import type { PlanJson } from '$lib/types/plan.js';
@@ -140,10 +139,7 @@
 		}
 	}
 
-	function handleFocusOut(event: FocusEvent) {
-		const related = event.relatedTarget as HTMLElement | null;
-		// Keep toolbar visible if focus moved into the toolbar
-		if (related?.closest('.fixed.z-50')) return;
+	function handleFocusOut() {
 		hoveredElement = null;
 		hoverRect = null;
 	}
@@ -367,16 +363,6 @@
 		></div>
 	{/if}
 
-	<!-- Hover Toolbar -->
-	<HoverToolbar
-		rect={hoverRect}
-		onComment={() => {
-			if (!hoveredElement) return;
-			const label = hoveredElement.getAttribute('data-comment-label') ?? 'General';
-			const quote = (hoveredElement.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 120);
-			feedbackStore.addComment(label, quote, '');
-		}}
-	/>
 
 	<!-- Feedback Panel (right sidebar) -->
 	<FeedbackPanel
