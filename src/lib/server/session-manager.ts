@@ -7,9 +7,9 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import type { SessionMeta } from "$lib/types/session.js";
-import type { PlanJson } from "$lib/types/plan.js";
-import type { FeedbackPayload } from "$lib/types/feedback.js";
+import type { SessionMeta } from "../types/session.js";
+import type { PlanJson } from "../types/plan.js";
+import type { FeedbackPayload } from "../types/feedback.js";
 
 /**
  * Session storage root directory.
@@ -35,6 +35,33 @@ function getSessionDir(sessionId: string): string {
   return join(getBaseDir(), sessionId);
 }
 
+// ── Shared JSON read helper ──────────────────────────────────────
+
+export function readJsonFile<T>(filePath: string): T | null {
+  if (!existsSync(filePath)) return null;
+  try {
+    return JSON.parse(readFileSync(filePath, "utf-8")) as T;
+  } catch {
+    return null;
+  }
+}
+
+// ── Path-based reads (used by CLI via session-reader) ────────────
+
+export function readMeta(sessionDir: string): SessionMeta | null {
+  return readJsonFile<SessionMeta>(join(sessionDir, "meta.json"));
+}
+
+export function readFeedbackByDir(sessionDir: string): FeedbackPayload | null {
+  return readJsonFile<FeedbackPayload>(join(sessionDir, "feedback.json"));
+}
+
+export function readPlanByDir(sessionDir: string): PlanJson | null {
+  return readJsonFile<PlanJson>(join(sessionDir, "plan.json"));
+}
+
+// ── ID-based reads (used by server routes) ───────────────────────
+
 export function listSessions(): SessionMeta[] {
   const baseDir = getBaseDir();
   mkdirSync(baseDir, { recursive: true });
@@ -43,14 +70,8 @@ export function listSessions(): SessionMeta[] {
 
   for (const entry of entries) {
     if (!entry.isDirectory()) continue;
-    const metaPath = join(baseDir, entry.name, "meta.json");
-    if (!existsSync(metaPath)) continue;
-    try {
-      const meta = JSON.parse(readFileSync(metaPath, "utf-8")) as SessionMeta;
-      sessions.push(meta);
-    } catch {
-      // skip invalid sessions
-    }
+    const meta = readJsonFile<SessionMeta>(join(baseDir, entry.name, "meta.json"));
+    if (meta) sessions.push(meta);
   }
 
   return sessions.sort(
@@ -59,13 +80,7 @@ export function listSessions(): SessionMeta[] {
 }
 
 export function getSession(sessionId: string): SessionMeta | null {
-  const metaPath = join(getSessionDir(sessionId), "meta.json");
-  if (!existsSync(metaPath)) return null;
-  try {
-    return JSON.parse(readFileSync(metaPath, "utf-8")) as SessionMeta;
-  } catch {
-    return null;
-  }
+  return readMeta(getSessionDir(sessionId));
 }
 
 export function createSession(sessionId: string, meta: SessionMeta): void {
@@ -76,23 +91,11 @@ export function createSession(sessionId: string, meta: SessionMeta): void {
 }
 
 export function getPlan(sessionId: string): PlanJson | null {
-  const planPath = join(getSessionDir(sessionId), "plan.json");
-  if (!existsSync(planPath)) return null;
-  try {
-    return JSON.parse(readFileSync(planPath, "utf-8")) as PlanJson;
-  } catch {
-    return null;
-  }
+  return readPlanByDir(getSessionDir(sessionId));
 }
 
 export function getFeedback(sessionId: string): FeedbackPayload | null {
-  const fbPath = join(getSessionDir(sessionId), "feedback.json");
-  if (!existsSync(fbPath)) return null;
-  try {
-    return JSON.parse(readFileSync(fbPath, "utf-8")) as FeedbackPayload;
-  } catch {
-    return null;
-  }
+  return readFeedbackByDir(getSessionDir(sessionId));
 }
 
 export function saveFeedback(

@@ -11,7 +11,7 @@ import { resolve, dirname, join } from "node:path";
 import { watch } from "chokidar";
 import { parseMarkdownToPlan, sessionIdFromPath } from "../markdown-to-plan.js";
 import { outputJson } from "../output.js";
-import { waitForFeedback } from "../session-reader.js";
+import { awaitReviewFeedback } from "../session-reader.js";
 import {
   DEFAULT_BASE_PORT,
   MAX_PORT,
@@ -309,7 +309,7 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
 
   // Wait for feedback unless --no-wait
   if (!noWait) {
-    await waitForFeedback(
+    await awaitReviewFeedback(
       feedbackPath,
       sessionId,
       plan.meta.title,
