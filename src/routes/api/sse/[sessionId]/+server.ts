@@ -1,6 +1,8 @@
 import type { RequestHandler } from './$types.js';
 import { addClient, removeClient } from '$lib/server/sse-manager.js';
 
+const HEARTBEAT_INTERVAL_MS = 30_000;
+
 export const GET: RequestHandler = async ({ params }) => {
 	const sessionId = params.sessionId;
 	let interval: ReturnType<typeof setInterval>;
@@ -22,7 +24,7 @@ export const GET: RequestHandler = async ({ params }) => {
 					clearInterval(interval);
 					removeClient(client);
 				}
-			}, 30000);
+			}, HEARTBEAT_INTERVAL_MS);
 		},
 		cancel() {
 			clearInterval(interval);

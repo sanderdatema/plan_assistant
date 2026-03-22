@@ -15,8 +15,10 @@
 		return `${min}:${sec.toString().padStart(2, '0')}`;
 	});
 
+	const URGENT_THRESHOLD_MS = 60_000;
+
 	let isUrgent = $derived(
-		store.idleRemainingMs !== null && store.idleRemainingMs < 60_000
+		store.idleRemainingMs !== null && store.idleRemainingMs < URGENT_THRESHOLD_MS
 	);
 </script>
 
