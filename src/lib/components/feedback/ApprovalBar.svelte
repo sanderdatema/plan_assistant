@@ -8,6 +8,8 @@
 
 	let { status, commentCount, computedStatus, onSubmit }: Props = $props();
 
+	const FLASH_DURATION_MS = 3_000;
+
 	let flashMessage = $state<string | null>(null);
 	let flashColor = $state('text-green');
 	let flashTimer: ReturnType<typeof setTimeout> | null = null;
@@ -25,7 +27,7 @@
 		if (flashTimer) clearTimeout(flashTimer);
 		flashMessage = message;
 		flashColor = color;
-		flashTimer = setTimeout(() => { flashMessage = null; }, 3000);
+		flashTimer = setTimeout(() => { flashMessage = null; }, FLASH_DURATION_MS);
 	}
 </script>
 

@@ -1,3 +1,5 @@
+import type { PhaseStatus } from "../utils/status.js";
+
 export interface FeedbackPayload {
   schemaVersion: 1;
   planTitle: string;
@@ -8,7 +10,7 @@ export interface FeedbackPayload {
     string,
     {
       phaseId: string;
-      status: "pending" | "approved" | "needs-work";
+      status: PhaseStatus;
       note?: string;
     }
   >;
@@ -17,7 +19,7 @@ export interface FeedbackPayload {
     {
       subItemId: string;
       phaseId: string;
-      status: "pending" | "approved" | "needs-work";
+      status: PhaseStatus;
     }
   >;
   comments: FeedbackComment[];

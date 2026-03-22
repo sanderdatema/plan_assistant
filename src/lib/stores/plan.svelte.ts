@@ -1,5 +1,7 @@
 import type { PlanJson } from "$lib/types/plan.js";
 
+const RECONNECT_DELAY_MS = 3_000;
+
 let instance: ReturnType<typeof createPlanStore> | null = null;
 
 function createPlanStore() {
@@ -55,7 +57,7 @@ function createPlanStore() {
           eventSource?.close();
           if (!serverShutdown) {
             // Reconnect after 3 seconds (but not if server is shutting down)
-            reconnectTimer = setTimeout(connect, 3000);
+            reconnectTimer = setTimeout(connect, RECONNECT_DELAY_MS);
           }
         };
       };

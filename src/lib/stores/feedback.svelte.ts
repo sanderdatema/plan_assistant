@@ -1,4 +1,7 @@
 import type { FeedbackPayload, FeedbackComment } from "$lib/types/feedback.js";
+import type { PhaseStatus } from "$lib/utils/status.js";
+
+const SAVE_DEBOUNCE_MS = 500;
 
 function genId() {
   return (
@@ -28,7 +31,7 @@ function createFeedbackStore() {
 
   function debouncedSave() {
     if (saveTimer) clearTimeout(saveTimer);
-    saveTimer = setTimeout(persistFeedback, 500);
+    saveTimer = setTimeout(persistFeedback, SAVE_DEBOUNCE_MS);
   }
 
   return {
@@ -125,7 +128,7 @@ function createFeedbackStore() {
 
     setPhaseStatus(
       phaseId: string,
-      status: "pending" | "approved" | "needs-work",
+      status: PhaseStatus,
       note?: string,
     ) {
       if (!currentFeedback) return;
@@ -140,7 +143,7 @@ function createFeedbackStore() {
     setSubItemStatus(
       subItemId: string,
       phaseId: string,
-      status: "pending" | "approved" | "needs-work",
+      status: PhaseStatus,
       allSubItemIds: string[],
     ) {
       if (!currentFeedback) return;
