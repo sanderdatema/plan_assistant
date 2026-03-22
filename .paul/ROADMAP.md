@@ -90,7 +90,7 @@ Phases: 4 of 4 complete
 ## Next Milestone
 
 **v1.5.1 Bug Fixes** (v1.5.1)
-Status: In progress
+Status: Complete
 Phases: 1 of 1
 
 ## v1.5.1 Phases
@@ -115,6 +115,55 @@ Phases: 1 of 1
 
 **Plans:**
 - [x] 05-01: Fix all 6 bugs (single plan, all independent fixes)
+
+## Next Milestone
+
+**v1.6.0 Refactoring & Test Coverage** (v1.6.0)
+Status: In progress
+Phases: 3
+
+## v1.6.0 Phases
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| 6 | Test Coverage | 1 | Planning | — |
+| 7 | Dead Code & Deduplication | 1 | Not started | — |
+| 8 | Type & Constant Cleanup | 1 | Not started | — |
+
+### Phase 6: Test Coverage
+
+**Goal:** Add tests for untested modules to create a safety net before refactoring.
+**Depends on:** Nothing (first phase of milestone)
+**Plane items:** PA-62, PA-63, PA-64, PA-65, PA-66
+
+**Scope:**
+- Tests for session-manager.ts core persistence functions (PA-62)
+- Tests for session-resolver.ts (PA-63)
+- Tests for renderPlanToHtml in export-html.ts (PA-64)
+- Tests for clean command session filtering logic (PA-65)
+- Fix vitest config to include colocated test files (PA-66)
+
+### Phase 7: Dead Code & Deduplication
+
+**Goal:** Remove dead code, deduplicate patterns, and consolidate shared helpers.
+**Depends on:** Phase 6 (tests as safety net)
+**Plane items:** PA-56, PA-57, PA-58, PA-61
+
+**Scope:**
+- Remove dead code: unused imports, exports, unreachable branches (PA-56)
+- Deduplicate session guard pattern in routes and CLI commands (PA-57)
+- Extract fetchWithTimeout helper (PA-58)
+- Use readJsonFile in getVersion (PA-61)
+
+### Phase 8: Type & Constant Cleanup
+
+**Goal:** Consolidate magic numbers and use consistent types.
+**Depends on:** Phase 7 (clean foundation)
+**Plane items:** PA-59, PA-60
+
+**Scope:**
+- Consolidate magic numbers into named constants (PA-59)
+- Use PhaseStatus type consistently instead of inline string unions (PA-60)
 
 ---
 *Roadmap created: 2026-03-22*

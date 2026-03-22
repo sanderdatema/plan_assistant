@@ -5,25 +5,26 @@
 See: .paul/PROJECT.md (updated 2026-03-22)
 
 **Core value:** AI agents krijgen gestructureerde menselijke feedback op implementatieplannen via browser review
-**Current focus:** v1.5.1 Bug Fixes — MILESTONE COMPLETE
+**Current focus:** v1.6.0 Refactoring & Test Coverage
 
 ## Current Position
 
-Milestone: v1.5.1 Bug Fixes
-Phase: 5 of 5 — Complete
-Plan: All plans complete
-Status: Milestone complete
-Last activity: 2026-03-22 — v1.5.1 milestone complete, 6 bugs fixed
+Milestone: v1.6.0 Refactoring & Test Coverage
+Phase: 6 of 8 (Test Coverage) — Planning
+Plan: 06-01 created, awaiting approval
+Status: PLAN created, ready for APPLY
+Last activity: 2026-03-22 — Created .paul/phases/06-test-coverage/06-01-PLAN.md
 
 Progress:
-- Milestone: [##########] 100%
+- Milestone: [░░░░░░░░░░] 0%
+- Phase 6: [░░░░░░░░░░] 0%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN --> APPLY --> UNIFY
-  v        v        v     [Loop complete — milestone done]
+  v        o        o     [Plan created, awaiting approval]
 ```
 
 ## Accumulated Context
@@ -43,7 +44,7 @@ PLAN --> APPLY --> UNIFY
 | Export-html parallel rendering | Code review | M | v1.6.0 |
 | Feedback components outside design system | Code review | M | v1.6.0 |
 | Decorative checkboxen in Success Criteria | Code review | S | v1.6.0 |
-| review.ts no-wait SIGINT uses process.exit(0) | Phase 5 apply | S | v1.6.0 |
+| review.ts no-wait SIGINT uses process.exit(0) | Phase 5 | S | v1.6.0 |
 
 ### Blockers/Concerns
 None.
@@ -51,9 +52,9 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-22
-Stopped at: v1.5.1 milestone complete
-Next action: Release v1.5.1 via /publish, then consider v1.6.0
-Resume file: .paul/ROADMAP.md
+Stopped at: Plan 06-01 created
+Next action: Review and approve plan, then run /paul:apply
+Resume file: .paul/phases/06-test-coverage/06-01-PLAN.md
 
 ---
 *STATE.md -- Updated after every significant action*
