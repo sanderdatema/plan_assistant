@@ -5,18 +5,18 @@
 See: .paul/PROJECT.md (updated 2026-03-22)
 
 **Core value:** AI agents krijgen gestructureerde menselijke feedback op implementatieplannen via browser review
-**Current focus:** v1.5.0 Code Quality -- Phase 2: CLI Testability Refactor
+**Current focus:** v1.5.0 Code Quality -- Phase 3: Consolidation & Cleanup
 
 ## Current Position
 
 Milestone: v1.5.0 Code Quality
-Phase: 2 of 4 (CLI Testability Refactor)
+Phase: 3 of 4 (Consolidation & Cleanup)
 Plan: Not started
 Status: Ready to plan
-Last activity: 2026-03-22 -- Phase 1 complete, transitioned to Phase 2
+Last activity: 2026-03-22 -- Phase 2 complete, transitioned to Phase 3
 
 Progress:
-- Milestone: [###-------] 25%
+- Milestone: [#####-----] 50%
 
 ## Loop Position
 
@@ -31,9 +31,10 @@ PLAN --> APPLY --> UNIFY
 ### Decisions
 | Decision | Phase | Impact |
 |----------|-------|--------|
-| Tests first, then refactor | Pre-planning | Beck: "niet refactoren zonder tests" |
-| Security deprioritized | Pre-planning | Local-only tool, niet publiekelijk exposed |
-| Export private functions for testability | Phase 1 | computeStatus, computeSummary, escapeHtml now exported |
+| Tests first, then refactor | Pre-planning | Safety net established |
+| SIGINT handlers keep process.exit(0) | Phase 2 | 2 locations exempt from CliError pattern |
+| CliExitCode for intentional exits | Phase 2 | status exit codes are not errors |
+| Promise reject for async exits | Phase 2 | Watcher callbacks use reject() |
 
 ### Deferred Issues
 | Issue | Origin | Effort | Revisit |
@@ -50,8 +51,8 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-22
-Stopped at: Phase 1 complete, ready to plan Phase 2
-Next action: /paul:plan for Phase 2 (CLI Testability Refactor)
+Stopped at: Phase 2 complete, ready to plan Phase 3
+Next action: /paul:plan for Phase 3 (Consolidation & Cleanup)
 Resume file: .paul/ROADMAP.md
 
 ---

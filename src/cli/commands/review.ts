@@ -24,13 +24,14 @@ import {
 } from "../server-client.js";
 import type { SessionMeta } from "../../lib/types/index.js";
 import type { ParsedArgs } from "../index.js";
+import { CliError } from "../errors.js";
 
 export async function review(args: ParsedArgs) {
   const markdownFile = args.positional[0];
   if (!markdownFile) {
     console.error("Error: Please provide a markdown file path");
     console.error("Usage: plan-assistant review <markdown-file>");
-    process.exit(1);
+    throw new CliError("Missing markdown file path");
   }
 
   // Parse host configuration (for Docker/remote sandbox environments)
@@ -48,22 +49,19 @@ export async function review(args: ParsedArgs) {
   if (typeof portFlag === "string") {
     requestedPort = parseInt(portFlag, 10);
     if (isNaN(requestedPort)) {
-      console.error(`Error: Invalid port number: ${portFlag}`);
-      process.exit(1);
+      throw new CliError(`Invalid port number: ${portFlag}`);
     }
   } else if (envPort) {
     requestedPort = parseInt(envPort, 10);
     if (isNaN(requestedPort)) {
-      console.error(`Error: Invalid PLAN_ASSISTANT_PORT: ${envPort}`);
-      process.exit(1);
+      throw new CliError(`Invalid PLAN_ASSISTANT_PORT: ${envPort}`);
     }
   }
 
   const absolutePath = resolve(markdownFile);
 
   if (!existsSync(absolutePath)) {
-    console.error(`File not found: ${absolutePath}`);
-    process.exit(1);
+    throw new CliError(`File not found: ${absolutePath}`);
   }
 
   const sessionDir = join(dirname(absolutePath), ".plan-sessions");
@@ -195,7 +193,7 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
             `Error: Port ${requestedPort} is already in use by another process.`,
           );
         }
-        process.exit(1);
+        throw new CliError(`Port ${requestedPort} is already in use`);
       }
       port = requestedPort;
     } else {

@@ -100,6 +100,8 @@ export function findSessionDirs(startDir: string): SessionEntry[] {
 
 // ── Feedback watching ──────────────────────────────────────────────
 
+import { CliExitCode } from "./errors.js";
+
 const EXIT_APPROVED = 0;
 const EXIT_NEEDS_WORK = 3;
 
@@ -108,7 +110,7 @@ async function outputFeedbackResult(
   sessionId: string,
   planTitle: string,
   sessionDir: string,
-): Promise<void> {
+): Promise<never> {
   // Stop the server — review cycle is complete
   const parentDir = dirname(sessionDir);
   const stopped = await stopServer(parentDir);
@@ -125,7 +127,7 @@ async function outputFeedbackResult(
     comments: unresolvedComments,
     commentCount: unresolvedComments.length,
   });
-  process.exit(
+  throw new CliExitCode(
     feedback.status === "approved" ? EXIT_APPROVED : EXIT_NEEDS_WORK,
   );
 }

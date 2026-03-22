@@ -2,6 +2,7 @@ import { resolveSession } from "../session-resolver.js";
 import { readMeta, readFeedback } from "../session-reader.js";
 import { outputJson, outputError } from "../output.js";
 import { parseDuration } from "../utils.js";
+import { CliError, CliExitCode } from "../errors.js";
 import type { ParsedArgs } from "../index.js";
 import type { FeedbackPayload } from "../../lib/types/index.js";
 import { watch } from "chokidar";
@@ -58,19 +59,19 @@ export async function status(args: ParsedArgs) {
       "Please provide a session ID or markdown file path",
       "MISSING_ARG",
     );
-    process.exit(EXIT_ERROR);
+    throw new CliError("Missing session ID or file path");
   }
 
   const resolved = resolveSession(idOrFile);
   if (!resolved) {
     outputError(`Session not found for: ${idOrFile}`, "NOT_FOUND");
-    process.exit(EXIT_ERROR);
+    throw new CliError(`Session not found for: ${idOrFile}`);
   }
 
   const meta = readMeta(resolved.sessionDir);
   if (!meta) {
     outputError(`Could not read session metadata`, "READ_ERROR");
-    process.exit(EXIT_ERROR);
+    throw new CliError("Could not read session metadata");
   }
 
   const shouldWait = args.flags.wait === true;
@@ -113,7 +114,7 @@ export async function status(args: ParsedArgs) {
     args.flags.pretty === true,
   );
 
-  process.exit(exitCode);
+  throw new CliExitCode(exitCode);
 }
 
 async function waitForFeedback(
@@ -139,16 +140,16 @@ async function waitForFeedback(
       phaseSummary,
       commentSummary,
     });
-    process.exit(exitCode);
+    throw new CliExitCode(exitCode);
   }
 
   // Watch for changes
   const feedbackPath = join(sessionDir, "feedback.json");
-  return new Promise((resolve) => {
+  return new Promise<void>((resolve, reject) => {
     const timer = setTimeout(() => {
       watcher.close();
       outputError("Timed out waiting for feedback", "TIMEOUT");
-      process.exit(EXIT_ERROR);
+      reject(new CliError("Timed out waiting for feedback"));
     }, timeoutMs);
 
     const checkFile = () => {
@@ -173,7 +174,7 @@ async function waitForFeedback(
             phaseSummary,
             commentSummary,
           });
-          process.exit(exitCode);
+          reject(new CliExitCode(exitCode));
         }
       } catch {
         // ignore parse errors during writes

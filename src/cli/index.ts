@@ -136,9 +136,9 @@ Optional top-level sections (all H2):
   ## References`);
 }
 
-export async function main(args: string[]) {
-  const parsed = parseArgs(args);
+import { CliError, CliExitCode } from "./errors.js";
 
+async function dispatch(parsed: ParsedArgs): Promise<void> {
   switch (parsed.command) {
     case "review": {
       const { review } = await import("./commands/review.js");
@@ -182,8 +182,24 @@ export async function main(args: string[]) {
       }
       return;
     default:
-      console.error(`Unknown command: ${parsed.command}`);
-      usage();
-      process.exit(1);
+      throw new CliError(`Unknown command: ${parsed.command}`, 1);
+  }
+}
+
+export async function main(args: string[]) {
+  const parsed = parseArgs(args);
+  try {
+    await dispatch(parsed);
+  } catch (err) {
+    if (err instanceof CliExitCode) {
+      process.exit(err.exitCode);
+    }
+    if (err instanceof CliError) {
+      console.error(err.message);
+      process.exit(err.exitCode);
+    }
+    // Unexpected error
+    console.error(err instanceof Error ? err.message : String(err));
+    process.exit(1);
   }
 }

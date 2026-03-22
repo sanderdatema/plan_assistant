@@ -8,14 +8,14 @@ Implement the recommendations from a deep 9-analyst code review. Focus on code q
 
 **v1.5.0 Code Quality** (v1.5.0)
 Status: In progress
-Phases: 1 of 4 complete
+Phases: 2 of 4 complete
 
 ## Phases
 
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 1 | Test Foundation | 1 | Complete | 2026-03-22 |
-| 2 | CLI Testability Refactor | TBD | Not started | - |
+| 2 | CLI Testability Refactor | 1 | Complete | 2026-03-22 |
 | 3 | Consolidation & Cleanup | TBD | Not started | - |
 | 4 | Structural Refactoring | TBD | Not started | - |
 
@@ -54,8 +54,7 @@ Phases: 1 of 4 complete
 - Add sessionId validation (/^[a-f0-9]{8}$/)
 
 **Plans:**
-- [ ] 02-01: CliError pattern + process.exit() removal
-- [ ] 02-02: stdout->stderr fix + sessionId validation
+- [x] 02-01: CliError pattern + process.exit() removal + stdout fix + sessionId validation
 
 ### Phase 3: Consolidation & Cleanup
 

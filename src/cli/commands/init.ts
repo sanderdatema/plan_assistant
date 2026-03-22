@@ -1,6 +1,7 @@
 import { writeFileSync, existsSync } from "node:fs";
 import { resolve } from "node:path";
 import { outputError } from "../output.js";
+import { CliError } from "../errors.js";
 import type { ParsedArgs } from "../index.js";
 
 const TEMPLATE = `# [Feature Name] Implementation Plan
@@ -118,7 +119,7 @@ export async function init(args: ParsedArgs) {
     const path = resolve(outputFile);
     if (existsSync(path)) {
       outputError(`File already exists: ${path}`, "FILE_EXISTS");
-      process.exit(1);
+      throw new CliError(`File already exists: ${path}`);
     }
     writeFileSync(path, TEMPLATE, "utf-8");
     console.error(`Template written to ${path}`);

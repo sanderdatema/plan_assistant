@@ -24,7 +24,14 @@ export function getBaseDir(): string {
   );
 }
 
+export function validateSessionId(sessionId: string): void {
+  if (!/^[a-f0-9]{1,16}$/.test(sessionId)) {
+    throw new Error(`Invalid session ID: ${sessionId}`);
+  }
+}
+
 function getSessionDir(sessionId: string): string {
+  validateSessionId(sessionId);
   return join(getBaseDir(), sessionId);
 }
 

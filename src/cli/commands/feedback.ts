@@ -1,6 +1,7 @@
 import { resolveSession } from "../session-resolver.js";
 import { readFeedback } from "../session-reader.js";
 import { outputJson, outputError } from "../output.js";
+import { CliError } from "../errors.js";
 import type { ParsedArgs } from "../index.js";
 
 export async function feedback(args: ParsedArgs) {
@@ -10,19 +11,19 @@ export async function feedback(args: ParsedArgs) {
       "Please provide a session ID or markdown file path",
       "MISSING_ARG",
     );
-    process.exit(1);
+    throw new CliError("Missing session ID or file path");
   }
 
   const resolved = resolveSession(idOrFile);
   if (!resolved) {
     outputError(`Session not found for: ${idOrFile}`, "NOT_FOUND");
-    process.exit(1);
+    throw new CliError(`Session not found for: ${idOrFile}`);
   }
 
   const feedback = readFeedback(resolved.sessionDir);
   if (!feedback) {
     outputError("No feedback found for this session", "NO_FEEDBACK");
-    process.exit(1);
+    throw new CliError("No feedback found for this session");
   }
 
   const phaseFilter =
