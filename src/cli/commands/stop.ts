@@ -8,6 +8,7 @@ import {
   MAX_PORT,
 } from "../server-client.js";
 import { outputJson, outputError } from "../output.js";
+import { CliError } from "../errors.js";
 
 export async function stop(args: ParsedArgs) {
   const target = args.positional[0];
@@ -17,7 +18,7 @@ export async function stop(args: ParsedArgs) {
     const session = resolveSession(target);
     if (!session) {
       outputError(`Session not found: ${target}`, "NOT_FOUND");
-      process.exit(1);
+      throw new CliError(`Session not found: ${target}`);
     }
 
     const parentDir = dirname(session.sessionDir);

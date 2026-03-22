@@ -4,6 +4,7 @@ import { resolveSession } from "../session-resolver.js";
 import { readPlan, readFeedback } from "../session-reader.js";
 import { renderPlanToHtml } from "../export-html.js";
 import { outputError } from "../output.js";
+import { CliError } from "../errors.js";
 import type { ParsedArgs } from "../index.js";
 
 export async function exportCmd(args: ParsedArgs) {
@@ -13,19 +14,19 @@ export async function exportCmd(args: ParsedArgs) {
       "Please provide a session ID or markdown file path",
       "MISSING_ARG",
     );
-    process.exit(1);
+    throw new CliError("Missing session ID or file path");
   }
 
   const resolved = resolveSession(idOrFile);
   if (!resolved) {
     outputError(`Session not found for: ${idOrFile}`, "NOT_FOUND");
-    process.exit(1);
+    throw new CliError(`Session not found for: ${idOrFile}`);
   }
 
   const plan = readPlan(resolved.sessionDir);
   if (!plan) {
     outputError("Could not read plan data", "READ_ERROR");
-    process.exit(1);
+    throw new CliError("Could not read plan data");
   }
 
   const feedback = readFeedback(resolved.sessionDir);

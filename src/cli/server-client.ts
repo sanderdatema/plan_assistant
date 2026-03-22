@@ -138,10 +138,9 @@ function startServer(sessionDir: string, port: number): Promise<number> {
   const buildEntry = join(packageDir, "build", "index.js");
 
   if (!existsSync(buildEntry)) {
-    console.error(
-      `Error: Server build not found at ${buildEntry}\nRun 'npm run build:server' in the plan-assistant package first.`,
+    throw new Error(
+      `Server build not found at ${buildEntry}\nRun 'npm run build:server' in the plan-assistant package first.`,
     );
-    process.exit(1);
   }
 
   return new Promise((resolvePromise, reject) => {
@@ -187,15 +186,10 @@ export async function launchServer(
   sessionDir: string,
   port: number,
 ): Promise<void> {
-  process.stdout.write(`Starting Plan Assistant server on port ${port}...`);
-  try {
-    const pid = await startServer(sessionDir, port);
-    writeLock(sessionDir, port, pid);
-    console.log(" ready.");
-  } catch (err) {
-    console.error(` failed: ${err}`);
-    process.exit(1);
-  }
+  process.stderr.write(`Starting Plan Assistant server on port ${port}...`);
+  const pid = await startServer(sessionDir, port);
+  writeLock(sessionDir, port, pid);
+  console.error(" ready.");
 }
 
 export async function stopServer(sessionDir: string): Promise<boolean> {

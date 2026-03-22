@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import { findSessionDirs } from "../session-reader.js";
 import { outputJson, outputError } from "../output.js";
 import { parseDuration } from "../utils.js";
+import { CliError, CliExitCode } from "../errors.js";
 import type { ParsedArgs } from "../index.js";
 import * as readline from "node:readline";
 
@@ -41,7 +42,7 @@ export async function clean(args: ParsedArgs) {
         `Invalid duration: ${olderThanStr}. Use format like 7d, 24h, 2w`,
         "INVALID_DURATION",
       );
-      process.exit(1);
+      throw new CliError(`Invalid duration: ${olderThanStr}`);
     }
   }
 
@@ -130,7 +131,7 @@ export async function clean(args: ParsedArgs) {
     const ok = await confirm("Continue?");
     if (!ok) {
       console.error("Aborted.");
-      process.exit(0);
+      throw new CliExitCode(0);
     }
   }
 
