@@ -49,7 +49,8 @@ function expire() {
   broadcastAll("idle-timer", { remainingMs: 0 });
   broadcastAll("server-shutdown", { reason: "idle-timeout" });
 
-  console.log("[idle-timer] Server idle for 5 minutes, shutting down.");
+  const minutes = IDLE_TIMEOUT_MS / 60_000;
+  console.log(`[idle-timer] Server idle for ${minutes} minutes, shutting down.`);
 
   if (onExpireCallback) {
     onExpireCallback();

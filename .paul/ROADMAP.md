@@ -87,5 +87,34 @@ Phases: 4 of 4 complete
 **Plans:**
 - [x] 04-01: Refactor review.ts + parsePhases (combined into single plan)
 
+## Next Milestone
+
+**v1.5.1 Bug Fixes** (v1.5.1)
+Status: In progress
+Phases: 1 of 1
+
+## v1.5.1 Phases
+
+| Phase | Name | Plans | Status | Completed |
+|-------|------|-------|--------|-----------|
+| 5 | Bug Fixes | 1 | Complete | 2026-03-22 |
+
+### Phase 5: Bug Fixes
+
+**Goal:** Fix 6 bugs found during codebase health scan.
+**Depends on:** Nothing (v1.5.0 complete)
+**Research:** None
+
+**Scope:**
+- B1: stop command doesn't call clearLock() — stale lock files
+- B2: SIGINT handler leak in awaitReviewFeedback
+- B3: pollFeedbackStatus uses reject() for success path
+- B4: phaseToString omits subItems in version diffs
+- B5: additionalSections parsed but never rendered (remove dead code)
+- B6: idle timer log hardcodes "5 minutes" independent of constant
+
+**Plans:**
+- [x] 05-01: Fix all 6 bugs (single plan, all independent fixes)
+
 ---
 *Roadmap created: 2026-03-22*

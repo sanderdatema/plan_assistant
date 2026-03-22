@@ -134,6 +134,12 @@ export async function awaitReviewFeedback(
       awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 100 },
     });
 
+    const cleanup = () => {
+      fbWatcher.close();
+      mdWatcher.close();
+      process.removeListener("SIGINT", onSigint);
+    };
+
     const check = async () => {
       try {
         if (!existsSync(feedbackPath)) return;
@@ -141,8 +147,7 @@ export async function awaitReviewFeedback(
           readFileSync(feedbackPath, "utf-8"),
         ) as FeedbackPayload;
         if (data.status === "approved" || data.status === "needs-work") {
-          fbWatcher.close();
-          mdWatcher.close();
+          cleanup();
           await outputFeedbackResult(data, sessionId, planTitle, sessionDir);
           resolve();
         }
@@ -151,14 +156,14 @@ export async function awaitReviewFeedback(
       }
     };
 
+    const onSigint = () => {
+      cleanup();
+      console.error("\nStopped watching.");
+      throw new CliExitCode(0);
+    };
+
     fbWatcher.on("change", check);
     fbWatcher.on("add", check);
-
-    process.on("SIGINT", () => {
-      fbWatcher.close();
-      mdWatcher.close();
-      console.error("\nStopped watching.");
-      process.exit(0);
-    });
+    process.on("SIGINT", onSigint);
   });
 }

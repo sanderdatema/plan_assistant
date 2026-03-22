@@ -65,7 +65,7 @@ function writeLock(sessionDir: string, port: number, pid: number): void {
   writeFileSync(lockFilePath(sessionDir), JSON.stringify({ port, pid }));
 }
 
-function clearLock(sessionDir: string): void {
+export function clearLock(sessionDir: string): void {
   try {
     unlinkSync(lockFilePath(sessionDir));
   } catch {
