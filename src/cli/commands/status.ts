@@ -83,13 +83,13 @@ export async function status(args: ParsedArgs) {
         ? (parseDuration(timeoutStr) ?? 30 * 60 * 1000)
         : 30 * 60 * 1000; // 30 min default
 
-    await pollFeedbackStatus(
+    const exitCode = await pollFeedbackStatus(
       resolved.sessionDir,
       resolved.sessionId,
       meta,
       timeoutMs,
     );
-    return;
+    throw new CliExitCode(exitCode);
   }
 
   const rawFeedback = readFeedback(resolved.sessionDir);
@@ -122,7 +122,7 @@ async function pollFeedbackStatus(
   sessionId: string,
   meta: ReturnType<typeof readMeta> & {},
   timeoutMs: number,
-): Promise<void> {
+): Promise<number> {
   // Check current state first (ignore stale feedback from older plan versions)
   const current = readFeedback(sessionDir);
   if (
@@ -140,12 +140,12 @@ async function pollFeedbackStatus(
       phaseSummary,
       commentSummary,
     });
-    throw new CliExitCode(exitCode);
+    return exitCode;
   }
 
   // Watch for changes
   const feedbackPath = join(sessionDir, "feedback.json");
-  return new Promise<void>((resolve, reject) => {
+  return new Promise<number>((resolve, reject) => {
     const timer = setTimeout(() => {
       watcher.close();
       outputError("Timed out waiting for feedback", "TIMEOUT");
@@ -174,7 +174,7 @@ async function pollFeedbackStatus(
             phaseSummary,
             commentSummary,
           });
-          reject(new CliExitCode(exitCode));
+          resolve(exitCode);
         }
       } catch {
         // ignore parse errors during writes

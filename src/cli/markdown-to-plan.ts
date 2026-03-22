@@ -3,11 +3,7 @@ import { createHash } from "node:crypto";
 import { basename } from "node:path";
 import type {
   PlanJson,
-  Phase,
-  Change,
-  Criterion,
   Diagram,
-  SubItem,
 } from "../lib/types/index.js";
 import { generatePhaseFlowDiagram } from "./mermaid-gen.js";
 import {
@@ -21,12 +17,10 @@ import {
   parsePhases,
   parseTestingStrategy,
   parseReferences,
-  tryMatchPhaseHeading,
   extractFilePath,
   parseChangesFromHeadings,
   parseChangesFromList,
   parseCriteria,
-  KNOWN_SECTION_PATTERNS,
 } from "./markdown-parser.js";
 
 export interface ParseResult {
@@ -134,56 +128,6 @@ export function parseMarkdownToPlan(
   const refsSection = findSection(sections, /^References$/i, 2);
   const references = refsSection ? parseReferences(refsSection.tokens) : [];
 
-  // Collect additional (unrecognized) H2 sections
-  const knownH2Indices = new Set<number>();
-  for (let i = 0; i < sections.length; i++) {
-    if (sections[i].level === 1) {
-      knownH2Indices.add(i);
-      continue;
-    }
-    if (sections[i].level !== 2) continue;
-
-    // Check if it's a known section
-    if (KNOWN_SECTION_PATTERNS.some((p) => p.test(sections[i].heading))) {
-      knownH2Indices.add(i);
-      continue;
-    }
-
-    // Check if it was parsed as a phase
-    if (
-      phases.some(
-        (p) =>
-          p.name === sections[i].heading ||
-          tryMatchPhaseHeading(sections[i].heading, 0),
-      )
-    ) {
-      knownH2Indices.add(i);
-      continue;
-    }
-  }
-
-  const additionalSections: { heading: string; content: string }[] = [];
-  for (let i = 0; i < sections.length; i++) {
-    if (sections[i].level !== 2 || knownH2Indices.has(i)) continue;
-    // Double-check it's not a parsed phase
-    const isPhase = phases.some(
-      (p) =>
-        p.name === sections[i].heading ||
-        sections[i].heading.match(new RegExp(`Phase\\s+${p.number}`, "i")),
-    );
-    if (isPhase) continue;
-
-    const subs = collectSectionsUntilLevel(sections, i, 2);
-    let content = tokensToMarkdown(sections[i].tokens);
-    for (const sub of subs) {
-      content += `\n\n${"#".repeat(sub.level)} ${sub.heading}\n\n${tokensToMarkdown(sub.tokens)}`;
-    }
-    additionalSections.push({
-      heading: sections[i].heading,
-      content: content.trim(),
-    });
-  }
-
   const now = new Date().toISOString();
 
   const plan: PlanJson = {
@@ -207,7 +151,6 @@ export function parseMarkdownToPlan(
     diagrams,
     testingStrategy,
     references,
-    ...(additionalSections.length > 0 ? { additionalSections } : {}),
   };
 
   return { plan, warnings: ctx.warnings };

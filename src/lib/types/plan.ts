@@ -23,7 +23,6 @@ export interface PlanJson {
     manual: string[];
   };
   references: string[];
-  additionalSections?: { heading: string; content: string }[];
 }
 
 export interface SubItem {

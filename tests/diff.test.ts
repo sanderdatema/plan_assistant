@@ -96,4 +96,18 @@ describe("diffPlans", () => {
     expect(diff).toBeDefined();
     expect(diff!.status).toBe("added");
   });
+
+  it("detects changed subItems within a phase", () => {
+    const oldPhase = makePhase("p1", 1, "Setup", "Overview");
+    oldPhase.subItems = [{ id: "s1", letter: "a", name: "Task A", content: "Old content" }];
+    const newPhase = makePhase("p1", 1, "Setup", "Overview");
+    newPhase.subItems = [{ id: "s1", letter: "a", name: "Task A", content: "Updated content" }];
+
+    const old = makePlan({ phases: [oldPhase] });
+    const updated = makePlan({ phases: [newPhase] });
+    const diffs = diffPlans(old, updated);
+    const phaseDiff = diffs.find((d) => d.section === "Phase 1: Setup");
+    expect(phaseDiff).toBeDefined();
+    expect(phaseDiff!.status).toBe("changed");
+  });
 });

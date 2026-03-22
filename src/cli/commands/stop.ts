@@ -4,6 +4,7 @@ import { resolveSession } from "../session-resolver.js";
 import {
   stopServer,
   checkHealth,
+  clearLock,
   DEFAULT_BASE_PORT,
   MAX_PORT,
 } from "../server-client.js";
@@ -51,12 +52,14 @@ export async function stop(args: ParsedArgs) {
           signal: controller.signal,
         });
         clearTimeout(timeout);
+        clearLock(health.sessionDir);
         results.push({ port, sessionDir: health.sessionDir });
         stopped++;
       } catch {
         // Try SIGTERM
         try {
           process.kill(health.pid, "SIGTERM");
+          clearLock(health.sessionDir);
           results.push({ port, sessionDir: health.sessionDir });
           stopped++;
         } catch {

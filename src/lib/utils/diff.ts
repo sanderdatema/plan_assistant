@@ -90,6 +90,7 @@ function diffField(section: string, oldVal: string, newVal: string): SectionDiff
 function phaseToString(phase: Phase): string {
 	const parts = [
 		phase.overview,
+		...phase.subItems.map((s) => `${s.letter}. ${s.name}: ${s.content}`),
 		...phase.changes.map(
 			(c) => `${c.componentName} (${c.filePath}): ${c.description}`
 		),
