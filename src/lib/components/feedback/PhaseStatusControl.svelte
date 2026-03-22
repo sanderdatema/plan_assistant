@@ -2,7 +2,7 @@
 	import { STATUS_LABELS, type PhaseStatus } from '$lib/utils/status.js';
 
 	interface Props {
-		status: string;
+		status: PhaseStatus;
 		onSetStatus: (status: PhaseStatus, note?: string) => void;
 	}
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { statusBadgeClass } from '$lib/utils/status.js';
+	import type { FeedbackStatus } from '$lib/types/index.js';
 	import IdleTimer from './IdleTimer.svelte';
 
 	interface Props {
@@ -10,7 +11,7 @@
 			markdownPath: string;
 			version: number;
 		};
-		status: string;
+		status: FeedbackStatus;
 	}
 
 	let { meta, status }: Props = $props();

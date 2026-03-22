@@ -23,7 +23,7 @@ import {
   parseCriteria,
 } from "./markdown-parser.js";
 
-export interface ParseResult {
+interface ParseResult {
   plan: PlanJson;
   warnings: string[];
 }

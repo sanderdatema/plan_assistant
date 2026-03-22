@@ -1,13 +1,12 @@
 import { requireSession } from "../session-resolver.js";
-import { readMeta, readFeedback } from "../session-reader.js";
+import { readMeta, readFeedback, waitForTerminalFeedback } from "../session-reader.js";
 import { outputJson, outputError } from "../output.js";
 import { parseDuration } from "../utils.js";
 import { CliError, CliExitCode } from "../errors.js";
 import type { ParsedArgs } from "../index.js";
 import type { FeedbackPayload } from "../../lib/types/index.js";
-import { watch } from "chokidar";
+import type { SessionMeta } from "../../lib/types/index.js";
 import { join } from "node:path";
-import { existsSync, readFileSync } from "node:fs";
 
 // Exit codes
 export const EXIT_APPROVED = 0;
@@ -15,6 +14,8 @@ export const EXIT_ERROR = 1;
 export const EXIT_NEEDS_WORK = 3;
 export const EXIT_REVIEWING = 4;
 export const EXIT_NO_FEEDBACK = 5;
+
+const DEFAULT_WAIT_TIMEOUT_MS = 30 * 60 * 1000; // 30 minutes
 
 export function computeStatus(feedback: FeedbackPayload | null) {
   if (!feedback)
@@ -76,8 +77,8 @@ export async function status(args: ParsedArgs) {
     const timeoutStr = args.flags["wait-timeout"];
     const timeoutMs =
       typeof timeoutStr === "string"
-        ? (parseDuration(timeoutStr) ?? 30 * 60 * 1000)
-        : 30 * 60 * 1000; // 30 min default
+        ? (parseDuration(timeoutStr) ?? DEFAULT_WAIT_TIMEOUT_MS)
+        : DEFAULT_WAIT_TIMEOUT_MS;
 
     const exitCode = await pollFeedbackStatus(
       resolved.sessionDir,
@@ -113,21 +114,29 @@ export async function status(args: ParsedArgs) {
   throw new CliExitCode(exitCode);
 }
 
+function isTerminalForMeta(meta: SessionMeta) {
+  return (feedback: FeedbackPayload) =>
+    feedback.status !== "reviewing" &&
+    !(meta.planVersion && feedback.planVersion < meta.planVersion);
+}
+
 async function pollFeedbackStatus(
   sessionDir: string,
   sessionId: string,
-  meta: ReturnType<typeof readMeta> & {},
+  meta: SessionMeta,
   timeoutMs: number,
 ): Promise<number> {
-  // Check current state first (ignore stale feedback from older plan versions)
-  const current = readFeedback(sessionDir);
-  if (
-    current &&
-    current.status !== "reviewing" &&
-    !(meta.planVersion && current.planVersion < meta.planVersion)
-  ) {
-    const { feedbackStatus, exitCode } = computeStatus(current);
-    const { phaseSummary, commentSummary } = computeSummary(current);
+  const feedbackPath = join(sessionDir, "feedback.json");
+
+  try {
+    const feedback = await waitForTerminalFeedback(
+      feedbackPath,
+      isTerminalForMeta(meta),
+      AbortSignal.timeout(timeoutMs),
+    );
+
+    const { feedbackStatus, exitCode } = computeStatus(feedback);
+    const { phaseSummary, commentSummary } = computeSummary(feedback);
     outputJson({
       sessionId,
       planTitle: meta.planTitle,
@@ -137,51 +146,8 @@ async function pollFeedbackStatus(
       commentSummary,
     });
     return exitCode;
+  } catch {
+    outputError("Timed out waiting for feedback", "TIMEOUT");
+    throw new CliError("Timed out waiting for feedback");
   }
-
-  // Watch for changes
-  const feedbackPath = join(sessionDir, "feedback.json");
-  return new Promise<number>((resolve, reject) => {
-    const timer = setTimeout(() => {
-      watcher.close();
-      outputError("Timed out waiting for feedback", "TIMEOUT");
-      reject(new CliError("Timed out waiting for feedback"));
-    }, timeoutMs);
-
-    const checkFile = () => {
-      try {
-        if (!existsSync(feedbackPath)) return;
-        const data = JSON.parse(
-          readFileSync(feedbackPath, "utf-8"),
-        ) as FeedbackPayload;
-        if (
-          data.status !== "reviewing" &&
-          !(meta.planVersion && data.planVersion < meta.planVersion)
-        ) {
-          clearTimeout(timer);
-          watcher.close();
-          const { feedbackStatus, exitCode } = computeStatus(data);
-          const { phaseSummary, commentSummary } = computeSummary(data);
-          outputJson({
-            sessionId,
-            planTitle: meta.planTitle,
-            status: meta.status,
-            feedbackStatus,
-            phaseSummary,
-            commentSummary,
-          });
-          resolve(exitCode);
-        }
-      } catch {
-        // ignore parse errors during writes
-      }
-    };
-
-    const watcher = watch(feedbackPath, {
-      awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 100 },
-    });
-
-    watcher.on("change", checkFile);
-    watcher.on("add", checkFile);
-  });
 }

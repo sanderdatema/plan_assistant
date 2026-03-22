@@ -8,6 +8,7 @@ import {
   clearLock,
   DEFAULT_BASE_PORT,
   MAX_PORT,
+  SHUTDOWN_TIMEOUT_MS,
 } from "../server-client.js";
 import { outputJson } from "../output.js";
 
@@ -41,7 +42,7 @@ export async function stop(args: ParsedArgs) {
     const health = await checkHealth(port);
     if (health) {
       try {
-        await fetchWithTimeout(`http://localhost:${port}/api/shutdown`, { method: "POST" }, 2000);
+        await fetchWithTimeout(`http://localhost:${port}/api/shutdown`, { method: "POST" }, SHUTDOWN_TIMEOUT_MS);
         clearLock(health.sessionDir);
         results.push({ port, sessionDir: health.sessionDir });
         stopped++;

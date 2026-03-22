@@ -38,7 +38,7 @@ function getSessionDir(sessionId: string): string {
 
 // ── Shared JSON read helper ──────────────────────────────────────
 
-export function readJsonFile<T>(filePath: string): T | null {
+function readJsonFile<T>(filePath: string): T | null {
   if (!existsSync(filePath)) return null;
   try {
     return JSON.parse(readFileSync(filePath, "utf-8")) as T;

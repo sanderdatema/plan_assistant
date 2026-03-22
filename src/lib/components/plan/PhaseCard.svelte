@@ -1,15 +1,16 @@
 <script lang="ts">
 	import type { Phase } from '$lib/types/plan.js';
+	import type { PhaseStatus } from '$lib/utils/status.js';
 	import ChangeBlock from './ChangeBlock.svelte';
 	import MarkdownBlock from './MarkdownBlock.svelte';
 	import PhaseStatusControl from '../feedback/PhaseStatusControl.svelte';
 
 	interface Props {
 		phase: Phase;
-		phaseStatus?: { phaseId: string; status: string; note?: string };
-		onSetStatus: (status: 'pending' | 'approved' | 'needs-work', note?: string) => void;
-		subItemStatuses?: Record<string, { subItemId: string; phaseId: string; status: string }>;
-		onSetSubItemStatus?: (subItemId: string, status: 'pending' | 'approved' | 'needs-work') => void;
+		phaseStatus?: { phaseId: string; status: PhaseStatus; note?: string };
+		onSetStatus: (status: PhaseStatus, note?: string) => void;
+		subItemStatuses?: Record<string, { subItemId: string; phaseId: string; status: PhaseStatus }>;
+		onSetSubItemStatus?: (subItemId: string, status: PhaseStatus) => void;
 	}
 
 	let { phase, phaseStatus, onSetStatus, subItemStatuses = {}, onSetSubItemStatus }: Props = $props();

@@ -20,7 +20,7 @@ import type { SessionMeta } from "../lib/types/index.js";
 import type { PlanJson } from "../lib/types/plan.js";
 import { CliError } from "./errors.js";
 
-export interface SessionSetupResult {
+interface SessionSetupResult {
   sessionId: string;
   sessionPath: string;
   sessionDir: string;

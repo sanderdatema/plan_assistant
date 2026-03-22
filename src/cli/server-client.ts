@@ -18,6 +18,12 @@ import { createServer } from "node:net";
 export const DEFAULT_BASE_PORT = 5181;
 export const MAX_PORT = 5199;
 
+const HEALTH_CHECK_TIMEOUT_MS = 500;
+const STARTUP_HEALTH_CHECK_TIMEOUT_MS = 1000;
+const STARTUP_POLL_INTERVAL_MS = 500;
+const STARTUP_MAX_ATTEMPTS = 30; // 30 × 500ms = 15s
+export const SHUTDOWN_TIMEOUT_MS = 2000;
+
 export async function fetchWithTimeout(
   url: string,
   options: RequestInit,
@@ -42,7 +48,7 @@ export async function checkHealth(
   port: number,
 ): Promise<{ sessionDir: string; pid: number } | null> {
   try {
-    const res = await fetchWithTimeout(`http://localhost:${port}/api/health`, {}, 500);
+    const res = await fetchWithTimeout(`http://localhost:${port}/api/health`, {}, HEALTH_CHECK_TIMEOUT_MS);
     if (!res.ok) return null;
     return (await res.json()) as { sessionDir: string; pid: number };
   } catch {
@@ -167,22 +173,21 @@ function startServer(sessionDir: string, port: number): Promise<number> {
 
     const pid = child.pid!;
     let attempts = 0;
-    const maxAttempts = 30;
     const interval = setInterval(async () => {
       attempts++;
       try {
-        const res = await fetchWithTimeout(`http://localhost:${port}/api/health`, {}, 1000);
+        const res = await fetchWithTimeout(`http://localhost:${port}/api/health`, {}, STARTUP_HEALTH_CHECK_TIMEOUT_MS);
         if (res.ok) {
           clearInterval(interval);
           resolvePromise(pid);
         }
       } catch {
-        if (attempts >= maxAttempts) {
+        if (attempts >= STARTUP_MAX_ATTEMPTS) {
           clearInterval(interval);
           reject(new Error("Server failed to start within 15 seconds"));
         }
       }
-    }, 500);
+    }, STARTUP_POLL_INTERVAL_MS);
   });
 }
 
@@ -203,7 +208,7 @@ export async function stopServer(sessionDir: string): Promise<boolean> {
 
   if (port) {
     try {
-      await fetchWithTimeout(`http://localhost:${port}/api/shutdown`, { method: "POST" }, 2000);
+      await fetchWithTimeout(`http://localhost:${port}/api/shutdown`, { method: "POST" }, SHUTDOWN_TIMEOUT_MS);
       clearLock(sessionDir);
       return true;
     } catch {

@@ -79,31 +79,76 @@ export function findSessionDirs(startDir: string): SessionEntry[] {
 import { CliExitCode } from "./errors.js";
 import { EXIT_APPROVED, EXIT_NEEDS_WORK } from "./commands/status.js";
 
-async function outputFeedbackResult(
-  feedback: FeedbackPayload,
-  sessionId: string,
-  planTitle: string,
-  sessionDir: string,
-): Promise<never> {
-  // Stop the server — review cycle is complete
-  const parentDir = dirname(sessionDir);
-  const stopped = await stopServer(parentDir);
-  if (stopped) {
-    console.error("Server stopped.");
+/**
+ * Watch a feedback.json file until a terminal state is reached.
+ * Returns the terminal FeedbackPayload, or throws on abort/timeout.
+ *
+ * @param isTerminal — predicate to determine if feedback is actionable
+ *   (e.g., filter out stale plan versions or "reviewing" status)
+ * @param signal — AbortSignal for cancellation (timeout, SIGINT, etc.)
+ */
+export function waitForTerminalFeedback(
+  feedbackPath: string,
+  isTerminal: (feedback: FeedbackPayload) => boolean,
+  signal?: AbortSignal,
+): Promise<FeedbackPayload> {
+  // Check if feedback already exists
+  if (existsSync(feedbackPath)) {
+    try {
+      const existing = JSON.parse(
+        readFileSync(feedbackPath, "utf-8"),
+      ) as FeedbackPayload;
+      if (isTerminal(existing)) {
+        return Promise.resolve(existing);
+      }
+    } catch {
+      /* ignore */
+    }
   }
 
-  const unresolvedComments = feedback.comments.filter((c) => !c.resolved);
-  outputJson({
-    event: "feedback",
-    sessionId,
-    planTitle,
-    status: feedback.status,
-    comments: unresolvedComments,
-    commentCount: unresolvedComments.length,
+  return new Promise((resolve, reject) => {
+    if (signal?.aborted) {
+      reject(signal.reason);
+      return;
+    }
+
+    const fbWatcher = watch(feedbackPath, {
+      awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 100 },
+    });
+
+    const cleanup = () => {
+      fbWatcher.close();
+      signal?.removeEventListener("abort", onAbort);
+    };
+
+    const check = () => {
+      try {
+        if (!existsSync(feedbackPath)) return;
+        const data = JSON.parse(
+          readFileSync(feedbackPath, "utf-8"),
+        ) as FeedbackPayload;
+        if (isTerminal(data)) {
+          cleanup();
+          resolve(data);
+        }
+      } catch {
+        /* ignore parse errors during writes */
+      }
+    };
+
+    const onAbort = () => {
+      cleanup();
+      reject(signal!.reason);
+    };
+
+    fbWatcher.on("change", check);
+    fbWatcher.on("add", check);
+    signal?.addEventListener("abort", onAbort);
   });
-  throw new CliExitCode(
-    feedback.status === "approved" ? EXIT_APPROVED : EXIT_NEEDS_WORK,
-  );
+}
+
+function isTerminalStatus(feedback: FeedbackPayload): boolean {
+  return feedback.status === "approved" || feedback.status === "needs-work";
 }
 
 export async function awaitReviewFeedback(
@@ -113,57 +158,46 @@ export async function awaitReviewFeedback(
   mdWatcher: ReturnType<typeof watch>,
   sessionDir: string,
 ): Promise<void> {
-  // Check if feedback already submitted
-  if (existsSync(feedbackPath)) {
-    try {
-      const existing = JSON.parse(
-        readFileSync(feedbackPath, "utf-8"),
-      ) as FeedbackPayload;
-      if (existing.status === "approved" || existing.status === "needs-work") {
-        mdWatcher.close();
-        await outputFeedbackResult(existing, sessionId, planTitle, sessionDir);
-        return;
-      }
-    } catch {
-      /* ignore */
+  const controller = new AbortController();
+
+  const onSigint = () => {
+    controller.abort();
+    mdWatcher.close();
+    console.error("\nStopped watching.");
+    throw new CliExitCode(0);
+  };
+
+  process.on("SIGINT", onSigint);
+
+  try {
+    const feedback = await waitForTerminalFeedback(
+      feedbackPath,
+      isTerminalStatus,
+      controller.signal,
+    );
+
+    mdWatcher.close();
+
+    // Stop the server — review cycle is complete
+    const parentDir = dirname(sessionDir);
+    const stopped = await stopServer(parentDir);
+    if (stopped) {
+      console.error("Server stopped.");
     }
-  }
 
-  return new Promise((resolve) => {
-    const fbWatcher = watch(feedbackPath, {
-      awaitWriteFinish: { stabilityThreshold: 200, pollInterval: 100 },
+    const unresolvedComments = feedback.comments.filter((c) => !c.resolved);
+    outputJson({
+      event: "feedback",
+      sessionId,
+      planTitle,
+      status: feedback.status,
+      comments: unresolvedComments,
+      commentCount: unresolvedComments.length,
     });
-
-    const cleanup = () => {
-      fbWatcher.close();
-      mdWatcher.close();
-      process.removeListener("SIGINT", onSigint);
-    };
-
-    const check = async () => {
-      try {
-        if (!existsSync(feedbackPath)) return;
-        const data = JSON.parse(
-          readFileSync(feedbackPath, "utf-8"),
-        ) as FeedbackPayload;
-        if (data.status === "approved" || data.status === "needs-work") {
-          cleanup();
-          await outputFeedbackResult(data, sessionId, planTitle, sessionDir);
-          resolve();
-        }
-      } catch {
-        /* ignore parse errors during writes */
-      }
-    };
-
-    const onSigint = () => {
-      cleanup();
-      console.error("\nStopped watching.");
-      throw new CliExitCode(0);
-    };
-
-    fbWatcher.on("change", check);
-    fbWatcher.on("add", check);
-    process.on("SIGINT", onSigint);
-  });
+    throw new CliExitCode(
+      feedback.status === "approved" ? EXIT_APPROVED : EXIT_NEEDS_WORK,
+    );
+  } finally {
+    process.removeListener("SIGINT", onSigint);
+  }
 }
