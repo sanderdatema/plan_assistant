@@ -1,6 +1,6 @@
 import { existsSync, rmSync } from "node:fs";
 import { resolve } from "node:path";
-import { findSessionDirs } from "../session-reader.js";
+import { findSessionDirs, type SessionEntry } from "../session-reader.js";
 import { outputJson, outputError } from "../output.js";
 import { parseDuration } from "../utils.js";
 import { CliError, CliExitCode } from "../errors.js";
@@ -18,6 +18,74 @@ async function confirm(message: string): Promise<boolean> {
       resolve(answer.toLowerCase() === "y");
     });
   });
+}
+
+export interface CleanOptions {
+  all: boolean;
+  olderThanMs: number | null;
+  olderThanStr?: string;
+}
+
+export function selectSessionsToClean(
+  sessions: SessionEntry[],
+  options: CleanOptions,
+  now: number = Date.now(),
+): Array<{ sessionId: string; sessionDir: string; reason: string }> {
+  const toRemove: Array<{
+    sessionId: string;
+    sessionDir: string;
+    reason: string;
+  }> = [];
+
+  for (const entry of sessions) {
+    const meta = entry.meta;
+    if (!meta) continue;
+
+    // Orphan detection: markdown file no longer exists
+    if (!options.all && !existsSync(meta.markdownPath)) {
+      toRemove.push({
+        sessionId: entry.sessionId,
+        sessionDir: entry.sessionDir,
+        reason: "orphan (markdown file missing)",
+      });
+      continue;
+    }
+
+    // All flag: remove everything
+    if (options.all) {
+      if (options.olderThanMs) {
+        const updatedAt = new Date(meta.updatedAt).getTime();
+        if (now - updatedAt > options.olderThanMs) {
+          toRemove.push({
+            sessionId: entry.sessionId,
+            sessionDir: entry.sessionDir,
+            reason: `older than ${options.olderThanStr}`,
+          });
+        }
+      } else {
+        toRemove.push({
+          sessionId: entry.sessionId,
+          sessionDir: entry.sessionDir,
+          reason: "all sessions",
+        });
+      }
+      continue;
+    }
+
+    // Age-based cleanup
+    if (options.olderThanMs) {
+      const updatedAt = new Date(meta.updatedAt).getTime();
+      if (now - updatedAt > options.olderThanMs) {
+        toRemove.push({
+          sessionId: entry.sessionId,
+          sessionDir: entry.sessionDir,
+          reason: `older than ${options.olderThanStr}`,
+        });
+      }
+    }
+  }
+
+  return toRemove;
 }
 
 export async function clean(args: ParsedArgs) {
@@ -47,61 +115,7 @@ export async function clean(args: ParsedArgs) {
   }
 
   const sessions = findSessionDirs(dir);
-  const now = Date.now();
-
-  const toRemove: Array<{
-    sessionId: string;
-    sessionDir: string;
-    reason: string;
-  }> = [];
-
-  for (const entry of sessions) {
-    const meta = entry.meta;
-    if (!meta) continue;
-
-    // Orphan detection: markdown file no longer exists
-    if (!all && !existsSync(meta.markdownPath)) {
-      toRemove.push({
-        sessionId: entry.sessionId,
-        sessionDir: entry.sessionDir,
-        reason: "orphan (markdown file missing)",
-      });
-      continue;
-    }
-
-    // All flag: remove everything
-    if (all) {
-      if (olderThanMs) {
-        const updatedAt = new Date(meta.updatedAt).getTime();
-        if (now - updatedAt > olderThanMs) {
-          toRemove.push({
-            sessionId: entry.sessionId,
-            sessionDir: entry.sessionDir,
-            reason: `older than ${olderThanStr}`,
-          });
-        }
-      } else {
-        toRemove.push({
-          sessionId: entry.sessionId,
-          sessionDir: entry.sessionDir,
-          reason: "all sessions",
-        });
-      }
-      continue;
-    }
-
-    // Age-based cleanup
-    if (olderThanMs) {
-      const updatedAt = new Date(meta.updatedAt).getTime();
-      if (now - updatedAt > olderThanMs) {
-        toRemove.push({
-          sessionId: entry.sessionId,
-          sessionDir: entry.sessionDir,
-          reason: `older than ${olderThanStr}`,
-        });
-      }
-    }
-  }
+  const toRemove = selectSessionsToClean(sessions, { all, olderThanMs, olderThanStr });
 
   if (toRemove.length === 0) {
     outputJson({ removed: 0, sessions: [] }, args.flags.pretty === true);
