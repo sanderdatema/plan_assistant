@@ -39,6 +39,7 @@ AI coding agents kunnen gestructureerde menselijke feedback krijgen op implement
 - [x] Unit test coverage for all pure functions -- Phase 1 complete
 - [x] CLI testability (CliError, no process.exit in commands) -- Phase 2 complete
 - [x] Code consolidation (session I/O, patterns, approve endpoint) -- Phase 3 complete
+- [x] Structural refactoring (review.ts, parsePhases god-functions split) -- Phase 4 complete
 
 ### Out of Scope
 
@@ -84,4 +85,4 @@ AI coding agents kunnen gestructureerde menselijke feedback krijgen op implement
 
 ---
 *Created: 2026-03-22*
-*Last updated: 2026-03-22 after Phase 1*
+*Last updated: 2026-03-22 after Phase 4 — v1.5.0 milestone complete*

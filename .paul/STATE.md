@@ -5,25 +5,25 @@
 See: .paul/PROJECT.md (updated 2026-03-22)
 
 **Core value:** AI agents krijgen gestructureerde menselijke feedback op implementatieplannen via browser review
-**Current focus:** v1.5.0 Code Quality -- Phase 4: Structural Refactoring
+**Current focus:** v1.5.0 Code Quality — MILESTONE COMPLETE
 
 ## Current Position
 
 Milestone: v1.5.0 Code Quality
-Phase: 4 of 4 (Structural Refactoring)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-03-22 -- Phase 3 complete, transitioned to Phase 4
+Phase: 4 of 4 — All phases complete
+Plan: All plans complete
+Status: Milestone complete
+Last activity: 2026-03-22 — v1.5.0 milestone complete
 
 Progress:
-- Milestone: [########--] 75%
+- Milestone: [##########] 100%
 
 ## Loop Position
 
 Current loop state:
 ```
 PLAN --> APPLY --> UNIFY
-  o        o        o     [Ready for next PLAN]
+  v        v        v     [Milestone complete]
 ```
 
 ## Accumulated Context
@@ -31,14 +31,18 @@ PLAN --> APPLY --> UNIFY
 ### Decisions
 | Decision | Phase | Impact |
 |----------|-------|--------|
-| Relative imports in session-manager | Phase 3 | $lib/ breaks CLI build |
+| Tests first, then refactor | Pre-planning | Safety net enabled all subsequent work |
 | Don't merge feedback watchers | Phase 3 | Different purposes = different functions |
+| Keep parser helpers in same file | Phase 4 | Internal helpers, not public API |
 
 ### Deferred Issues
 | Issue | Origin | Effort | Revisit |
 |-------|--------|--------|---------|
-| Mermaid dependency (2.5MB) | Code review | S | After v1.5.0 |
-| Export-html parallel rendering | Code review | M | After v1.5.0 |
+| Mermaid dependency (2.5MB) | Code review | S | Next milestone |
+| Export-html parallel rendering | Code review | M | Next milestone |
+| Feedback components outside design system | Code review | M | Next milestone |
+| Decorative checkboxen in Success Criteria | Code review | S | Next milestone |
+| additionalSections parsed but not shown | Code review | S | Next milestone |
 
 ### Blockers/Concerns
 None.
@@ -46,8 +50,8 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-22
-Stopped at: Phase 3 complete, ready to plan Phase 4
-Next action: /paul:plan for Phase 4 (Structural Refactoring)
+Stopped at: v1.5.0 milestone complete
+Next action: Review accomplishments, consider release
 Resume file: .paul/ROADMAP.md
 
 ---

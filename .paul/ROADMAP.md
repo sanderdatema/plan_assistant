@@ -7,8 +7,8 @@ Implement the recommendations from a deep 9-analyst code review. Focus on code q
 ## Current Milestone
 
 **v1.5.0 Code Quality** (v1.5.0)
-Status: In progress
-Phases: 3 of 4 complete
+Status: Complete
+Phases: 4 of 4 complete
 
 ## Phases
 
@@ -17,7 +17,7 @@ Phases: 3 of 4 complete
 | 1 | Test Foundation | 1 | Complete | 2026-03-22 |
 | 2 | CLI Testability Refactor | 1 | Complete | 2026-03-22 |
 | 3 | Consolidation & Cleanup | 2 | Complete | 2026-03-22 |
-| 4 | Structural Refactoring | TBD | Not started | - |
+| 4 | Structural Refactoring | 1 | Complete | 2026-03-22 |
 
 ## Phase Details
 
@@ -85,9 +85,7 @@ Phases: 3 of 4 complete
 - Add integration tests for the refactored modules
 
 **Plans:**
-- [ ] 04-01: Refactor review.ts
-- [ ] 04-02: Refactor parsePhases
-- [ ] 04-03: Integration tests for refactored modules
+- [x] 04-01: Refactor review.ts + parsePhases (combined into single plan)
 
 ---
 *Roadmap created: 2026-03-22*
