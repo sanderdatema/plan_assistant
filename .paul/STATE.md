@@ -11,12 +11,13 @@ See: .paul/PROJECT.md (updated 2026-03-22)
 
 Milestone: v1.5.0 Code Quality
 Phase: 3 of 4 (Consolidation & Cleanup)
-Plan: Not started
-Status: Ready to plan
-Last activity: 2026-03-22 -- Phase 2 complete, transitioned to Phase 3
+Plan: 03-01 complete, 03-02 not started
+Status: Ready for next PLAN
+Last activity: 2026-03-22 -- Plan 03-01 unified
 
 Progress:
-- Milestone: [#####-----] 50%
+- Milestone: [######----] 60%
+- Phase 3: [#####-----] 50%
 
 ## Loop Position
 
@@ -31,10 +32,8 @@ PLAN --> APPLY --> UNIFY
 ### Decisions
 | Decision | Phase | Impact |
 |----------|-------|--------|
-| Tests first, then refactor | Pre-planning | Safety net established |
-| SIGINT handlers keep process.exit(0) | Phase 2 | 2 locations exempt from CliError pattern |
-| CliExitCode for intentional exits | Phase 2 | status exit codes are not errors |
-| Promise reject for async exits | Phase 2 | Watcher callbacks use reject() |
+| Split Phase 3 into two plans | Phase 3 | 03-01 done, 03-02 next |
+| Use parser's superset patterns | Phase 3 | Extra patterns harmless |
 
 ### Deferred Issues
 | Issue | Origin | Effort | Revisit |
@@ -42,8 +41,6 @@ PLAN --> APPLY --> UNIFY
 | Mermaid dependency (2.5MB) | Code review | S | After v1.5.0 |
 | Export-html parallel rendering | Code review | M | After v1.5.0 |
 | Feedback components outside design system | Code review | M | After v1.5.0 |
-| Decorative checkboxen in Success Criteria | Code review | S | After v1.5.0 |
-| additionalSections parsed but not shown | Code review | S | After v1.5.0 |
 
 ### Blockers/Concerns
 None.
@@ -51,8 +48,8 @@ None.
 ## Session Continuity
 
 Last session: 2026-03-22
-Stopped at: Phase 2 complete, ready to plan Phase 3
-Next action: /paul:plan for Phase 3 (Consolidation & Cleanup)
+Stopped at: Plan 03-01 complete, ready for 03-02
+Next action: /paul:plan for 03-02 (waitForFeedback + session I/O consolidation)
 Resume file: .paul/ROADMAP.md
 
 ---

@@ -26,6 +26,7 @@ import {
   parseChangesFromHeadings,
   parseChangesFromList,
   parseCriteria,
+  KNOWN_SECTION_PATTERNS,
 } from "./markdown-parser.js";
 
 export interface ParseResult {
@@ -135,14 +136,6 @@ export function parseMarkdownToPlan(
 
   // Collect additional (unrecognized) H2 sections
   const knownH2Indices = new Set<number>();
-  const knownPatterns = [
-    /^Overview$/i,
-    /^Current\s+State/i,
-    /What\s+We.*NOT\s+Doing/i,
-    /Implementation\s+Approach/i,
-    /Testing\s+Strategy/i,
-    /^References$/i,
-  ];
   for (let i = 0; i < sections.length; i++) {
     if (sections[i].level === 1) {
       knownH2Indices.add(i);
@@ -151,7 +144,7 @@ export function parseMarkdownToPlan(
     if (sections[i].level !== 2) continue;
 
     // Check if it's a known section
-    if (knownPatterns.some((p) => p.test(sections[i].heading))) {
+    if (KNOWN_SECTION_PATTERNS.some((p) => p.test(sections[i].heading))) {
       knownH2Indices.add(i);
       continue;
     }

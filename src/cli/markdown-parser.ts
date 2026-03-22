@@ -341,7 +341,7 @@ export function tryMatchPhaseHeading(
 }
 
 /** Known top-level section patterns that should NOT be treated as phases */
-const KNOWN_SECTION_PATTERNS = [
+export const KNOWN_SECTION_PATTERNS = [
   /^Overview$/i,
   /^Current\s+State/i,
   /What\s+We.*NOT\s+Doing/i,
