@@ -24,7 +24,7 @@ export function reset() {
   }
 }
 
-export function getRemaining(): number {
+function getRemaining(): number {
   return Math.max(0, deadline - Date.now());
 }
 

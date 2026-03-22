@@ -18,7 +18,21 @@ import { createServer } from "node:net";
 export const DEFAULT_BASE_PORT = 5181;
 export const MAX_PORT = 5199;
 
-export function getPackageDir(): string {
+export async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number,
+): Promise<Response> {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    return await fetch(url, { ...options, signal: controller.signal });
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function getPackageDir(): string {
   const thisFile = fileURLToPath(import.meta.url);
   // dist/cli/server-client.js -> package root
   return resolve(dirname(thisFile), "../..");
@@ -28,12 +42,7 @@ export async function checkHealth(
   port: number,
 ): Promise<{ sessionDir: string; pid: number } | null> {
   try {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 500);
-    const res = await fetch(`http://localhost:${port}/api/health`, {
-      signal: controller.signal,
-    });
-    clearTimeout(timeout);
+    const res = await fetchWithTimeout(`http://localhost:${port}/api/health`, {}, 500);
     if (!res.ok) return null;
     return (await res.json()) as { sessionDir: string; pid: number };
   } catch {
@@ -162,12 +171,7 @@ function startServer(sessionDir: string, port: number): Promise<number> {
     const interval = setInterval(async () => {
       attempts++;
       try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 1000);
-        const res = await fetch(`http://localhost:${port}/api/health`, {
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
+        const res = await fetchWithTimeout(`http://localhost:${port}/api/health`, {}, 1000);
         if (res.ok) {
           clearInterval(interval);
           resolvePromise(pid);
@@ -199,13 +203,7 @@ export async function stopServer(sessionDir: string): Promise<boolean> {
 
   if (port) {
     try {
-      const controller = new AbortController();
-      const timeout = setTimeout(() => controller.abort(), 2000);
-      await fetch(`http://localhost:${port}/api/shutdown`, {
-        method: "POST",
-        signal: controller.signal,
-      });
-      clearTimeout(timeout);
+      await fetchWithTimeout(`http://localhost:${port}/api/shutdown`, { method: "POST" }, 2000);
       clearLock(sessionDir);
       return true;
     } catch {
