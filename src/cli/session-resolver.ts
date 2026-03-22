@@ -9,6 +9,8 @@
 import { existsSync } from "node:fs";
 import { resolve, dirname, join } from "node:path";
 import { sessionIdFromPath } from "./markdown-to-plan.js";
+import { outputError } from "./output.js";
+import { CliError } from "./errors.js";
 
 export interface ResolvedSession {
   sessionId: string;
@@ -48,4 +50,13 @@ export function resolveSession(idOrFile: string): ResolvedSession | null {
   }
 
   return null;
+}
+
+export function requireSession(idOrFile: string): ResolvedSession {
+  const resolved = resolveSession(idOrFile);
+  if (!resolved) {
+    outputError(`Session not found for: ${idOrFile}`, "NOT_FOUND");
+    throw new CliError(`Session not found for: ${idOrFile}`);
+  }
+  return resolved;
 }

@@ -7,6 +7,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { error } from "@sveltejs/kit";
 import type { SessionMeta } from "../types/session.js";
 import type { PlanJson } from "../types/plan.js";
 import type { FeedbackPayload } from "../types/feedback.js";
@@ -83,6 +84,12 @@ export function getSession(sessionId: string): SessionMeta | null {
   return readMeta(getSessionDir(sessionId));
 }
 
+export function requireSession(sessionId: string): SessionMeta {
+  const session = getSession(sessionId);
+  if (!session) throw error(404, "Session not found");
+  return session;
+}
+
 export function createSession(sessionId: string, meta: SessionMeta): void {
   const dir = getSessionDir(sessionId);
   mkdirSync(dir, { recursive: true });
@@ -145,15 +152,7 @@ export function getVersion(
   sessionId: string,
   version: number,
 ): PlanJson | null {
-  const versionPath = join(
-    getSessionDir(sessionId),
-    "versions",
-    `v${version}.json`,
+  return readJsonFile<PlanJson>(
+    join(getSessionDir(sessionId), "versions", `v${version}.json`),
   );
-  if (!existsSync(versionPath)) return null;
-  try {
-    return JSON.parse(readFileSync(versionPath, "utf-8")) as PlanJson;
-  } catch {
-    return null;
-  }
 }

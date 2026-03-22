@@ -1,26 +1,22 @@
 import { dirname } from "node:path";
 import type { ParsedArgs } from "../index.js";
-import { resolveSession } from "../session-resolver.js";
+import { requireSession } from "../session-resolver.js";
 import {
   stopServer,
   checkHealth,
+  fetchWithTimeout,
   clearLock,
   DEFAULT_BASE_PORT,
   MAX_PORT,
 } from "../server-client.js";
-import { outputJson, outputError } from "../output.js";
-import { CliError } from "../errors.js";
+import { outputJson } from "../output.js";
 
 export async function stop(args: ParsedArgs) {
   const target = args.positional[0];
 
   if (target) {
     // Stop server for a specific session
-    const session = resolveSession(target);
-    if (!session) {
-      outputError(`Session not found: ${target}`, "NOT_FOUND");
-      throw new CliError(`Session not found: ${target}`);
-    }
+    const session = requireSession(target);
 
     const parentDir = dirname(session.sessionDir);
     const stopped = await stopServer(parentDir);
@@ -45,13 +41,7 @@ export async function stop(args: ParsedArgs) {
     const health = await checkHealth(port);
     if (health) {
       try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 2000);
-        await fetch(`http://localhost:${port}/api/shutdown`, {
-          method: "POST",
-          signal: controller.signal,
-        });
-        clearTimeout(timeout);
+        await fetchWithTimeout(`http://localhost:${port}/api/shutdown`, { method: "POST" }, 2000);
         clearLock(health.sessionDir);
         results.push({ port, sessionDir: health.sessionDir });
         stopped++;

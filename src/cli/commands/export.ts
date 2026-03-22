@@ -1,6 +1,6 @@
 import { writeFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { resolveSession } from "../session-resolver.js";
+import { requireSession } from "../session-resolver.js";
 import { readPlan, readFeedback } from "../session-reader.js";
 import { renderPlanToHtml } from "../export-html.js";
 import { outputError } from "../output.js";
@@ -17,11 +17,7 @@ export async function exportCmd(args: ParsedArgs) {
     throw new CliError("Missing session ID or file path");
   }
 
-  const resolved = resolveSession(idOrFile);
-  if (!resolved) {
-    outputError(`Session not found for: ${idOrFile}`, "NOT_FOUND");
-    throw new CliError(`Session not found for: ${idOrFile}`);
-  }
+  const resolved = requireSession(idOrFile);
 
   const plan = readPlan(resolved.sessionDir);
   if (!plan) {

@@ -1,6 +1,6 @@
-import { json, error } from "@sveltejs/kit";
+import { json } from "@sveltejs/kit";
 import {
-  getSession,
+  requireSession,
   getFeedback,
   saveFeedback,
   updateSessionStatus,
@@ -9,17 +9,13 @@ import type { RequestHandler } from "./$types.js";
 import type { FeedbackPayload } from "$lib/types/feedback.js";
 
 export const GET: RequestHandler = async ({ params }) => {
-  const session = getSession(params.sessionId);
-  if (!session) throw error(404, "Session not found");
-
+  requireSession(params.sessionId);
   const feedback = getFeedback(params.sessionId);
   return json(feedback);
 };
 
 export const PUT: RequestHandler = async ({ params, request }) => {
-  const session = getSession(params.sessionId);
-  if (!session) throw error(404, "Session not found");
-
+  requireSession(params.sessionId);
   const body = (await request.json()) as FeedbackPayload;
   body.updatedAt = new Date().toISOString();
   saveFeedback(params.sessionId, body);

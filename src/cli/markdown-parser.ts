@@ -412,17 +412,6 @@ function detectPhaseHeading(
     return null;
   }
 
-  if (!phaseMatch && section.level === 3) {
-    const h3Match = tryMatchPhaseHeading(section.heading, autoNumber);
-    if (h3Match) {
-      ctx.warn(
-        `Phase "${section.heading}" uses h3 instead of h2 — accepted but non-canonical`,
-      );
-      return h3Match;
-    }
-    return null;
-  }
-
   return phaseMatch;
 }
 

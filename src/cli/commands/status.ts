@@ -1,4 +1,4 @@
-import { resolveSession } from "../session-resolver.js";
+import { requireSession } from "../session-resolver.js";
 import { readMeta, readFeedback } from "../session-reader.js";
 import { outputJson, outputError } from "../output.js";
 import { parseDuration } from "../utils.js";
@@ -62,11 +62,7 @@ export async function status(args: ParsedArgs) {
     throw new CliError("Missing session ID or file path");
   }
 
-  const resolved = resolveSession(idOrFile);
-  if (!resolved) {
-    outputError(`Session not found for: ${idOrFile}`, "NOT_FOUND");
-    throw new CliError(`Session not found for: ${idOrFile}`);
-  }
+  const resolved = requireSession(idOrFile);
 
   const meta = readMeta(resolved.sessionDir);
   if (!meta) {
