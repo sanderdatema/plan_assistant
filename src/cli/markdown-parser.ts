@@ -360,6 +360,197 @@ const CHANGES_HEADING_PATTERN =
 const SUCCESS_CRITERIA_HEADING_PATTERN =
   /^(?:Success\s+Criteria|Criteria|Verification):?$/i;
 
+// ── Phase heading detection ──────────────────────────────────────
+
+interface DetectedPhase {
+  number: number;
+  name: string;
+  variant: string;
+}
+
+/**
+ * Detect whether a section is a phase heading.
+ * Handles canonical (## Phase N:), unnumbered H2s with phase-like content,
+ * and H3 phase headings (with warning).
+ * Returns null if the section is not a phase.
+ */
+function detectPhaseHeading(
+  section: Section,
+  allSections: Section[],
+  sectionIdx: number,
+  autoNumber: number,
+  ctx: ParseContext,
+): DetectedPhase | null {
+  if (section.level !== 2 && section.level !== 3) return null;
+
+  const phaseMatch = tryMatchPhaseHeading(section.heading, autoNumber);
+
+  // Check for unnumbered H2s that look like phases
+  if (!phaseMatch && section.level === 2) {
+    if (KNOWN_SECTION_PATTERNS.some((p) => p.test(section.heading))) return null;
+
+    const subSections = collectSectionsUntilLevel(allSections, sectionIdx, 2);
+    const hasChanges = subSections.some((s) =>
+      CHANGES_HEADING_PATTERN.test(s.heading),
+    );
+    const hasCriteria = subSections.some(
+      (s) =>
+        SUCCESS_CRITERIA_HEADING_PATTERN.test(s.heading) ||
+        /Automated\s+Verification/i.test(s.heading) ||
+        /Manual\s+Verification/i.test(s.heading),
+    );
+    const hasNumberedChanges = subSections.some(
+      (s) => (s.level === 4 || s.level === 3) && /^\d+\.\s/.test(s.heading),
+    );
+
+    if (hasChanges || hasCriteria || hasNumberedChanges) {
+      ctx.warn(
+        `Unnumbered heading "${section.heading}" treated as Phase ${autoNumber}`,
+      );
+      return { number: autoNumber, name: section.heading, variant: "unnumbered" };
+    }
+    return null;
+  }
+
+  if (!phaseMatch && section.level === 3) {
+    const h3Match = tryMatchPhaseHeading(section.heading, autoNumber);
+    if (h3Match) {
+      ctx.warn(
+        `Phase "${section.heading}" uses h3 instead of h2 — accepted but non-canonical`,
+      );
+      return h3Match;
+    }
+    return null;
+  }
+
+  return phaseMatch;
+}
+
+// ── Phase content extraction ─────────────────────────────────────
+
+function extractPhaseChanges(
+  subSections: Section[],
+  allSections: Section[],
+  phaseNumber: number,
+  ctx: ParseContext,
+): Change[] {
+  const changesSection = subSections.find((s) =>
+    CHANGES_HEADING_PATTERN.test(s.heading),
+  );
+
+  if (!changesSection) return [];
+
+  if (!/^Changes\s+Required/i.test(changesSection.heading)) {
+    ctx.warn(
+      `Phase ${phaseNumber}: "${changesSection.heading}" used instead of "Changes Required" — accepted`,
+    );
+  }
+
+  const changesIdx = allSections.indexOf(changesSection);
+  if (changesIdx < 0) return [];
+
+  // Strategy 1: Heading-based changes (#### N. Name)
+  const changeSubs = collectSectionsUntilLevel(
+    allSections,
+    changesIdx,
+    changesSection.level,
+  );
+  const changes = parseChangesFromHeadings(changeSubs, ctx);
+
+  // Strategy 2: List-based changes if no heading-based changes found
+  if (changes.length === 0) {
+    return parseChangesFromList(changesSection.tokens, ctx);
+  }
+
+  return changes;
+}
+
+function extractPhaseCriteria(
+  subSections: Section[],
+  allSections: Section[],
+): { automated: Criterion[]; manual: Criterion[] } {
+  const criteriaSection = subSections.find((s) =>
+    SUCCESS_CRITERIA_HEADING_PATTERN.test(s.heading),
+  );
+  const criteriaIdx = criteriaSection
+    ? allSections.indexOf(criteriaSection)
+    : -1;
+  const criteriaSubs =
+    criteriaIdx >= 0 && criteriaSection
+      ? collectSectionsUntilLevel(
+          allSections,
+          criteriaIdx,
+          criteriaSection.level,
+        )
+      : [];
+
+  const automatedSection =
+    criteriaSubs.find((s) => /Automated\s+Verification/i.test(s.heading)) ??
+    subSections.find((s) => /Automated\s+Verification/i.test(s.heading));
+  const manualSection =
+    criteriaSubs.find((s) => /Manual\s+Verification/i.test(s.heading)) ??
+    subSections.find((s) => /Manual\s+Verification/i.test(s.heading));
+
+  const automated = automatedSection
+    ? parseCriteria(automatedSection.tokens, "automated")
+    : [];
+  const manual = manualSection
+    ? parseCriteria(manualSection.tokens, "manual")
+    : [];
+
+  // If criteria section exists but no automated/manual sub-sections,
+  // treat all list items as manual criteria
+  if (
+    criteriaSection &&
+    automated.length === 0 &&
+    manual.length === 0 &&
+    criteriaSubs.length === 0
+  ) {
+    manual.push(...parseCriteria(criteriaSection.tokens, "manual"));
+  }
+
+  return { automated, manual };
+}
+
+function extractPhaseContentAndSubItems(
+  phaseSection: Section,
+  subSections: Section[],
+  phaseId: string,
+  phaseNumber: number,
+): { content: string | undefined; subItems: SubItem[] } {
+  const recognizedPattern =
+    /^(Overview|Changes\s+Required|Changes|File\s+Changes|Modifications|Automated\s+Verification|Manual\s+Verification|Success\s+Criteria|Criteria|Verification):?$/i;
+  const subItemPattern = /^(\d+)([a-z])\.\s+(.+)/i;
+  const contentParts: string[] = [];
+  const subItems: SubItem[] = [];
+
+  const directText = tokensToMarkdown(phaseSection.tokens);
+  if (directText) contentParts.push(directText);
+
+  for (const sub of subSections) {
+    if (recognizedPattern.test(sub.heading)) continue;
+
+    const siMatch = sub.heading.match(subItemPattern);
+    if (siMatch && parseInt(siMatch[1], 10) === phaseNumber) {
+      const letter = siMatch[2].toLowerCase();
+      subItems.push({
+        id: `${phaseId}-${letter}`,
+        letter,
+        name: siMatch[3].trim(),
+        content: tokensToMarkdown(sub.tokens),
+      });
+    } else {
+      const subBody = tokensToMarkdown(sub.tokens);
+      contentParts.push(`### ${sub.heading}\n\n${subBody}`);
+    }
+  }
+
+  const content = contentParts.join("\n\n").trim() || undefined;
+  return { content, subItems };
+}
+
+// ── Main phase parser ────────────────────────────────────────────
+
 export function parsePhases(
   allSections: Section[],
   ctx: ParseContext,
@@ -370,199 +561,32 @@ export function parsePhases(
   for (let i = 0; i < allSections.length; i++) {
     const section = allSections[i];
 
-    // Try matching at level 2 (canonical) or level 3 (with warning)
-    if (section.level !== 2 && section.level !== 3) continue;
+    const detected = detectPhaseHeading(section, allSections, i, autoNumber, ctx);
+    if (!detected) continue;
 
-    const phaseMatch = tryMatchPhaseHeading(section.heading, autoNumber);
-
-    // Also check for unnumbered H2s that look like phases
-    let isUnnumberedPhase = false;
-    if (!phaseMatch && section.level === 2) {
-      // Skip known section patterns
-      if (KNOWN_SECTION_PATTERNS.some((p) => p.test(section.heading))) continue;
-
-      // Check if this H2 has subsections that look like phase content
-      // (has Changes Required, or Success Criteria, or numbered sub-headings)
-      const subSections = collectSectionsUntilLevel(allSections, i, 2);
-      const hasChanges = subSections.some((s) =>
-        CHANGES_HEADING_PATTERN.test(s.heading),
-      );
-      const hasCriteria = subSections.some(
-        (s) =>
-          SUCCESS_CRITERIA_HEADING_PATTERN.test(s.heading) ||
-          /Automated\s+Verification/i.test(s.heading) ||
-          /Manual\s+Verification/i.test(s.heading),
-      );
-      const hasNumberedChanges = subSections.some(
-        (s) => (s.level === 4 || s.level === 3) && /^\d+\.\s/.test(s.heading),
-      );
-
-      if (hasChanges || hasCriteria || hasNumberedChanges) {
-        isUnnumberedPhase = true;
-      } else {
-        continue;
-      }
-    }
-
-    if (!phaseMatch && !isUnnumberedPhase) {
-      // H3 with phase-like heading
-      if (section.level === 3) {
-        const h3Match = tryMatchPhaseHeading(section.heading, autoNumber);
-        if (h3Match) {
-          ctx.warn(
-            `Phase "${section.heading}" uses h3 instead of h2 — accepted but non-canonical`,
-          );
-          // Fall through with h3Match
-        } else {
-          continue;
-        }
-      } else {
-        continue;
-      }
-    }
-
-    const match = phaseMatch ?? {
-      number: autoNumber,
-      name: section.heading,
-      variant: "unnumbered" as const,
-    };
-
-    if (match.variant !== "canonical" && match.variant !== "unnumbered") {
+    if (detected.variant !== "canonical" && detected.variant !== "unnumbered") {
       ctx.warn(
-        `Phase "${section.heading}" uses non-canonical format (${match.variant}) — accepted`,
-      );
-    }
-    if (match.variant === "unnumbered") {
-      ctx.warn(
-        `Unnumbered heading "${section.heading}" treated as Phase ${match.number}`,
+        `Phase "${section.heading}" uses non-canonical format (${detected.variant}) — accepted`,
       );
     }
 
-    const number = match.number;
-    const name = match.name;
+    const { number, name } = detected;
     const id = `phase-${number}`;
     autoNumber = number + 1;
 
-    const subSections = collectSectionsUntilLevel(
-      allSections,
-      i,
-      section.level,
+    const subSections = collectSectionsUntilLevel(allSections, i, section.level);
+
+    const overviewSection = subSections.find((s) => /^Overview$/i.test(s.heading));
+    const overview = overviewSection ? tokensToMarkdown(overviewSection.tokens) : "";
+
+    const changes = extractPhaseChanges(subSections, allSections, number, ctx);
+    const successCriteria = extractPhaseCriteria(subSections, allSections);
+    const { content, subItems } = extractPhaseContentAndSubItems(
+      allSections[i],
+      subSections,
+      id,
+      number,
     );
-
-    const overviewSection = subSections.find((s) =>
-      /^Overview$/i.test(s.heading),
-    );
-    const overview = overviewSection
-      ? tokensToMarkdown(overviewSection.tokens)
-      : "";
-
-    // Flexible changes section heading
-    const changesSection = subSections.find((s) =>
-      CHANGES_HEADING_PATTERN.test(s.heading),
-    );
-
-    if (
-      changesSection &&
-      !/^Changes\s+Required/i.test(changesSection.heading)
-    ) {
-      ctx.warn(
-        `Phase ${number}: "${changesSection.heading}" used instead of "Changes Required" — accepted`,
-      );
-    }
-
-    const changesIdx = changesSection
-      ? allSections.indexOf(changesSection)
-      : -1;
-
-    let changes: Change[] = [];
-    if (changesIdx >= 0 && changesSection) {
-      // Strategy 1: Heading-based changes (#### N. Name)
-      const changeSubs = collectSectionsUntilLevel(
-        allSections,
-        changesIdx,
-        changesSection.level,
-      );
-      changes = parseChangesFromHeadings(changeSubs, ctx);
-
-      // Strategy 2: List-based changes if no heading-based changes found
-      if (changes.length === 0) {
-        changes = parseChangesFromList(changesSection.tokens, ctx);
-      }
-    }
-
-    // Flexible success criteria heading
-    const criteriaSection = subSections.find((s) =>
-      SUCCESS_CRITERIA_HEADING_PATTERN.test(s.heading),
-    );
-    const criteriaIdx = criteriaSection
-      ? allSections.indexOf(criteriaSection)
-      : -1;
-    const criteriaSubs =
-      criteriaIdx >= 0 && criteriaSection
-        ? collectSectionsUntilLevel(
-            allSections,
-            criteriaIdx,
-            criteriaSection.level,
-          )
-        : [];
-
-    const automatedSection =
-      criteriaSubs.find((s) => /Automated\s+Verification/i.test(s.heading)) ??
-      subSections.find((s) => /Automated\s+Verification/i.test(s.heading));
-    const manualSection =
-      criteriaSubs.find((s) => /Manual\s+Verification/i.test(s.heading)) ??
-      subSections.find((s) => /Manual\s+Verification/i.test(s.heading));
-
-    const automated = automatedSection
-      ? parseCriteria(automatedSection.tokens, "automated")
-      : [];
-    const manual = manualSection
-      ? parseCriteria(manualSection.tokens, "manual")
-      : [];
-
-    // If criteria section exists but no automated/manual sub-sections,
-    // treat all list items as manual criteria
-    if (
-      criteriaSection &&
-      automated.length === 0 &&
-      manual.length === 0 &&
-      criteriaSubs.length === 0
-    ) {
-      manual.push(...parseCriteria(criteriaSection.tokens, "manual"));
-    }
-
-    // Build content from direct tokens + unrecognized subsections
-    const recognizedPattern =
-      /^(Overview|Changes\s+Required|Changes|File\s+Changes|Modifications|Automated\s+Verification|Manual\s+Verification|Success\s+Criteria|Criteria|Verification):?$/i;
-    const subItemPattern = /^(\d+)([a-z])\.\s+(.+)/i;
-    const contentParts: string[] = [];
-    const subItems: SubItem[] = [];
-
-    // Direct tokens between phase heading and first sub-heading
-    const phaseSection = allSections[i];
-    const directText = tokensToMarkdown(phaseSection.tokens);
-    if (directText) contentParts.push(directText);
-
-    // Unrecognized subsections — check for sub-items first
-    for (const sub of subSections) {
-      if (recognizedPattern.test(sub.heading)) continue;
-
-      const siMatch = sub.heading.match(subItemPattern);
-      if (siMatch && parseInt(siMatch[1], 10) === number) {
-        const letter = siMatch[2].toLowerCase();
-        subItems.push({
-          id: `${id}-${letter}`,
-          letter,
-          name: siMatch[3].trim(),
-          content: tokensToMarkdown(sub.tokens),
-        });
-      } else {
-        const subBody = tokensToMarkdown(sub.tokens);
-        contentParts.push(`### ${sub.heading}\n\n${subBody}`);
-      }
-    }
-
-    const content = contentParts.join("\n\n").trim() || undefined;
 
     phases.push({
       id,
@@ -572,7 +596,7 @@ export function parsePhases(
       content,
       subItems,
       changes,
-      successCriteria: { automated, manual },
+      successCriteria,
     });
   }
 

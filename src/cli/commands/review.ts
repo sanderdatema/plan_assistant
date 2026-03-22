@@ -1,17 +1,8 @@
-import {
-  readFileSync,
-  writeFileSync,
-  existsSync,
-  mkdirSync,
-  unlinkSync,
-  symlinkSync,
-  lstatSync,
-} from "node:fs";
-import { resolve, dirname, join } from "node:path";
-import { watch } from "chokidar";
-import { parseMarkdownToPlan, sessionIdFromPath } from "../markdown-to-plan.js";
+import { existsSync, mkdirSync, symlinkSync } from "node:fs";
+import { join } from "node:path";
 import { outputJson } from "../output.js";
 import { awaitReviewFeedback } from "../session-reader.js";
+import { prepareSession, watchMarkdownFile } from "../review-session.js";
 import {
   DEFAULT_BASE_PORT,
   MAX_PORT,
@@ -22,7 +13,6 @@ import {
   launchServer,
   openBrowser,
 } from "../server-client.js";
-import type { SessionMeta } from "../../lib/types/index.js";
 import type { ParsedArgs } from "../index.js";
 import { CliError } from "../errors.js";
 
@@ -58,110 +48,28 @@ export async function review(args: ParsedArgs) {
     }
   }
 
-  const absolutePath = resolve(markdownFile);
-
-  if (!existsSync(absolutePath)) {
-    throw new CliError(`File not found: ${absolutePath}`);
-  }
-
-  const sessionDir = join(dirname(absolutePath), ".plan-sessions");
-  const sessionId = sessionIdFromPath(absolutePath);
-  const sessionPath = join(sessionDir, sessionId);
-
-  // Parse markdown
-  const markdown = readFileSync(absolutePath, "utf-8");
-  const projectDir = process.cwd();
-
-  let version = 1;
-  const existingPlanPath = join(sessionPath, "plan.json");
-  if (existsSync(existingPlanPath)) {
-    try {
-      const existing = JSON.parse(readFileSync(existingPlanPath, "utf-8"));
-      version = (existing.meta?.version ?? 0) + 1;
-    } catch {
-      // ignore, start at 1
-    }
-  }
-
-  const { plan, warnings } = parseMarkdownToPlan(
-    markdown,
-    absolutePath,
-    projectDir,
+  // --- Session setup (extracted to review-session.ts) ---
+  const session = prepareSession(markdownFile);
+  const {
+    sessionId,
+    sessionPath,
+    sessionDir,
+    plan,
     version,
-  );
+    absolutePath,
+    existingPlanPath,
+  } = session;
 
-  // Display any parser warnings
-  for (const warning of warnings) {
-    console.error(`Warning: ${warning}`);
-  }
-
-  if (plan.phases.length === 0) {
-    console.error(`
-⚠ No phases found — plan will appear empty in the browser.
-
-Use the correct format for phases:
-
-  ## Phase 1: Phase Name
-
-  ### Changes Required:
-
-  #### 1. Component Name
-  **File**: \`path/to/file.ext\`
-  Description of what to change.
-
-  ### Success Criteria:
-  - [ ] \`npm test\`
-
-Accepted phase keywords: "Phase N:", "Step N:", "Task N:" (H2 headings)
-Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatted template.
-`);
-  }
-
-  // Write session files
-  mkdirSync(sessionPath, { recursive: true });
-  mkdirSync(join(sessionPath, "versions"), { recursive: true });
-
-  // Clear stale feedback from previous review cycle
-  const oldFeedbackPath = join(sessionPath, "feedback.json");
-  if (existsSync(oldFeedbackPath)) {
-    try {
-      unlinkSync(oldFeedbackPath);
-    } catch {
-      // ignore
-    }
-  }
-
-  const meta: SessionMeta = {
-    id: sessionId,
-    planTitle: plan.meta.title,
-    markdownPath: absolutePath,
-    projectDir,
-    status: "active",
-    planVersion: version,
-    createdAt: plan.meta.createdAt,
-    updatedAt: plan.meta.updatedAt,
-  };
-
-  writeFileSync(join(sessionPath, "meta.json"), JSON.stringify(meta, null, 2));
-  writeFileSync(join(sessionPath, "plan.json"), JSON.stringify(plan, null, 2));
-  writeFileSync(
-    join(sessionPath, "versions", `v${version}.json`),
-    JSON.stringify(plan, null, 2),
-  );
-
-  // Find existing server for this session dir or start a new one
+  // --- Server lifecycle ---
   const reuse = args.flags.reuse === true;
   const basePort = requestedPort ?? DEFAULT_BASE_PORT;
   let port = await findExistingServer(sessionDir, basePort);
 
   if (!port && reuse) {
-    // --reuse: find any running plan-assistant server and reuse it
     for (let p = basePort; p <= MAX_PORT; p++) {
       const health = await checkHealth(p);
       if (health) {
         port = p;
-        // Cross-project reuse: the server only knows its own SESSION_DIR.
-        // Symlink our session into the server's directory so it can find it.
         if (health.sessionDir !== sessionDir) {
           const linkPath = join(health.sessionDir, sessionId);
           if (!existsSync(linkPath)) {
@@ -181,7 +89,6 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
   if (!port) {
     if (requestedPort) {
       if (!(await isPortFree(requestedPort))) {
-        // Check if it's a plan-assistant server for a better error message
         const health = await checkHealth(requestedPort);
         if (health) {
           console.error(
@@ -202,10 +109,8 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
     await launchServer(sessionDir, port);
   }
 
-  // At this point port is always assigned (server found or started above)
   const serverPort = port!;
 
-  // Helper: check server health and restart if it died (e.g. idle timeout)
   async function ensureServer(): Promise<void> {
     const health = await checkHealth(serverPort);
     if (!health) {
@@ -216,7 +121,7 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
     }
   }
 
-  // Keepalive: ping server every 2 minutes to prevent idle timeout shutdown
+  // Keepalive
   const KEEPALIVE_MS = 2 * 60 * 1000;
   const keepaliveInterval = setInterval(async () => {
     try {
@@ -229,7 +134,7 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
   const url = `http://${displayHost}:${serverPort}/plan/${sessionId}`;
   const feedbackPath = join(sessionPath, "feedback.json");
 
-  // Machine-readable ready event on first line
+  // Machine-readable ready event
   outputJson({
     event: "ready",
     sessionId,
@@ -262,50 +167,14 @@ Run \`npx plan-assistant init --output <file>\` to generate a correctly-formatte
     console.error(`Press Ctrl+C to stop without waiting.`);
   }
 
-  // Watch markdown file for changes
-  const mdWatcher = watch(absolutePath, {
-    awaitWriteFinish: { stabilityThreshold: 300, pollInterval: 100 },
-  });
-
-  mdWatcher.on("change", async () => {
-    try {
-      // Ensure server is alive before writing updated plan
-      await ensureServer();
-      const updated = readFileSync(absolutePath, "utf-8");
-      const existingPlan = JSON.parse(readFileSync(existingPlanPath, "utf-8"));
-      const newVersion = (existingPlan.meta?.version ?? 0) + 1;
-      const { plan: newPlan, warnings: newWarnings } = parseMarkdownToPlan(
-        updated,
-        absolutePath,
-        projectDir,
-        newVersion,
-      );
-
-      for (const warning of newWarnings) {
-        console.error(`Warning: ${warning}`);
-      }
-
-      if (newPlan.phases.length === 0) {
-        console.error(
-          `⚠ No phases found after reload — check format. Run \`npx plan-assistant init\` for a template.`,
-        );
-      }
-
-      writeFileSync(
-        join(sessionPath, "plan.json"),
-        JSON.stringify(newPlan, null, 2),
-      );
-      writeFileSync(
-        join(sessionPath, "versions", `v${newVersion}.json`),
-        JSON.stringify(newPlan, null, 2),
-      );
-      console.error(
-        `[${new Date().toLocaleTimeString()}] Plan updated (v${newVersion})`,
-      );
-    } catch (err) {
-      console.error(`Error re-parsing markdown: ${err}`);
-    }
-  });
+  // --- File watching (extracted to review-session.ts) ---
+  const mdWatcher = watchMarkdownFile(
+    absolutePath,
+    sessionPath,
+    session.projectDir,
+    existingPlanPath,
+    ensureServer,
+  );
 
   // Wait for feedback unless --no-wait
   if (!noWait) {
