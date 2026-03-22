@@ -1,48 +1,24 @@
 /**
  * Session data reading and feedback watching.
- * CLI-side equivalent of the server's session-manager.
+ * Read functions are imported from session-manager (single implementation).
  */
 
-import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
+import { existsSync, readFileSync, readdirSync, statSync } from "node:fs";
 import { join, dirname } from "node:path";
 import { watch } from "chokidar";
 import { outputJson } from "./output.js";
 import { stopServer } from "./server-client.js";
+import {
+  readMeta,
+  readFeedbackByDir as readFeedback,
+  readPlanByDir as readPlan,
+} from "../lib/server/session-manager.js";
 import type {
   SessionMeta,
   FeedbackPayload,
-  PlanJson,
 } from "../lib/types/index.js";
 
-export function readMeta(sessionDir: string): SessionMeta | null {
-  const path = join(sessionDir, "meta.json");
-  if (!existsSync(path)) return null;
-  try {
-    return JSON.parse(readFileSync(path, "utf-8")) as SessionMeta;
-  } catch {
-    return null;
-  }
-}
-
-export function readFeedback(sessionDir: string): FeedbackPayload | null {
-  const path = join(sessionDir, "feedback.json");
-  if (!existsSync(path)) return null;
-  try {
-    return JSON.parse(readFileSync(path, "utf-8")) as FeedbackPayload;
-  } catch {
-    return null;
-  }
-}
-
-export function readPlan(sessionDir: string): PlanJson | null {
-  const path = join(sessionDir, "plan.json");
-  if (!existsSync(path)) return null;
-  try {
-    return JSON.parse(readFileSync(path, "utf-8")) as PlanJson;
-  } catch {
-    return null;
-  }
-}
+export { readMeta, readFeedback, readPlan };
 
 export interface SessionEntry {
   sessionId: string;
@@ -130,7 +106,7 @@ async function outputFeedbackResult(
   );
 }
 
-export async function waitForFeedback(
+export async function awaitReviewFeedback(
   feedbackPath: string,
   sessionId: string,
   planTitle: string,

@@ -83,7 +83,7 @@ export async function status(args: ParsedArgs) {
         ? (parseDuration(timeoutStr) ?? 30 * 60 * 1000)
         : 30 * 60 * 1000; // 30 min default
 
-    await waitForFeedback(
+    await pollFeedbackStatus(
       resolved.sessionDir,
       resolved.sessionId,
       meta,
@@ -117,7 +117,7 @@ export async function status(args: ParsedArgs) {
   throw new CliExitCode(exitCode);
 }
 
-async function waitForFeedback(
+async function pollFeedbackStatus(
   sessionDir: string,
   sessionId: string,
   meta: ReturnType<typeof readMeta> & {},

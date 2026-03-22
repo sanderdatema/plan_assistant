@@ -8,7 +8,7 @@ Implement the recommendations from a deep 9-analyst code review. Focus on code q
 
 **v1.5.0 Code Quality** (v1.5.0)
 Status: In progress
-Phases: 2 of 4 complete
+Phases: 3 of 4 complete
 
 ## Phases
 
@@ -16,7 +16,7 @@ Phases: 2 of 4 complete
 |-------|------|-------|--------|-----------|
 | 1 | Test Foundation | 1 | Complete | 2026-03-22 |
 | 2 | CLI Testability Refactor | 1 | Complete | 2026-03-22 |
-| 3 | Consolidation & Cleanup | 2 | Planning | - |
+| 3 | Consolidation & Cleanup | 2 | Complete | 2026-03-22 |
 | 4 | Structural Refactoring | TBD | Not started | - |
 
 ## Phase Details
@@ -70,9 +70,8 @@ Phases: 2 of 4 complete
 - Export exit code constants from shared location
 
 **Plans:**
-- [ ] 03-01: Consolidate waitForFeedback
-- [ ] 03-02: Unify session I/O
-- [ ] 03-03: Remove approve endpoint + shared constants
+- [x] 03-01: Unify patterns, remove approve endpoint, share exit codes
+- [x] 03-02: Consolidate session I/O, rename waitForFeedback
 
 ### Phase 4: Structural Refactoring
 

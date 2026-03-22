@@ -38,6 +38,7 @@ AI coding agents kunnen gestructureerde menselijke feedback krijgen op implement
 - [ ] Code quality improvements from deep review (this milestone)
 - [x] Unit test coverage for all pure functions -- Phase 1 complete
 - [x] CLI testability (CliError, no process.exit in commands) -- Phase 2 complete
+- [x] Code consolidation (session I/O, patterns, approve endpoint) -- Phase 3 complete
 
 ### Out of Scope
 
