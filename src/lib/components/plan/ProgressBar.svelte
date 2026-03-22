@@ -1,9 +1,10 @@
 <script lang="ts">
 	import type { Phase } from '$lib/types/plan.js';
+	import type { PhaseStatus } from '$lib/utils/status.js';
 
 	interface Props {
 		phases: Phase[];
-		phaseStatuses: Record<string, { status: string }>;
+		phaseStatuses: Record<string, { status: PhaseStatus }>;
 	}
 
 	let { phases, phaseStatuses }: Props = $props();

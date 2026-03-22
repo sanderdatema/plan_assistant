@@ -1,11 +1,13 @@
 import type { PhaseStatus } from "../utils/status.js";
 
+export type FeedbackStatus = "reviewing" | "approved" | "needs-work";
+
 export interface FeedbackPayload {
   schemaVersion: 1;
   planTitle: string;
   planVersion: number;
   sessionId: string;
-  status: "reviewing" | "approved" | "needs-work";
+  status: FeedbackStatus;
   phaseStatuses: Record<
     string,
     {

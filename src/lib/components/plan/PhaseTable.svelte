@@ -5,7 +5,7 @@
 
 	interface Props {
 		phases: Phase[];
-		phaseStatuses: Record<string, { phaseId: string; status: string; note?: string }>;
+		phaseStatuses: Record<string, { phaseId: string; status: PhaseStatus; note?: string }>;
 		onSetStatus: (phaseId: string, status: PhaseStatus) => void;
 	}
 

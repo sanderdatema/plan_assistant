@@ -34,8 +34,7 @@
   "dependencies": {
     "chokidar": "^4.0.3",
     "highlight.js": "^11.11.0",
-    "marked": "^15.0.7",
-    "mermaid": "^11.6.0"
+    "marked": "^15.0.7"
   },
   "knip": {
     "entry": [
@@ -52,6 +51,7 @@
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
     "@tailwindcss/vite": "^4.1.4",
     "@types/node": "^25.3.0",
+    "mermaid": "^11.6.0",
     "svelte": "^5.20.0",
     "svelte-check": "^4.1.0",
     "tailwindcss": "^4.1.4",

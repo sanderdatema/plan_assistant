@@ -12,7 +12,7 @@ import { sessionIdFromPath } from "./markdown-to-plan.js";
 import { outputError } from "./output.js";
 import { CliError } from "./errors.js";
 
-export interface ResolvedSession {
+interface ResolvedSession {
   sessionId: string;
   sessionDir: string;
   markdownPath?: string;

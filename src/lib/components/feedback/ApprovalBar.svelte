@@ -1,6 +1,8 @@
 <script lang="ts">
+	import type { FeedbackStatus } from '$lib/types/index.js';
+
 	interface Props {
-		status: string;
+		status: FeedbackStatus;
 		commentCount: number;
 		computedStatus: 'approved' | 'needs-work';
 		onSubmit: () => void;
