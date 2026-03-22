@@ -101,9 +101,7 @@ export function findSessionDirs(startDir: string): SessionEntry[] {
 // ── Feedback watching ──────────────────────────────────────────────
 
 import { CliExitCode } from "./errors.js";
-
-const EXIT_APPROVED = 0;
-const EXIT_NEEDS_WORK = 3;
+import { EXIT_APPROVED, EXIT_NEEDS_WORK } from "./commands/status.js";
 
 async function outputFeedbackResult(
   feedback: FeedbackPayload,

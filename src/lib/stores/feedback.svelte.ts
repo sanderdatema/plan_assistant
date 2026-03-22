@@ -175,12 +175,9 @@ function createFeedbackStore() {
       currentFeedback.updatedAt = new Date().toISOString();
 
       // Save immediately (not debounced)
+      // The feedback PUT endpoint already handles session status update
       if (saveTimer) clearTimeout(saveTimer);
       await persistFeedback();
-
-      if (status === "approved") {
-        await fetch(`/api/sessions/${sessionId}/approve`, { method: "POST" });
-      }
     },
   };
 }
