@@ -18,24 +18,28 @@ This will:
 
 | Command | Description |
 |---------|-------------|
+| `plan-assistant init [--output <file>]` | Generate a plan template (stdout if no `--output`) |
 | `plan-assistant review <file>` | Parse and open plan for review |
 | `plan-assistant status <file-or-id>` | Check review status (exit codes: 0=approved, 3=needs-work, 4=reviewing, 5=no feedback) |
 | `plan-assistant feedback <file-or-id>` | Output feedback JSON |
-| `plan-assistant list` | List all sessions |
-| `plan-assistant init` | Generate a plan template |
-| `plan-assistant clean` | Remove orphaned sessions |
+| `plan-assistant list [--dir <path>]` | List all sessions |
+| `plan-assistant stop [<file-or-id>]` | Stop running server(s) |
+| `plan-assistant clean [--all] [--older-than <dur>]` | Remove old/orphaned sessions |
 | `plan-assistant export <file-or-id>` | Export as self-contained HTML |
-| `plan-assistant help` | Show help |
+| `plan-assistant help [format]` | Show help or plan format reference |
 
 ### Common flags
 
 - `--pretty` — Human-readable output (default: JSON for AI parsing)
-- `--port <N>` — Specific port for review server
-- `--wait` — Block until feedback is submitted (status command)
-- `--unresolved` — Only show unresolved comments (feedback command)
-- `--phase <id>` — Filter to a specific phase (feedback command)
-- `--dry-run` — Preview what would be removed (clean command)
-- `--output <file>` — Write to file instead of stdout (init, export commands)
+- `--port <N>` — Specific port for review server (review)
+- `--host <H>` — Hostname for browser URL, e.g. host IP when running in Docker (review)
+- `--no-wait` — Don't wait for feedback, just start the server (review)
+- `--reuse` — Reuse an already-running server for another session (review)
+- `--wait` — Block until feedback is submitted (status)
+- `--unresolved` — Only show unresolved comments (feedback)
+- `--phase <id>` — Filter to a specific phase (feedback)
+- `--dry-run` — Preview what would be removed (clean)
+- `--output <file>` — Write to file instead of stdout (init, export)
 
 ## Features
 
@@ -252,6 +256,21 @@ Add `.plan-sessions/` to your `.gitignore`.
 npm install
 npm run dev        # SvelteKit dev server on port 5199
 npm run build      # Build CLI + server
-npm test           # Run parser tests
-npm run check      # Type check
+npm run build:cli  # CLI only (tsconfig.cli.json → bin/)
+npm test           # Vitest (parser, diff, status, export tests)
+npm run check      # svelte-check + TypeScript
+```
+
+### Architecture
+
+```
+src/
+  cli/              CLI entry point, commands, markdown parser
+  lib/
+    components/     Svelte 5 components (plan/, feedback/)
+    stores/         Rune-based stores (plan, feedback)
+    server/         Session manager, file watcher, SSE, idle timer
+    types/          TypeScript type definitions
+    utils/          Diff engine, status helpers
+  routes/           SvelteKit pages and API routes
 ```
