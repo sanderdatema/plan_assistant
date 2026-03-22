@@ -119,8 +119,8 @@ Phases: 1 of 1
 ## Next Milestone
 
 **v1.6.0 Refactoring & Test Coverage** (v1.6.0)
-Status: In progress
-Phases: 3
+Status: Complete
+Phases: 3 of 3 complete
 
 ## v1.6.0 Phases
 
@@ -128,7 +128,7 @@ Phases: 3
 |-------|------|-------|--------|-----------|
 | 6 | Test Coverage | 1 | Complete | 2026-03-22 |
 | 7 | Dead Code & Deduplication | 1 | Complete | 2026-03-22 |
-| 8 | Type & Constant Cleanup | 1 | Not started | — |
+| 8 | Type & Constant Cleanup | 1 | Complete | 2026-03-22 |
 
 ### Phase 6: Test Coverage
 
