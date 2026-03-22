@@ -9,13 +9,13 @@ import { join } from "node:path";
 import { existsSync, readFileSync } from "node:fs";
 
 // Exit codes
-const EXIT_APPROVED = 0;
-const EXIT_ERROR = 1;
-const EXIT_NEEDS_WORK = 3;
-const EXIT_REVIEWING = 4;
-const EXIT_NO_FEEDBACK = 5;
+export const EXIT_APPROVED = 0;
+export const EXIT_ERROR = 1;
+export const EXIT_NEEDS_WORK = 3;
+export const EXIT_REVIEWING = 4;
+export const EXIT_NO_FEEDBACK = 5;
 
-function computeStatus(feedback: FeedbackPayload | null) {
+export function computeStatus(feedback: FeedbackPayload | null) {
   if (!feedback)
     return { feedbackStatus: "none" as const, exitCode: EXIT_NO_FEEDBACK };
 
@@ -30,7 +30,7 @@ function computeStatus(feedback: FeedbackPayload | null) {
   }
 }
 
-function computeSummary(feedback: FeedbackPayload | null) {
+export function computeSummary(feedback: FeedbackPayload | null) {
   const phaseSummary = { total: 0, approved: 0, needsWork: 0, pending: 0 };
   const commentSummary = { total: 0, unresolved: 0 };
 
