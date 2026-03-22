@@ -127,7 +127,7 @@ Phases: 3
 | Phase | Name | Plans | Status | Completed |
 |-------|------|-------|--------|-----------|
 | 6 | Test Coverage | 1 | Complete | 2026-03-22 |
-| 7 | Dead Code & Deduplication | 1 | Not started | — |
+| 7 | Dead Code & Deduplication | 1 | Complete | 2026-03-22 |
 | 8 | Type & Constant Cleanup | 1 | Not started | — |
 
 ### Phase 6: Test Coverage
