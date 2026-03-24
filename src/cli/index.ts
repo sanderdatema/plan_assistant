@@ -46,11 +46,20 @@ export function parseArgs(argv: string[]): ParsedArgs {
 function usage() {
   console.log(`plan-assistant - Review implementation plans in the browser
 
-Workflow:
+Workflow (interactive):
   1. plan-assistant init --output plan.md              Create correctly-formatted template
   2. # Edit plan.md with your plan content
-  3. plan-assistant review plan.md                     Open in browser, wait for Approve/Request Changes
-  4. # review exits with the feedback result automatically
+  3. plan-assistant review plan.md                     Open in browser, wait for feedback
+  4. # review exits automatically when user submits feedback
+
+Workflow (AI agent / background):
+  1. plan-assistant init --output plan.md              Create template
+  2. # Fill in the template with plan content
+  3. plan-assistant review plan.md                     Run in BACKGROUND (starts server, opens browser)
+  4. plan-assistant status --wait plan.md              Run in FOREGROUND — blocks until feedback
+     Exit codes: 0=approved, 3=needs-work, 4=reviewing, 5=no feedback
+     IMPORTANT: Do NOT proceed with implementation until exit code is 0.
+  5. If exit 3: plan-assistant feedback plan.md --unresolved   Read comments, update plan, go to 3
 
 Commands:
   plan-assistant init [--output <file>]                Generate plan template (stdout if no --output)
