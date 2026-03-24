@@ -137,7 +137,11 @@ export function isPortFree(port: number): Promise<boolean> {
     server.once("listening", () => {
       server.close(() => resolve(true));
     });
-    server.listen(port, "127.0.0.1");
+    // Bind on 0.0.0.0 — the SvelteKit server listens on 0.0.0.0 by default,
+    // and macOS treats 0.0.0.0 and 127.0.0.1 as distinct bind addresses.
+    // Using 127.0.0.1 here would report the port as "free" even when a
+    // 0.0.0.0 server already occupies it, causing a silent startup failure.
+    server.listen(port, "0.0.0.0");
   });
 }
 
@@ -176,10 +180,23 @@ function startServer(sessionDir: string, port: number): Promise<number> {
     const interval = setInterval(async () => {
       attempts++;
       try {
-        const res = await fetchWithTimeout(`http://localhost:${port}/api/health`, {}, STARTUP_HEALTH_CHECK_TIMEOUT_MS);
-        if (res.ok) {
-          clearInterval(interval);
-          resolvePromise(pid);
+        const health = await checkHealth(port);
+        if (health) {
+          // Verify this is OUR server, not a stale one on the same port
+          if (health.sessionDir === sessionDir) {
+            clearInterval(interval);
+            resolvePromise(pid);
+          } else if (attempts >= STARTUP_MAX_ATTEMPTS) {
+            clearInterval(interval);
+            reject(
+              new Error(
+                `Port ${port} is occupied by another Plan Assistant server ` +
+                  `(session dir: ${health.sessionDir}). ` +
+                  `Use --reuse to share it, or stop it with \`plan-assistant stop\`.`,
+              ),
+            );
+          }
+          // Otherwise keep waiting — our server may still be starting
         }
       } catch {
         if (attempts >= STARTUP_MAX_ATTEMPTS) {
