@@ -4,6 +4,21 @@ export interface ParsedArgs {
   flags: Record<string, string | boolean>;
 }
 
+// Flags that never take a value — the parser must not consume the next
+// positional argument as their value.
+const BOOLEAN_FLAGS = new Set([
+  "wait",
+  "no-wait",
+  "pretty",
+  "reuse",
+  "all",
+  "dry-run",
+  "force",
+  "unresolved",
+  "help",
+  "h",
+]);
+
 export function parseArgs(argv: string[]): ParsedArgs {
   const command = argv[0] ?? "help";
   const positional: string[] = [];
@@ -16,6 +31,8 @@ export function parseArgs(argv: string[]): ParsedArgs {
       const eqIdx = key.indexOf("=");
       if (eqIdx >= 0) {
         flags[key.slice(0, eqIdx)] = key.slice(eqIdx + 1);
+      } else if (BOOLEAN_FLAGS.has(key)) {
+        flags[key] = true;
       } else {
         // Check if next arg is a value (not a flag)
         const next = argv[i + 1];
@@ -28,12 +45,16 @@ export function parseArgs(argv: string[]): ParsedArgs {
       }
     } else if (arg.startsWith("-") && arg.length === 2) {
       const key = arg.slice(1);
-      const next = argv[i + 1];
-      if (next && !next.startsWith("-")) {
-        flags[key] = next;
-        i++;
-      } else {
+      if (BOOLEAN_FLAGS.has(key)) {
         flags[key] = true;
+      } else {
+        const next = argv[i + 1];
+        if (next && !next.startsWith("-")) {
+          flags[key] = next;
+          i++;
+        } else {
+          flags[key] = true;
+        }
       }
     } else {
       positional.push(arg);

@@ -57,4 +57,22 @@ describe("parseArgs", () => {
     expect(result.flags.wait).toBe(true);
     expect(result.flags.pretty).toBe(true);
   });
+
+  it("does not consume positional as value for known boolean flags", () => {
+    const result = parseArgs(["status", "--wait", "plan.md"]);
+    expect(result.flags.wait).toBe(true);
+    expect(result.positional).toEqual(["plan.md"]);
+  });
+
+  it("treats --no-wait as boolean even when followed by positional", () => {
+    const result = parseArgs(["review", "--no-wait", "plan.md"]);
+    expect(result.flags["no-wait"]).toBe(true);
+    expect(result.positional).toEqual(["plan.md"]);
+  });
+
+  it("treats --reuse as boolean even when followed by positional", () => {
+    const result = parseArgs(["review", "--reuse", "plan.md"]);
+    expect(result.flags.reuse).toBe(true);
+    expect(result.positional).toEqual(["plan.md"]);
+  });
 });
