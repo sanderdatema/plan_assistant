@@ -204,6 +204,7 @@
 				currentVersion={plan.meta.version}
 				onSelectVersion={handleSelectVersion}
 				onCompare={handleCompare}
+				onHideDiff={() => { showDiff = false; diffs = []; }}
 			/>
 		</div>
 

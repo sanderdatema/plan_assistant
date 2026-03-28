@@ -4,9 +4,10 @@
 		currentVersion: number;
 		onSelectVersion: (version: number) => void;
 		onCompare: (oldVersion: number, newVersion: number) => void;
+		onHideDiff?: () => void;
 	}
 
-	let { versions, currentVersion, onSelectVersion, onCompare }: Props = $props();
+	let { versions, currentVersion, onSelectVersion, onCompare, onHideDiff }: Props = $props();
 
 	let compareMode = $state(false);
 	let compareFrom = $state(0);
@@ -14,6 +15,13 @@
 	function handleCompare() {
 		if (compareFrom > 0 && compareFrom !== currentVersion) {
 			onCompare(compareFrom, currentVersion);
+		}
+	}
+
+	function toggleCompare() {
+		compareMode = !compareMode;
+		if (!compareMode) {
+			onHideDiff?.();
 		}
 	}
 </script>
@@ -39,7 +47,7 @@
 
 		<button
 			class="text-text-dim hover:text-accent rounded px-2 py-1 text-xs transition-colors"
-			onclick={() => compareMode = !compareMode}
+			onclick={toggleCompare}
 		>
 			{compareMode ? 'Hide diff' : 'Compare versions'}
 		</button>
