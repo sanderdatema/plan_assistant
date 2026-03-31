@@ -11,3 +11,12 @@ dist/
 .playwright-cli/
 .plan-sessions/
 host_folders/
+
+# AI tooling (not part of the package)
+.carl/
+.serena/
+.paul/
+.claude/
+AGENTS.md
+thoughts/
+.observer.lock
