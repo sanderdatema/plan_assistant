@@ -15,6 +15,7 @@
 	import ApprovalBar from '$lib/components/feedback/ApprovalBar.svelte';
 	import { diffPlans, type SectionDiff } from '$lib/utils/diff.js';
 	import type { PlanJson } from '$lib/types/plan.js';
+	import { QUOTE_MAX_LENGTH } from '$lib/constants.js';
 
 	let { data }: { data: PageData } = $props();
 
@@ -101,20 +102,11 @@
 	let hoverRect = $state<{ x: number; y: number; width: number; height: number } | null>(null);
 	let planContentEl = $state<HTMLDivElement | undefined>();
 
-	function handleMouseMove(event: MouseEvent) {
-		const target = event.target as HTMLElement;
-		// Don't highlight when hovering over interactive elements
-		if (target.closest('button, input, a, select, textarea')) {
-			hoveredElement = null;
-			hoverRect = null;
-			return;
-		}
-		const commentable = target.closest('[data-commentable]') as HTMLElement | null;
-
-		if (commentable && planContentEl?.contains(commentable)) {
-			if (commentable !== hoveredElement) {
-				hoveredElement = commentable;
-				const rect = commentable.getBoundingClientRect();
+	function activateCommentable(el: HTMLElement | null) {
+		if (el && planContentEl?.contains(el)) {
+			if (el !== hoveredElement) {
+				hoveredElement = el;
+				const rect = el.getBoundingClientRect();
 				hoverRect = { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
 			}
 		} else {
@@ -123,25 +115,24 @@
 		}
 	}
 
-	function handleMouseLeave() {
+	function clearCommentable() {
 		hoveredElement = null;
 		hoverRect = null;
+	}
+
+	function handleMouseMove(event: MouseEvent) {
+		const target = event.target as HTMLElement;
+		if (target.closest('button, input, a, select, textarea')) {
+			clearCommentable();
+			return;
+		}
+		activateCommentable(target.closest('[data-commentable]'));
 	}
 
 	function handleFocusIn(event: FocusEvent) {
 		const target = event.target as HTMLElement;
 		if (target.closest('button, input, a, select, textarea')) return;
-		const commentable = target.closest('[data-commentable]') as HTMLElement | null;
-		if (commentable && planContentEl?.contains(commentable)) {
-			hoveredElement = commentable;
-			const rect = commentable.getBoundingClientRect();
-			hoverRect = { x: rect.x, y: rect.y, width: rect.width, height: rect.height };
-		}
-	}
-
-	function handleFocusOut() {
-		hoveredElement = null;
-		hoverRect = null;
+		activateCommentable(target.closest('[data-commentable]'));
 	}
 
 	function handlePlanClick(event: MouseEvent) {
@@ -152,7 +143,7 @@
 		if (target.closest('button, input, a, [data-feedback-panel]')) return;
 
 		const label = hoveredElement.getAttribute('data-comment-label') ?? 'General';
-		const quote = (hoveredElement.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, 120);
+		const quote = (hoveredElement.textContent ?? '').trim().replace(/\s+/g, ' ').slice(0, QUOTE_MAX_LENGTH);
 
 		feedbackStore.addComment(label, quote, '');
 	}
@@ -189,9 +180,9 @@
 		aria-label="Plan content"
 		class="min-h-screen pb-20 pr-[22rem] pl-8 pt-4"
 		onmousemove={handleMouseMove}
-		onmouseleave={handleMouseLeave}
+		onmouseleave={clearCommentable}
 		onfocusin={handleFocusIn}
-		onfocusout={handleFocusOut}
+		onfocusout={clearCommentable}
 		onclick={handlePlanClick}
 		onkeydown={(e) => { if (e.key === 'Enter') handlePlanClick(e as unknown as MouseEvent); }}
 	>

@@ -17,10 +17,6 @@ import {
   parsePhases,
   parseTestingStrategy,
   parseReferences,
-  extractFilePath,
-  parseChangesFromHeadings,
-  parseChangesFromList,
-  parseCriteria,
 } from "./markdown-parser.js";
 
 interface ParseResult {

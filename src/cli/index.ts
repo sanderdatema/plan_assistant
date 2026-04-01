@@ -65,7 +65,7 @@ export function parseArgs(argv: string[]): ParsedArgs {
 }
 
 function usage() {
-  console.log(`plan-assistant - Review implementation plans in the browser
+  console.error(`plan-assistant - Review implementation plans in the browser
 
 Workflow (interactive):
   1. plan-assistant init --output plan.md              Create correctly-formatted template
@@ -101,13 +101,14 @@ Flags:
   --no-wait       Don't wait for feedback, just start server (review command)
   --reuse         Reuse an already-running server on another session (review command)
   --wait          Block until feedback is submitted (status command)
+  --wait-timeout  Override the 30-minute wait timeout, e.g. "1h", "10m" (status command)
 
 TIP: Always start with \`plan-assistant init\` to get a correctly-formatted template.
      Run \`plan-assistant help format\` to see the expected markdown structure.`);
 }
 
 function usageFormat() {
-  console.log(`plan-assistant - Expected plan markdown format
+  console.error(`plan-assistant - Expected plan markdown format
 
 Always start with: npx plan-assistant init --output <file>
 

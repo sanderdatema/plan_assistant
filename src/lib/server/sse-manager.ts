@@ -4,6 +4,7 @@ type SSEClient = {
 };
 
 const clients = new Map<string, Set<SSEClient>>();
+const encoder = new TextEncoder();
 
 export function addClient(
   sessionId: string,
@@ -42,9 +43,12 @@ function sendToClients(
   }
 }
 
+/**
+ * Send an event to clients subscribed to a specific session.
+ * Also fans out to wildcard ("*") subscribers so session-list pages stay updated.
+ */
 export function broadcast(sessionId: string, event: string, data: unknown) {
   const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-  const encoder = new TextEncoder();
   const encoded = encoder.encode(message);
 
   // Send to session-specific clients
@@ -56,10 +60,13 @@ export function broadcast(sessionId: string, event: string, data: unknown) {
   }
 }
 
-/** Send an event to every connected client regardless of session. */
+/**
+ * Send an event to every connected client regardless of session.
+ * Use this for server-wide events (idle-timer, shutdown).
+ * Unlike broadcast(), this iterates all client sets — no wildcard fanout needed.
+ */
 export function broadcastAll(event: string, data: unknown) {
   const message = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
-  const encoder = new TextEncoder();
   const encoded = encoder.encode(message);
 
   for (const clientSet of clients.values()) {

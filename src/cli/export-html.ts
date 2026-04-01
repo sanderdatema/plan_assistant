@@ -81,6 +81,49 @@ function highlightCode(code: string, lang?: string): string {
   }
 }
 
+function renderChange(change: PlanJson["phases"][number]["changes"][number]): string {
+  return `
+    <div style="margin:12px 0;padding:12px;background:#1e1e2e;border-radius:6px">
+      <h4 style="margin:0 0 8px;color:#cdd6f4">${escapeHtml(change.componentName)}</h4>
+      ${change.filePath ? `<div style="font-family:monospace;font-size:13px;color:#89b4fa;margin-bottom:8px">${escapeHtml(change.filePath)}</div>` : ""}
+      <div style="color:#bac2de">${escapeHtml(change.description)}</div>
+      ${
+        change.codeSnippet
+          ? `<pre style="margin:8px 0 0;padding:12px;background:#11111b;border-radius:4px;overflow-x:auto;font-size:13px"><code class="hljs">${highlightCode(change.codeSnippet, change.codeLanguage)}</code></pre>`
+          : ""
+      }
+    </div>`;
+}
+
+function renderPhase(
+  phase: PlanJson["phases"][number],
+  feedback: FeedbackPayload | null,
+): string {
+  const changesHtml = phase.changes.map(renderChange).join("\n");
+
+  const criteriaHtml = [
+    ...phase.successCriteria.automated.map(
+      (c) =>
+        `<li>${escapeHtml(c.text)}${c.command ? ` <code style="background:#1e1e2e;padding:2px 6px;border-radius:3px;font-size:13px">${escapeHtml(c.command)}</code>` : ""}</li>`,
+    ),
+    ...phase.successCriteria.manual.map(
+      (c) => `<li>${escapeHtml(c.text)}</li>`,
+    ),
+  ].join("\n");
+
+  return `
+  <section style="margin:24px 0;padding:20px;background:#181825;border-radius:8px;border:1px solid #313244">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+      <h2 style="margin:0;color:#cdd6f4">Phase ${phase.number}: ${escapeHtml(phase.name)}</h2>
+      ${renderPhaseStatus(phase.id, feedback)}
+    </div>
+    ${phase.overview ? `<p style="color:#a6adc8">${escapeHtml(phase.overview)}</p>` : ""}
+    ${changesHtml}
+    ${criteriaHtml ? `<div style="margin-top:16px"><h4 style="color:#cdd6f4;margin:0 0 8px">Success Criteria</h4><ul style="color:#bac2de;padding-left:20px">${criteriaHtml}</ul></div>` : ""}
+    ${renderComments(feedback?.comments ?? [], phase.id)}
+  </section>`;
+}
+
 export function renderPlanToHtml(
   plan: PlanJson,
   feedback: FeedbackPayload | null,
@@ -97,45 +140,7 @@ export function renderPlanToHtml(
     : "";
 
   const phasesHtml = plan.phases
-    .map((phase) => {
-      const changesHtml = phase.changes
-        .map(
-          (change) => `
-        <div style="margin:12px 0;padding:12px;background:#1e1e2e;border-radius:6px">
-          <h4 style="margin:0 0 8px;color:#cdd6f4">${escapeHtml(change.componentName)}</h4>
-          ${change.filePath ? `<div style="font-family:monospace;font-size:13px;color:#89b4fa;margin-bottom:8px">${escapeHtml(change.filePath)}</div>` : ""}
-          <div style="color:#bac2de">${escapeHtml(change.description)}</div>
-          ${
-            change.codeSnippet
-              ? `<pre style="margin:8px 0 0;padding:12px;background:#11111b;border-radius:4px;overflow-x:auto;font-size:13px"><code class="hljs">${highlightCode(change.codeSnippet, change.codeLanguage)}</code></pre>`
-              : ""
-          }
-        </div>`,
-        )
-        .join("\n");
-
-      const criteriaHtml = [
-        ...phase.successCriteria.automated.map(
-          (c) =>
-            `<li>${escapeHtml(c.text)}${c.command ? ` <code style="background:#1e1e2e;padding:2px 6px;border-radius:3px;font-size:13px">${escapeHtml(c.command)}</code>` : ""}</li>`,
-        ),
-        ...phase.successCriteria.manual.map(
-          (c) => `<li>${escapeHtml(c.text)}</li>`,
-        ),
-      ].join("\n");
-
-      return `
-      <section style="margin:24px 0;padding:20px;background:#181825;border-radius:8px;border:1px solid #313244">
-        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
-          <h2 style="margin:0;color:#cdd6f4">Phase ${phase.number}: ${escapeHtml(phase.name)}</h2>
-          ${renderPhaseStatus(phase.id, feedback)}
-        </div>
-        ${phase.overview ? `<p style="color:#a6adc8">${escapeHtml(phase.overview)}</p>` : ""}
-        ${changesHtml}
-        ${criteriaHtml ? `<div style="margin-top:16px"><h4 style="color:#cdd6f4;margin:0 0 8px">Success Criteria</h4><ul style="color:#bac2de;padding-left:20px">${criteriaHtml}</ul></div>` : ""}
-        ${renderComments(feedback?.comments ?? [], phase.id)}
-      </section>`;
-    })
+    .map((phase) => renderPhase(phase, feedback))
     .join("\n");
 
   const generalComments = renderComments(feedback?.comments ?? []);

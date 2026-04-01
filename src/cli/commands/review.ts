@@ -16,6 +16,8 @@ import {
 import type { ParsedArgs } from "../index.js";
 import { CliError } from "../errors.js";
 
+const KEEPALIVE_MS = 2 * 60 * 1000;
+
 export async function review(args: ParsedArgs) {
   const markdownFile = args.positional[0];
   if (!markdownFile) {
@@ -121,8 +123,6 @@ export async function review(args: ParsedArgs) {
     }
   }
 
-  // Keepalive
-  const KEEPALIVE_MS = 2 * 60 * 1000;
   const keepaliveInterval = setInterval(async () => {
     try {
       await ensureServer();

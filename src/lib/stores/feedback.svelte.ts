@@ -9,6 +9,14 @@ function genId() {
   );
 }
 
+/** If all sub-items share the same status, return it; otherwise "pending". */
+export function aggregateSubItemStatuses(
+  statuses: PhaseStatus[],
+): PhaseStatus {
+  if (statuses.length === 0) return "pending";
+  return statuses.every((s) => s === statuses[0]) ? statuses[0] : "pending";
+}
+
 let instance: ReturnType<typeof createFeedbackStore> | null = null;
 
 function createFeedbackStore() {
@@ -32,6 +40,12 @@ function createFeedbackStore() {
   function debouncedSave() {
     if (saveTimer) clearTimeout(saveTimer);
     saveTimer = setTimeout(persistFeedback, SAVE_DEBOUNCE_MS);
+  }
+
+  /** Stamp updatedAt and schedule a persist. */
+  function touch() {
+    currentFeedback!.updatedAt = new Date().toISOString();
+    debouncedSave();
   }
 
   return {
@@ -94,8 +108,7 @@ function createFeedbackStore() {
         createdAt: new Date().toISOString(),
       };
       currentFeedback.comments = [...currentFeedback.comments, newComment];
-      currentFeedback.updatedAt = new Date().toISOString();
-      debouncedSave();
+      touch();
       return newComment.id;
     },
 
@@ -104,8 +117,7 @@ function createFeedbackStore() {
       currentFeedback.comments = currentFeedback.comments.map((c) =>
         c.id === id ? { ...c, comment } : c,
       );
-      currentFeedback.updatedAt = new Date().toISOString();
-      debouncedSave();
+      touch();
     },
 
     resolveComment(id: string) {
@@ -113,8 +125,7 @@ function createFeedbackStore() {
       currentFeedback.comments = currentFeedback.comments.map((c) =>
         c.id === id ? { ...c, resolved: !c.resolved } : c,
       );
-      currentFeedback.updatedAt = new Date().toISOString();
-      debouncedSave();
+      touch();
     },
 
     deleteComment(id: string) {
@@ -122,8 +133,7 @@ function createFeedbackStore() {
       currentFeedback.comments = currentFeedback.comments.filter(
         (c) => c.id !== id,
       );
-      currentFeedback.updatedAt = new Date().toISOString();
-      debouncedSave();
+      touch();
     },
 
     setPhaseStatus(
@@ -136,8 +146,7 @@ function createFeedbackStore() {
         ...currentFeedback.phaseStatuses,
         [phaseId]: { phaseId, status, note },
       };
-      currentFeedback.updatedAt = new Date().toISOString();
-      debouncedSave();
+      touch();
     },
 
     setSubItemStatus(
@@ -153,11 +162,11 @@ function createFeedbackStore() {
       };
 
       // Auto-aggregate to phase level
-      const statuses = allSubItemIds.map(
-        (id) => currentFeedback!.subItemStatuses[id]?.status ?? "pending",
+      const aggregated = aggregateSubItemStatuses(
+        allSubItemIds.map(
+          (id) => currentFeedback!.subItemStatuses[id]?.status ?? "pending",
+        ),
       );
-      const allSame = statuses.every((s) => s === statuses[0]);
-      const aggregated = allSame ? statuses[0] : "pending";
       currentFeedback.phaseStatuses = {
         ...currentFeedback.phaseStatuses,
         [phaseId]: {
@@ -167,15 +176,14 @@ function createFeedbackStore() {
         },
       };
 
-      currentFeedback.updatedAt = new Date().toISOString();
-      debouncedSave();
+      touch();
     },
 
     async submitFeedback(status: "approved" | "needs-work") {
       if (!currentFeedback) return;
       currentFeedback.status = status;
       currentFeedback.submittedAt = new Date().toISOString();
-      currentFeedback.updatedAt = new Date().toISOString();
+      currentFeedback.updatedAt = currentFeedback.submittedAt;
 
       // Save immediately (not debounced)
       // The feedback PUT endpoint already handles session status update

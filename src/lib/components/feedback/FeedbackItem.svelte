@@ -1,5 +1,6 @@
 <script lang="ts">
 	import type { FeedbackComment } from '$lib/types/feedback.js';
+	import { QUOTE_MAX_LENGTH } from '$lib/constants.js';
 
 	interface Props {
 		comment: FeedbackComment;
@@ -45,7 +46,7 @@
 
 	{#if comment.quote}
 		<p class="mb-2 rounded-md border border-slate-700 bg-[#0f172a] px-2 py-1.5 text-xs italic text-slate-300">
-			"{comment.quote.length > 120 ? comment.quote.slice(0, 120) + '...' : comment.quote}"
+			"{comment.quote.length > QUOTE_MAX_LENGTH ? comment.quote.slice(0, QUOTE_MAX_LENGTH) + '...' : comment.quote}"
 		</p>
 	{/if}
 
