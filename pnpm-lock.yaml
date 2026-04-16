@@ -17,9 +17,6 @@ importers:
       marked:
         specifier: ^15.0.7
         version: 15.0.12
-      mermaid:
-        specifier: ^11.6.0
-        version: 11.12.3
     devDependencies:
       '@sveltejs/adapter-node':
         specifier: ^5.5.3
@@ -36,6 +33,9 @@ importers:
       '@types/node':
         specifier: ^25.3.0
         version: 25.3.0
+      mermaid:
+        specifier: ^11.6.0
+        version: 11.12.3
       svelte:
         specifier: ^5.20.0
         version: 5.53.6
