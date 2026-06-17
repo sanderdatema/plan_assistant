@@ -43,7 +43,7 @@
     ]
   },
   "overrides": {
-    "dompurify": ">=3.3.2"
+    "dompurify": ">=3.4.11"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.5.3",
