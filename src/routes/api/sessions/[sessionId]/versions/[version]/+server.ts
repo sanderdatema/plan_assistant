@@ -1,5 +1,6 @@
 import { json, error } from '@sveltejs/kit';
-import { requireSession, getVersion } from '$lib/server/session-manager.js';
+import { getVersion } from '$lib/server/session-manager.js';
+import { requireSession } from '$lib/server/require-session.js';
 import type { RequestHandler } from './$types.js';
 
 export const GET: RequestHandler = async ({ params }) => {

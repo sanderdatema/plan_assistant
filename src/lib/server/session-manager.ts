@@ -7,7 +7,6 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
-import { error } from "@sveltejs/kit";
 import type { SessionMeta } from "../types/session.js";
 import type { PlanJson } from "../types/plan.js";
 import type { FeedbackPayload } from "../types/feedback.js";
@@ -82,12 +81,6 @@ export function listSessions(): SessionMeta[] {
 
 export function getSession(sessionId: string): SessionMeta | null {
   return readMeta(getSessionDir(sessionId));
-}
-
-export function requireSession(sessionId: string): SessionMeta {
-  const session = getSession(sessionId);
-  if (!session) throw error(404, "Session not found");
-  return session;
 }
 
 export function createSession(sessionId: string, meta: SessionMeta): void {

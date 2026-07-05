@@ -1,4 +1,5 @@
-import { requireSession, getPlan, getFeedback, listVersions } from '$lib/server/session-manager.js';
+import { getPlan, getFeedback, listVersions } from '$lib/server/session-manager.js';
+import { requireSession } from '$lib/server/require-session.js';
 import type { PageServerLoad } from './$types.js';
 
 export const load: PageServerLoad = async ({ params }) => {

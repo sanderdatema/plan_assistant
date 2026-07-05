@@ -1,10 +1,10 @@
 import { json } from "@sveltejs/kit";
 import {
-  requireSession,
   getFeedback,
   saveFeedback,
   updateSessionStatus,
 } from "$lib/server/session-manager.js";
+import { requireSession } from "$lib/server/require-session.js";
 import type { RequestHandler } from "./$types.js";
 import type { FeedbackPayload } from "$lib/types/feedback.js";
 
