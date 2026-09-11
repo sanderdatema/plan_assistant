@@ -1,6 +1,7 @@
 <script lang="ts">
 	import type { Change } from '$lib/types/plan.js';
 	import hljs from 'highlight.js';
+	import InlineMarkdown from './InlineMarkdown.svelte';
 
 	interface Props {
 		change: Change;
@@ -26,12 +27,12 @@
 
 <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 <div class="mb-3" data-commentable tabindex="0" data-comment-label={commentLabel ?? change.componentName}>
-	<h4 class="text-text-dim mb-1 text-sm font-medium">{change.componentName}</h4>
+	<h4 class="text-text-dim mb-1 text-sm font-medium"><InlineMarkdown content={change.componentName} /></h4>
 	<p class="mb-1 text-sm">
 		<strong>File:</strong>
 		<code class="bg-surface2 text-accent rounded px-1 py-0.5 font-mono text-xs">{change.filePath}</code>
 	</p>
-	<p class="text-text-dim text-sm">{change.description}</p>
+	<p class="text-text-dim text-sm"><InlineMarkdown content={change.description} /></p>
 	{#if change.codeSnippet}
 		<pre class="bg-surface border-border mt-2 overflow-x-auto rounded-md border p-3 text-xs"><code bind:this={codeEl} class={change.codeLanguage ? `language-${change.codeLanguage}` : ''}>{change.codeSnippet}</code></pre>
 	{/if}

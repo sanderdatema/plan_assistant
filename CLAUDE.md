@@ -2,15 +2,24 @@
 
 SvelteKit web UI + Node CLI for reviewing implementation plans in the browser with live reload.
 
-## Plane Rules
-- Taakbeheer gaat via Plane. Gebruik altijd de `mcp__plane__*` MCP tools.
-- project_id: `5856874d-207a-44d6-a88e-88aa5169468d`
-- State UUIDs — Todo: `ca77a67d-3eee-4705-b3aa-4faae7b92a07` | In Progress: `d780fd29-153f-47a9-9412-636e7475d537` | Done: `306d06ab-c698-4c7b-8d1e-a1bca772df19`
-- Volgende taak: `mcp__plane__list_work_items` → filter op Todo/In Progress → sorteer op priority (urgent→high→medium→low).
-- Taak starten: `mcp__plane__update_work_item(issue_id=..., state="d780fd29-153f-47a9-9412-636e7475d537")`.
-- Taak afronden: `mcp__plane__update_work_item(issue_id=..., state="306d06ab-c698-4c7b-8d1e-a1bca772df19")`.
-- Nieuwe taak: `mcp__plane__create_work_item(project_id=..., name=..., priority=..., state="ca77a67d-3eee-4705-b3aa-4faae7b92a07")`.
-- Nooit `task-master` CLI aanroepen — dat is verwijderd.
+## Betonning Rules
+
+- Taakbeheer gaat via Betonning, met de `mcp__betonning__*` MCP tools. Plane
+  bestaat niet meer en de `bt` CLI is verwijderd.
+- Project-key: `PLANASSIST`.
+- States (hoofdlettergevoelig in spelling, niet in casing): `Backlog`, `Todo`,
+  `In Progress`, `Done`, `Cancelled`. `Backlog` = nog niet oppakken,
+  `Todo` = mag opgepakt worden.
+- Volgende taak: `list_items(project="PLANASSIST", state="Todo")` → sorteer op
+  priority (urgent → high → medium → low).
+- Taak starten: `set_state(ref, "In Progress")`. Afronden: `set_state(ref, "Done")`
+  plus een afsluit-comment via `comment_item` (wat je deed, welke bestanden
+  wijzigden, of de tests groen zijn).
+- Nieuwe taak: `create_item(project="PLANASSIST", ...)`, gevolgd door
+  `update_item(ref, plan_md=...)` met het werkplan — zet dat vóór er een comment
+  staat, want daarna ligt het vast.
+- Fallback als de MCP-server eruit ligt: de REST API op de `base_url` uit
+  `~/.config/betonning/config.json`, header `Authorization: Bearer <api_key>`.
 
 ## Tech Stack
 

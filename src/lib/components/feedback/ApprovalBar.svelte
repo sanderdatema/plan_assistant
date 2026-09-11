@@ -16,6 +16,17 @@
 	let flashColor = $state('text-green');
 	let flashTimer: ReturnType<typeof setTimeout> | null = null;
 
+	// The panel on the right is anchored to the viewport and would otherwise run
+	// underneath this bar, putting the last comments out of reach (PLANASSIST-81).
+	// Publish our own height so FeedbackPanel can stop short of it.
+	let barHeight = $state(0);
+
+	$effect(() => {
+		const root = document.documentElement;
+		root.style.setProperty('--approval-bar-h', `${barHeight}px`);
+		return () => root.style.removeProperty('--approval-bar-h');
+	});
+
 	function handleSubmit() {
 		onSubmit();
 		if (computedStatus === 'approved') {
@@ -33,7 +44,12 @@
 	}
 </script>
 
-<div role="toolbar" aria-label="Review actions" class="fixed right-0 bottom-0 left-0 z-40 border-t border-border bg-surface px-6 py-3">
+<div
+	role="toolbar"
+	aria-label="Review actions"
+	bind:clientHeight={barHeight}
+	class="fixed right-0 bottom-0 left-0 z-40 border-t border-border bg-surface px-6 py-3"
+>
 	<div class="mx-auto flex max-w-5xl items-center justify-between pr-80">
 		<div class="text-text-dim text-sm">
 			{#if flashMessage}

@@ -20,7 +20,7 @@
 	data-feedback-panel
 	role="complementary"
 	aria-label="Review comments"
-	class="fixed top-2 right-4 z-40 flex w-80 max-h-[calc(100vh-1rem)] flex-col rounded-xl bg-[#0f172a] shadow-xl shadow-black/35"
+	class="fixed top-2 right-4 z-40 flex w-80 max-h-[calc(100vh-1.5rem-var(--approval-bar-h,4rem))] flex-col rounded-xl bg-[#0f172a] shadow-xl shadow-black/35"
 >
 	<!-- Header -->
 	<header class="border-b border-white/10 px-4 py-3">
