@@ -4,25 +4,27 @@ import type { Phase, Diagram } from "../lib/types/index.js";
 // collide with the parser's own syntax: quotes end the label early, and
 // []{}()<>| are node/edge-shape delimiters. Mermaid's documented fix is to
 // substitute HTML entities for these characters inside the label instead of
-// trying to backslash-escape them, so `"` -> `&quot;`, etc. Newlines are
-// replaced with a space since a raw line break would terminate the
-// statement. Applied to every label we generate, not just double quotes,
-// since any of these characters in a phase name can break the diagram the
-// same way.
+// trying to backslash-escape them. One pass over the string, so an ampersand
+// in the source cannot be escaped twice.
+const MERMAID_LABEL_ENTITIES: Record<string, string> = {
+  "&": "&amp;",
+  '"': "&quot;",
+  "[": "&#91;",
+  "]": "&#93;",
+  "(": "&#40;",
+  ")": "&#41;",
+  "{": "&#123;",
+  "}": "&#125;",
+  "<": "&lt;",
+  ">": "&gt;",
+  "|": "&#124;",
+};
+
 function escapeMermaidLabel(text: string): string {
   return text
-    .replace(/&/g, "&amp;")
-    .replace(/"/g, "&quot;")
-    .replace(/\[/g, "&#91;")
-    .replace(/\]/g, "&#93;")
-    .replace(/\(/g, "&#40;")
-    .replace(/\)/g, "&#41;")
-    .replace(/\{/g, "&#123;")
-    .replace(/\}/g, "&#125;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/\|/g, "&#124;")
-    .replace(/\r\n|\r|\n/g, " ");
+    .replaceAll(/[&"[\](){}<>|]/g, (char) => MERMAID_LABEL_ENTITIES[char])
+    // A raw line break would terminate the statement.
+    .replaceAll(/\r\n|\r|\n/g, " ");
 }
 
 export function generatePhaseFlowDiagram(phases: Phase[]): Diagram {
