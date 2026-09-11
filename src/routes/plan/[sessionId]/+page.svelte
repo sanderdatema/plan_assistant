@@ -8,6 +8,7 @@
 	import PhaseCard from '$lib/components/plan/PhaseCard.svelte';
 	import MermaidDiagram from '$lib/components/plan/MermaidDiagram.svelte';
 	import MarkdownBlock from '$lib/components/plan/MarkdownBlock.svelte';
+	import InlineMarkdown from '$lib/components/plan/InlineMarkdown.svelte';
 	import ProgressBar from '$lib/components/plan/ProgressBar.svelte';
 	import VersionSelector from '$lib/components/plan/VersionSelector.svelte';
 	import DiffView from '$lib/components/plan/DiffView.svelte';
@@ -238,7 +239,7 @@
 						{#each plan.keyDiscoveries as discovery}
 							<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 							<li data-commentable tabindex="0" data-comment-label="Key Discovery: {discovery.text.slice(0, 50)}">
-								{discovery.text}
+								<InlineMarkdown content={discovery.text} />
 								{#if discovery.codeRef}
 									<code class="bg-surface2 text-accent rounded px-1 py-0.5 font-mono text-xs">{discovery.codeRef}</code>
 								{/if}
@@ -259,8 +260,8 @@
 						<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 						<div class="bg-surface border-border rounded-lg border border-l-3 border-l-red p-4" data-commentable tabindex="0" data-comment-label="Scope > {exclusion.title}">
 							<div class="text-red text-xs font-semibold uppercase tracking-wide">Out of scope</div>
-							<h4 class="mt-1 mb-1 text-sm font-semibold">{exclusion.title}</h4>
-							<p class="text-text-dim text-xs">{exclusion.reason}</p>
+							<h4 class="mt-1 mb-1 text-sm font-semibold"><InlineMarkdown content={exclusion.title} /></h4>
+							<p class="text-text-dim text-xs"><InlineMarkdown content={exclusion.reason} /></p>
 						</div>
 					{/each}
 				</div>
@@ -307,7 +308,7 @@
 					<ul class="text-text-dim space-y-1 pl-5 text-sm">
 						{#each plan.testingStrategy.unit as item}
 							<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-							<li data-commentable tabindex="0" data-comment-label="Testing > Unit > {item.slice(0, 40)}">{item}</li>
+							<li data-commentable tabindex="0" data-comment-label="Testing > Unit > {item.slice(0, 40)}"><InlineMarkdown content={item} /></li>
 						{/each}
 					</ul>
 				{/if}
@@ -316,7 +317,7 @@
 					<ul class="text-text-dim space-y-1 pl-5 text-sm">
 						{#each plan.testingStrategy.integration as item}
 							<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-							<li data-commentable tabindex="0" data-comment-label="Testing > Integration > {item.slice(0, 40)}">{item}</li>
+							<li data-commentable tabindex="0" data-comment-label="Testing > Integration > {item.slice(0, 40)}"><InlineMarkdown content={item} /></li>
 						{/each}
 					</ul>
 				{/if}
@@ -325,7 +326,7 @@
 					<ul class="text-text-dim space-y-1 pl-5 text-sm">
 						{#each plan.testingStrategy.manual as item}
 							<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-							<li data-commentable tabindex="0" data-comment-label="Testing > Manual > {item.slice(0, 40)}">{item}</li>
+							<li data-commentable tabindex="0" data-comment-label="Testing > Manual > {item.slice(0, 40)}"><InlineMarkdown content={item} /></li>
 						{/each}
 					</ul>
 				{/if}
@@ -340,7 +341,7 @@
 				<ul class="text-text-dim space-y-1 pl-5 text-sm">
 					{#each plan.references as ref}
 						<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-						<li data-commentable tabindex="0" data-comment-label="Reference: {ref.slice(0, 50)}">{ref}</li>
+						<li data-commentable tabindex="0" data-comment-label="Reference: {ref.slice(0, 50)}"><InlineMarkdown content={ref} /></li>
 					{/each}
 				</ul>
 			</section>

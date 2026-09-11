@@ -3,6 +3,7 @@
 	import type { PhaseStatus } from '$lib/utils/status.js';
 	import ChangeBlock from './ChangeBlock.svelte';
 	import MarkdownBlock from './MarkdownBlock.svelte';
+	import InlineMarkdown from './InlineMarkdown.svelte';
 	import PhaseStatusControl from '../feedback/PhaseStatusControl.svelte';
 
 	interface Props {
@@ -59,7 +60,7 @@
 							data-comment-label="{phaseLabel} > {phase.number}{subItem.letter}. {subItem.name}"
 						>
 							<div class="flex items-center justify-between gap-3">
-								<h4 class="text-sm font-semibold">{phase.number}{subItem.letter}. {subItem.name}</h4>
+								<h4 class="text-sm font-semibold">{phase.number}{subItem.letter}. <InlineMarkdown content={subItem.name} /></h4>
 								<PhaseStatusControl
 									status={subItemStatuses[subItem.id]?.status ?? 'pending'}
 									onSetStatus={(status) => onSetSubItemStatus?.(subItem.id, status)}
@@ -99,7 +100,7 @@
 										<code class="bg-surface2 rounded px-1 py-0.5 font-mono text-xs">{criterion.command}</code>
 										—
 									{/if}
-									{criterion.text}
+									<InlineMarkdown content={criterion.text} />
 								</span>
 							</li>
 						{/each}
@@ -113,7 +114,7 @@
 							<!-- svelte-ignore a11y_no_noninteractive_tabindex -->
 							<li class="text-text-dim flex items-start gap-2 text-sm" data-commentable tabindex="0" data-comment-label="{phaseLabel} > Manual > {criterion.text.slice(0, 40)}">
 								<input type="checkbox" class="mt-0.5 accent-green" />
-								<span>{criterion.text}</span>
+								<span><InlineMarkdown content={criterion.text} /></span>
 							</li>
 						{/each}
 					</ul>
