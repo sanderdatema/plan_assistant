@@ -13,6 +13,7 @@
   "license": "MIT",
   "author": "Sander Datema",
   "type": "module",
+  "packageManager": "npm@11.19.0",
   "bin": {
     "plan-assistant": "bin/cli.js"
   },
