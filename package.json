@@ -47,8 +47,8 @@
     "dompurify": ">=3.3.2"
   },
   "devDependencies": {
-    "@sveltejs/adapter-node": "^5.5.3",
-    "@sveltejs/kit": "^2.53.0",
+    "@sveltejs/adapter-node": "^6.0.0",
+    "@sveltejs/kit": "^3.1.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.3",
     "@tailwindcss/vite": "^4.1.4",
     "@types/node": "^25.3.0",
